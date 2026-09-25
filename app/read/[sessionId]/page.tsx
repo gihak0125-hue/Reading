@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
-import { ReadingWorkspace, type ParagraphData } from "./reading-workspace";
+import {
+  ReadingWorkspace,
+  type ParagraphData,
+  type AnnotationData,
+} from "./reading-workspace";
 
 export default async function ReadingPage({
   params,
@@ -30,11 +34,17 @@ export default async function ReadingPage({
     .eq("passage_id", session.passage_id)
     .order("seq", { ascending: true });
 
+  const { data: annotations } = await supabase
+    .from("annotations")
+    .select("id, paragraph_id, type, span_start, span_end")
+    .eq("session_id", session.id);
+
   return (
     <ReadingWorkspace
       sessionId={session.id}
       title={passage.title}
       paragraphs={(paragraphs ?? []) as ParagraphData[]}
+      annotations={(annotations ?? []) as AnnotationData[]}
     />
   );
 }
