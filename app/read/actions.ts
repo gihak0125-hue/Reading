@@ -59,6 +59,49 @@ export async function deleteAnnotation(
   revalidatePath(`/read/${sessionId}`);
 }
 
+export type RelationType =
+  | "compare_contrast"
+  | "cause_effect"
+  | "problem_solution"
+  | "listing";
+
+/**
+ * 두 표시(A→B)를 관계로 연결한다.
+ * arrow 주석 한 행에 A의 위치(paragraph/span)를 담고 target_ref로 B를 가리킨다.
+ */
+export async function addRelation(input: {
+  sessionId: string;
+  fromAnnotationId: string;
+  toAnnotationId: string;
+  relationType: RelationType;
+}): Promise<{ error?: string }> {
+  if (input.fromAnnotationId === input.toAnnotationId)
+    return { error: "서로 다른 두 표시를 연결하세요." };
+  const { supabase } = await requireOwnedSession(input.sessionId);
+
+  const { data: from } = await supabase
+    .from("annotations")
+    .select("paragraph_id, span_start, span_end, session_id")
+    .eq("id", input.fromAnnotationId)
+    .single();
+  if (!from || from.session_id !== input.sessionId)
+    return { error: "시작 표시를 찾을 수 없습니다." };
+
+  const { error } = await supabase.from("annotations").insert({
+    session_id: input.sessionId,
+    paragraph_id: from.paragraph_id,
+    span_start: from.span_start,
+    span_end: from.span_end,
+    type: "arrow",
+    target_ref: input.toAnnotationId,
+    relation_type: input.relationType,
+  });
+  if (error) return { error: `연결 실패: ${error.message}` };
+
+  revalidatePath(`/read/${input.sessionId}`);
+  return {};
+}
+
 /** 지문을 골라 읽기 세션을 시작한다(이미 진행 중이면 그 세션으로 이어감). */
 export async function startSession(formData: FormData): Promise<void> {
   const { supabase, user } = await getSessionProfile("/read");

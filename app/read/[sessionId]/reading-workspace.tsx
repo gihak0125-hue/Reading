@@ -2,25 +2,41 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { addAnnotation, deleteAnnotation } from "../actions";
+import { addAnnotation, deleteAnnotation, addRelation } from "../actions";
 
 export type ParagraphData = { id: string; seq: number; text: string };
+export type RelationType =
+  | "compare_contrast"
+  | "cause_effect"
+  | "problem_solution"
+  | "listing";
 export type AnnotationData = {
   id: string;
   paragraph_id: string;
   type: "underline" | "circle" | "arrow";
   span_start: number;
   span_end: number;
+  target_ref: string | null;
+  relation_type: RelationType | null;
 };
 
-type ToolId = "underline" | "circle" | "arrow" | "relation" | "erase";
+type ToolId = "underline" | "circle" | "arrow" | "erase";
 const TOOLS: { id: ToolId; label: string; glyph: string; ready: boolean }[] = [
   { id: "underline", label: "밑줄", glyph: "▁", ready: true },
   { id: "circle", label: "동그라미", glyph: "◯", ready: true },
-  { id: "arrow", label: "화살표", glyph: "→", ready: false },
-  { id: "relation", label: "관계 표시", glyph: "🔗", ready: false },
+  { id: "arrow", label: "화살표 연결", glyph: "→", ready: true },
   { id: "erase", label: "지우기", glyph: "⌫", ready: true },
 ];
+
+const RELATION_LABELS: { value: RelationType; label: string }[] = [
+  { value: "cause_effect", label: "인과" },
+  { value: "compare_contrast", label: "비교·대조" },
+  { value: "problem_solution", label: "문제-해결" },
+  { value: "listing", label: "나열" },
+];
+function relationLabel(v: RelationType | null): string {
+  return RELATION_LABELS.find((r) => r.value === v)?.label ?? "관계";
+}
 
 const PHASES = ["핵심원리", "관계 연결", "구조화", "자기설명"];
 type PadTab = "key" | "structure" | "explain";
@@ -61,12 +77,26 @@ export function ReadingWorkspace({
   const [showTools, setShowTools] = useState(true);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
+  const [arrowFrom, setArrowFrom] = useState<string | null>(null);
+  const [pendingPair, setPendingPair] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const marks = useMemo(
     () => annotations.filter((a) => a.type === "underline" || a.type === "circle"),
     [annotations],
   );
+  const relations = useMemo(
+    () => annotations.filter((a) => a.type === "arrow"),
+    [annotations],
+  );
+  const annoById = useMemo(() => {
+    const m = new Map<string, AnnotationData>();
+    for (const a of annotations) m.set(a.id, a);
+    return m;
+  }, [annotations]);
 
   function handleAdd(paragraphId: string, start: number, end: number) {
     if (tool !== "underline" && tool !== "circle") return;
@@ -87,6 +117,7 @@ export function ReadingWorkspace({
   }
 
   function handleErase(id: string) {
+    if (arrowFrom === id) setArrowFrom(null);
     startTransition(async () => {
       await deleteAnnotation(id, sessionId);
     });
@@ -97,6 +128,54 @@ export function ReadingWorkspace({
     for (const p of paragraphs) m.set(p.id, p);
     return m;
   }, [paragraphs]);
+
+  function annoText(a?: AnnotationData | null): string {
+    if (!a) return "";
+    return (paraById.get(a.paragraph_id)?.text ?? "").slice(
+      a.span_start,
+      a.span_end,
+    );
+  }
+
+  function selectTool(id: ToolId) {
+    setTool((cur) => (cur === id ? null : id));
+    setArrowFrom(null);
+    setPendingPair(null);
+    setMsg(null);
+  }
+
+  /** 화살표 도구: 표시 A 탭 → 표시 B 탭 → 관계 유형 선택 */
+  function handlePickEndpoint(markId: string) {
+    if (tool !== "arrow") return;
+    if (!arrowFrom) {
+      setArrowFrom(markId);
+      setMsg("연결할 두 번째 표시를 탭하세요.");
+      return;
+    }
+    if (arrowFrom === markId) {
+      setArrowFrom(null);
+      setMsg(null);
+      return;
+    }
+    setPendingPair({ from: arrowFrom, to: markId });
+    setMsg(null);
+  }
+
+  function handleAddRelation(rt: RelationType) {
+    if (!pendingPair) return;
+    const pair = pendingPair;
+    startTransition(async () => {
+      const res = await addRelation({
+        sessionId,
+        fromAnnotationId: pair.from,
+        toAnnotationId: pair.to,
+        relationType: rt,
+      });
+      if (res.error) setMsg(res.error);
+      setPendingPair(null);
+      setArrowFrom(null);
+    });
+  }
 
   return (
     <div className="flex min-h-full flex-col">
@@ -167,7 +246,7 @@ export function ReadingWorkspace({
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => setTool(active ? null : t.id)}
+                      onClick={() => selectTool(t.id)}
                       className={`relative flex min-w-[64px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
                         active
                           ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
@@ -190,11 +269,44 @@ export function ReadingWorkspace({
                   ? `'${TOOLS.find((t) => t.id === tool)?.label}' 선택됨 — 본문에서 표시할 글자를 드래그(길게 눌러 선택)하세요.`
                   : tool === "erase"
                     ? "'지우기' 선택됨 — 표시된 부분을 탭하면 지워집니다."
-                    : tool === "arrow" || tool === "relation"
-                      ? "이 도구는 곧 추가됩니다."
+                    : tool === "arrow"
+                      ? "'화살표 연결' 선택됨 — 이미 표시한(밑줄·동그라미) 두 부분을 차례로 탭해 관계로 이으세요."
                       : "도구를 먼저 선택한 후, 본문에서 표시할 곳을 선택하세요."}
               </p>
               {msg && <p className="mt-1 text-xs text-red-600">{msg}</p>}
+
+              {/* 관계 유형 선택 */}
+              {pendingPair && (
+                <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
+                  <p className="mb-2 text-xs font-medium text-blue-900 dark:text-blue-100">
+                    “{annoText(annoById.get(pendingPair.from))}” →{" "}
+                    “{annoText(annoById.get(pendingPair.to))}” 의 관계는?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {RELATION_LABELS.map((r) => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        disabled={pending}
+                        onClick={() => handleAddRelation(r.value)}
+                        className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-gray-900 dark:text-blue-300"
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingPair(null);
+                        setArrowFrom(null);
+                      }}
+                      className="rounded-md px-2 py-1.5 text-xs text-gray-500 hover:underline"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -210,8 +322,10 @@ export function ReadingWorkspace({
                   annos={marks.filter((a) => a.paragraph_id === p.id)}
                   tool={tool}
                   pending={pending}
+                  arrowFrom={arrowFrom}
                   onAdd={(s, e) => handleAdd(p.id, s, e)}
                   onErase={handleErase}
+                  onPickEndpoint={handlePickEndpoint}
                 />
               </div>
             ))}
@@ -289,10 +403,49 @@ export function ReadingWorkspace({
             </div>
           )}
           {tab === "structure" && (
-            <PadEmpty
-              title="관계 구조도"
-              hint="화살표로 정보를 연결하면 관계도가 그려져요. (곧 추가)"
-            />
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                관계 구조도 {relations.length > 0 && `(${relations.length})`}
+              </p>
+              {relations.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
+                  화살표 도구로 두 표시를 이으면 관계도가 그려져요.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {relations.map((a) => (
+                    <li
+                      key={a.id}
+                      className="rounded-lg border border-gray-200 p-2.5 text-sm dark:border-gray-800"
+                    >
+                      <div className="flex items-start gap-1.5">
+                        <span className="min-w-0 flex-1">
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
+                            {annoText(a) || "(삭제됨)"}
+                          </span>
+                          <span className="mx-1 text-blue-500">
+                            ↓ {relationLabel(a.relation_type)}
+                          </span>
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
+                            {annoText(annoById.get(a.target_ref ?? "")) ||
+                              "(삭제됨)"}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleErase(a.id)}
+                          disabled={pending}
+                          className="shrink-0 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                          aria-label="관계 삭제"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
           {tab === "explain" && (
             <PadEmpty
@@ -343,15 +496,19 @@ function AnnotatedParagraph({
   annos,
   tool,
   pending,
+  arrowFrom,
   onAdd,
   onErase,
+  onPickEndpoint,
 }: {
   text: string;
   annos: AnnotationData[];
   tool: ToolId | null;
   pending: boolean;
+  arrowFrom: string | null;
   onAdd: (start: number, end: number) => void;
   onErase: (id: string) => void;
+  onPickEndpoint: (markId: string) => void;
 }) {
   const ref = useRef<HTMLParagraphElement>(null);
 
@@ -407,6 +564,9 @@ function AnnotatedParagraph({
     >
       {runs.map((r, i) => {
         const marked = r.underline || r.circle;
+        const isFrom = arrowFrom != null && r.ids.includes(arrowFrom);
+        const clickable =
+          marked && !pending && (tool === "erase" || tool === "arrow");
         const cls = [
           r.underline
             ? "underline decoration-blue-500 decoration-2 underline-offset-4"
@@ -414,9 +574,8 @@ function AnnotatedParagraph({
           r.circle
             ? "rounded-full border-2 border-rose-400 px-1 py-0.5"
             : "",
-          marked && tool === "erase"
-            ? "cursor-pointer hover:opacity-60"
-            : "",
+          clickable ? "cursor-pointer hover:opacity-70" : "",
+          isFrom ? "rounded bg-blue-200/60 ring-2 ring-blue-400" : "",
         ]
           .filter(Boolean)
           .join(" ");
@@ -425,8 +584,12 @@ function AnnotatedParagraph({
             key={i}
             className={cls || undefined}
             onClick={
-              marked && tool === "erase" && !pending
-                ? () => r.ids[0] && onErase(r.ids[0])
+              clickable
+                ? () => {
+                    if (!r.ids[0]) return;
+                    if (tool === "erase") onErase(r.ids[0]);
+                    else if (tool === "arrow") onPickEndpoint(r.ids[0]);
+                  }
                 : undefined
             }
           >
