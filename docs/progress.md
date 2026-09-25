@@ -13,7 +13,7 @@
 - [x] .gitignore / .env.example / README.md
 - [x] CI(.github/workflows/ci.yml) / pre-commit / 실행 루프 스킬 초안
 - [x] supabase/migrations 초기 스키마 SQL
-- [ ] **git/Node 설치** (사용자) → 저장소 초기화·첫 푸시
+- [x] git/Node 설치 + 저장소 초기화·첫 푸시 (GitHub: gihak0125-hue/Reading, main)
 - [ ] Vercel·Supabase 프로젝트 연결
 
 ### M1 데이터 기반 (예정)
@@ -29,7 +29,7 @@
 ### M6 배포·파일럿 (예정)
 
 ## 블로커
-- ⛔ 로컬에 git·node·npm 미설치 → 커밋/푸시·빌드 불가. 설치 필요.
+- (해결됨) git·node·npm·gh 설치 완료 및 첫 푸시 완료.
 
 ## 열린 결정 (plan.md 12.2)
 1. OpenAI 호출 위치(Edge Function vs Route Handler)
