@@ -22,9 +22,10 @@
 - [x] lib/env, lib/supabase(client/server), lib/openai(모델 라우팅)
 - [x] 랜딩 페이지 + /api/health (env 존재여부만 노출)
 - [x] 빌드/타입체크 통과, 로컬 실행 확인
-- [ ] **Supabase 프로젝트 생성 + 키 발급** (사용자) → .env.local 작성
-- [ ] 마이그레이션 적용(0001_init.sql)
-- [ ] Auth(학생/교사 role) 로그인 화면 + RLS 검증
+- [x] Supabase 프로젝트 생성 + 키 발급 → .env.local (URL/anon 적용, 연결 확인)
+- [x] 마이그레이션 적용(0001_init.sql) — 10개 테이블 + RLS + 프로필 자동생성
+- [x] Auth 로그인/회원가입 화면 + 세션 미들웨어 + 대시보드
+- [ ] 0002 적용(역할 metadata 반영) + 이메일 확인 설정 + 로그인 실제 검증 (사용자)
 - [ ] 교사 지문 등록·문단/핵심정보 태깅 화면
 
 ## 확정된 결정

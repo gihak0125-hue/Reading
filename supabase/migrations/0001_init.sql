@@ -112,6 +112,20 @@ create table agent_messages (
   created_at timestamptz not null default now()
 );
 
+-- ========== 신규 가입 시 프로필 자동 생성 ==========
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, display_name)
+  values (new.id, coalesce(new.raw_user_meta_data->>'display_name', new.email));
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
+
 -- ========== RLS ==========
 alter table profiles           enable row level security;
 alter table classes            enable row level security;

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="mx-auto flex max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
@@ -13,6 +15,14 @@ export default function Home() {
           글의 구조를 추론하고, 자기설명하도록 돕습니다. 막힌 지점을 진단해
           너에게 맞는 힌트를 제공합니다.
         </p>
+        <div className="mt-2">
+          <Link
+            href="/login"
+            className="inline-block rounded-md bg-blue-600 px-5 py-2.5 font-medium text-white hover:bg-blue-700"
+          >
+            로그인 / 시작하기
+          </Link>
+        </div>
       </header>
 
       <section className="rounded-xl border border-gray-200 p-6 dark:border-gray-800">
