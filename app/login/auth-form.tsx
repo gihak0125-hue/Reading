@@ -1,14 +1,13 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { login, signup, type AuthState } from "./actions";
+import { authenticate, type AuthState } from "./actions";
 
 const initial: AuthState = {};
 
 export function AuthForm({ next }: { next: string }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
-  const action = mode === "login" ? login : signup;
-  const [state, formAction, pending] = useActionState(action, initial);
+  const [state, formAction, pending] = useActionState(authenticate, initial);
 
   return (
     <div className="w-full max-w-sm rounded-xl border border-gray-200 p-6 dark:border-gray-800">
@@ -39,6 +38,7 @@ export function AuthForm({ next }: { next: string }) {
 
       <form action={formAction} className="flex flex-col gap-4">
         <input type="hidden" name="next" value={next} />
+        <input type="hidden" name="intent" value={mode} />
 
         {mode === "signup" && (
           <label className="flex flex-col gap-1 text-sm">
