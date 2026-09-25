@@ -1,0 +1,14 @@
+# 기본: 텍스트 자동 정규화(저장소에는 LF)
+* text=auto eol=lf
+
+# 셸 스크립트/훅/CI 는 반드시 LF (CRLF 이면 실행 실패)
+*.sh        text eol=lf
+.husky/*    text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# 바이너리 취급(줄바꿈 변환 금지)
+*.png binary
+*.jpg binary
+*.xlsx binary
+*.pdf binary

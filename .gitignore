@@ -1,0 +1,43 @@
+# 환경변수 / 비밀키 (절대 커밋 금지)
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Vercel
+.vercel/
+
+# Supabase (로컬)
+supabase/.branches/
+supabase/.temp/
+**/.supabase/
+
+# 테스트/커버리지
+coverage/
+.nyc_output/
+
+# 로그
+*.log
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# 임시 원본 파일
+~$*.xlsx
+*.tmp

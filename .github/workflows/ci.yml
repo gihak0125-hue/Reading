@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # package.json/lock 이 생기기 전(M0)에는 install 을 건너뛴다.
+      - name: Install
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else echo "no lockfile yet (M0), skip"; fi
+
+      - name: Lint
+        run: |
+          if [ -f package.json ] && npm run | grep -q " lint"; then npm run lint; else echo "skip lint"; fi
+
+      - name: Typecheck
+        run: |
+          if [ -f package.json ] && npm run | grep -q " typecheck"; then npm run typecheck; else echo "skip typecheck"; fi
+
+      - name: Test
+        run: |
+          if [ -f package.json ] && npm run | grep -q " test"; then npm test; else echo "skip test"; fi
+
+      - name: Secret scan (클라이언트 번들에 서버 시크릿 금지)
+        run: |
+          if grep -REn "OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY" app components 2>/dev/null | grep -v "process.env"; then
+            echo "::error::클라이언트 코드에 서버 시크릿 참조가 감지되었습니다"; exit 1;
+          else
+            echo "secret scan ok";
+          fi
