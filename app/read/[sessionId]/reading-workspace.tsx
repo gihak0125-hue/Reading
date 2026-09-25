@@ -8,7 +8,9 @@ export type ParagraphData = { id: string; seq: number; text: string };
 export type RelationType =
   | "compare_contrast"
   | "cause_effect"
+  | "process"
   | "problem_solution"
+  | "question_answer"
   | "listing";
 export type AnnotationData = {
   id: string;
@@ -17,31 +19,70 @@ export type AnnotationData = {
   span_start: number;
   span_end: number;
   target_ref: string | null;
+  from_ref: string | null;
   relation_type: RelationType | null;
 };
 
-type ToolId = "underline" | "circle" | "arrow" | "erase";
-const TOOLS: { id: ToolId; label: string; glyph: string; ready: boolean }[] = [
-  { id: "underline", label: "밑줄", glyph: "▁", ready: true },
-  { id: "circle", label: "동그라미", glyph: "◯", ready: true },
-  { id: "arrow", label: "화살표 연결", glyph: "→", ready: true },
-  { id: "erase", label: "지우기", glyph: "⌫", ready: true },
+type ToolId = "underline" | "circle" | "arrow" | "listing" | "erase";
+const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
+  { id: "underline", label: "밑줄", glyph: "▁" },
+  { id: "circle", label: "동그라미", glyph: "◯" },
+  { id: "arrow", label: "관계 연결", glyph: "→" },
+  { id: "listing", label: "나열", glyph: "①" },
+  { id: "erase", label: "지우기", glyph: "⌫" },
 ];
 
-const RELATION_LABELS: { value: RelationType; label: string }[] = [
-  { value: "cause_effect", label: "인과" },
-  { value: "compare_contrast", label: "비교·대조" },
-  { value: "problem_solution", label: "문제-해결" },
-  { value: "listing", label: "나열" },
+// 관계 연결(짝) 유형 — 나열은 별도 도구
+const PAIR_RELATIONS: { value: RelationType; label: string; hint: string }[] = [
+  { value: "cause_effect", label: "인과", hint: "→" },
+  { value: "process", label: "과정", hint: "→" },
+  { value: "compare_contrast", label: "비교·대조", hint: "↔" },
+  { value: "problem_solution", label: "문제-해결", hint: "P·S" },
+  { value: "question_answer", label: "문답", hint: "Q·A" },
 ];
-function relationLabel(v: RelationType | null): string {
-  return RELATION_LABELS.find((r) => r.value === v)?.label ?? "관계";
-}
+const REL_LABEL: Record<RelationType, string> = {
+  cause_effect: "인과",
+  process: "과정",
+  compare_contrast: "비교·대조",
+  problem_solution: "문제-해결",
+  question_answer: "문답",
+  listing: "나열",
+};
 
 const PHASES = ["핵심원리", "관계 연결", "구조화", "자기설명"];
 type PadTab = "key" | "structure" | "explain";
 
-/** 선택 영역의 문자 오프셋을 컨테이너 텍스트 기준으로 계산 */
+type Badge = { text: string; tone: string };
+const TONE: Record<string, string> = {
+  amber: "bg-amber-200 text-amber-900",
+  green: "bg-emerald-200 text-emerald-900",
+  blue: "bg-blue-200 text-blue-900",
+  violet: "bg-violet-200 text-violet-900",
+  gray: "bg-gray-300 text-gray-800",
+};
+
+/** 배지([data-badge]) 텍스트를 제외하고 컨테이너 내 오프셋 계산 */
+function offsetInContainer(
+  container: HTMLElement,
+  node: Node,
+  nodeOffset: number,
+): number {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    acceptNode(n) {
+      return (n.parentElement as HTMLElement | null)?.closest("[data-badge]")
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  let len = 0;
+  while (walker.nextNode()) {
+    const t = walker.currentNode;
+    if (t === node) return len + nodeOffset;
+    len += t.textContent?.length ?? 0;
+  }
+  return len;
+}
+
 function selectionOffsets(
   container: HTMLElement,
 ): { start: number; end: number } | null {
@@ -53,11 +94,10 @@ function selectionOffsets(
     !container.contains(range.endContainer)
   )
     return null;
-  const pre = document.createRange();
-  pre.selectNodeContents(container);
-  pre.setEnd(range.startContainer, range.startOffset);
-  const start = pre.toString().length;
-  const end = start + range.toString().length;
+  const a = offsetInContainer(container, range.startContainer, range.startOffset);
+  const b = offsetInContainer(container, range.endContainer, range.endOffset);
+  const start = Math.min(a, b);
+  const end = Math.max(a, b);
   if (end <= start) return null;
   return { start, end };
 }
@@ -97,6 +137,91 @@ export function ReadingWorkspace({
     for (const a of annotations) m.set(a.id, a);
     return m;
   }, [annotations]);
+  const paraById = useMemo(() => {
+    const m = new Map<string, ParagraphData>();
+    for (const p of paragraphs) m.set(p.id, p);
+    return m;
+  }, [paragraphs]);
+
+  // 표시별 관계 배지 계산
+  const badgesByMark = useMemo(() => {
+    const map = new Map<string, Badge[]>();
+    const push = (id: string | null, b: Badge) => {
+      if (!id) return;
+      const arr = map.get(id) ?? [];
+      arr.push(b);
+      map.set(id, arr);
+    };
+    let n = 0;
+    for (const r of relations) {
+      const rt = r.relation_type;
+      const from = r.from_ref;
+      const to = r.target_ref;
+      if (!to || rt === "listing") continue;
+      if (rt === "problem_solution") {
+        push(from, { text: "P", tone: "amber" });
+        push(to, { text: "S", tone: "amber" });
+      } else if (rt === "question_answer") {
+        push(from, { text: "Q", tone: "green" });
+        push(to, { text: "A", tone: "green" });
+      } else if (rt === "cause_effect" || rt === "process") {
+        n++;
+        push(from, { text: `${n}→`, tone: "blue" });
+        push(to, { text: `→${n}`, tone: "blue" });
+      } else if (rt === "compare_contrast") {
+        n++;
+        push(from, { text: `${n}↔`, tone: "violet" });
+        push(to, { text: `${n}↔`, tone: "violet" });
+      }
+    }
+    // 나열 번호(연결 체인 기준)
+    const listing = relations.filter(
+      (r) => r.relation_type === "listing" && r.from_ref && r.target_ref,
+    );
+    if (listing.length) {
+      const pred = new Map<string, string>();
+      const nodes = new Set<string>();
+      for (const r of listing) {
+        pred.set(r.target_ref!, r.from_ref!);
+        nodes.add(r.from_ref!);
+        nodes.add(r.target_ref!);
+      }
+      const orderOf = (start: string) => {
+        let o = 1;
+        let cur = start;
+        const seen = new Set<string>();
+        while (pred.has(cur) && !seen.has(cur)) {
+          seen.add(cur);
+          cur = pred.get(cur)!;
+          o++;
+        }
+        return o;
+      };
+      for (const id of nodes) push(id, { text: `${orderOf(id)}`, tone: "gray" });
+    }
+    return map;
+  }, [relations]);
+
+  function annoText(a?: AnnotationData | null): string {
+    if (!a) return "";
+    return (paraById.get(a.paragraph_id)?.text ?? "").slice(
+      a.span_start,
+      a.span_end,
+    );
+  }
+
+  function selectTool(id: ToolId) {
+    setTool((cur) => (cur === id ? null : id));
+    setArrowFrom(null);
+    setPendingPair(null);
+    setMsg(
+      id === "arrow"
+        ? "표시(밑줄·동그라미) 두 개를 차례로 탭해 관계로 이으세요."
+        : id === "listing"
+          ? "나열할 항목들을 순서대로 탭하세요. 1·2·3 번호가 붙어요."
+          : null,
+    );
+  }
 
   function handleAdd(paragraphId: string, start: number, end: number) {
     if (tool !== "underline" && tool !== "circle") return;
@@ -123,42 +248,39 @@ export function ReadingWorkspace({
     });
   }
 
-  const paraById = useMemo(() => {
-    const m = new Map<string, ParagraphData>();
-    for (const p of paragraphs) m.set(p.id, p);
-    return m;
-  }, [paragraphs]);
-
-  function annoText(a?: AnnotationData | null): string {
-    if (!a) return "";
-    return (paraById.get(a.paragraph_id)?.text ?? "").slice(
-      a.span_start,
-      a.span_end,
-    );
-  }
-
-  function selectTool(id: ToolId) {
-    setTool((cur) => (cur === id ? null : id));
-    setArrowFrom(null);
-    setPendingPair(null);
-    setMsg(null);
-  }
-
-  /** 화살표 도구: 표시 A 탭 → 표시 B 탭 → 관계 유형 선택 */
   function handlePickEndpoint(markId: string) {
-    if (tool !== "arrow") return;
-    if (!arrowFrom) {
-      setArrowFrom(markId);
-      setMsg("연결할 두 번째 표시를 탭하세요.");
-      return;
+    if (tool === "arrow") {
+      if (!arrowFrom) {
+        setArrowFrom(markId);
+        setMsg("연결할 두 번째 표시를 탭하세요.");
+      } else if (arrowFrom === markId) {
+        setArrowFrom(null);
+        setMsg(null);
+      } else {
+        setPendingPair({ from: arrowFrom, to: markId });
+        setMsg(null);
+      }
+    } else if (tool === "listing") {
+      if (!arrowFrom) {
+        setArrowFrom(markId);
+        setMsg("다음 항목을 탭하세요.");
+      } else if (arrowFrom === markId) {
+        setArrowFrom(null);
+        setMsg(null);
+      } else {
+        const from = arrowFrom;
+        startTransition(async () => {
+          const res = await addRelation({
+            sessionId,
+            fromAnnotationId: from,
+            toAnnotationId: markId,
+            relationType: "listing",
+          });
+          if (res.error) setMsg(res.error);
+        });
+        setArrowFrom(markId); // 체인 이어가기
+      }
     }
-    if (arrowFrom === markId) {
-      setArrowFrom(null);
-      setMsg(null);
-      return;
-    }
-    setPendingPair({ from: arrowFrom, to: markId });
-    setMsg(null);
   }
 
   function handleAddRelation(rt: RelationType) {
@@ -236,7 +358,6 @@ export function ReadingWorkspace({
             </button>
           </div>
 
-          {/* 도구 팔레트 */}
           {showTools && (
             <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
               <div className="flex flex-wrap gap-2">
@@ -247,7 +368,7 @@ export function ReadingWorkspace({
                       key={t.id}
                       type="button"
                       onClick={() => selectTool(t.id)}
-                      className={`relative flex min-w-[64px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
+                      className={`flex min-w-[64px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
                         active
                           ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                           : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -255,35 +376,31 @@ export function ReadingWorkspace({
                     >
                       <span className="text-lg leading-none">{t.glyph}</span>
                       {t.label}
-                      {!t.ready && (
-                        <span className="absolute -right-1 -top-1 rounded-full bg-gray-300 px-1 text-[9px] text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                          곧
-                        </span>
-                      )}
                     </button>
                   );
                 })}
               </div>
               <p className="mt-2 text-xs text-gray-500">
                 {tool === "underline" || tool === "circle"
-                  ? `'${TOOLS.find((t) => t.id === tool)?.label}' 선택됨 — 본문에서 표시할 글자를 드래그(길게 눌러 선택)하세요.`
+                  ? `'${TOOLS.find((t) => t.id === tool)?.label}' 선택됨 — 표시할 글자를 드래그(길게 눌러 선택)하세요.`
                   : tool === "erase"
-                    ? "'지우기' 선택됨 — 표시된 부분을 탭하면 지워집니다."
+                    ? "'지우기' — 표시를 탭하면 지워집니다."
                     : tool === "arrow"
-                      ? "'화살표 연결' 선택됨 — 이미 표시한(밑줄·동그라미) 두 부분을 차례로 탭해 관계로 이으세요."
-                      : "도구를 먼저 선택한 후, 본문에서 표시할 곳을 선택하세요."}
+                      ? "'관계 연결' — 표시 두 개를 차례로 탭하세요."
+                      : tool === "listing"
+                        ? "'나열' — 항목들을 순서대로 탭하면 1·2·3 번호가 붙어요."
+                        : "도구를 먼저 선택한 후, 본문에서 표시할 곳을 선택하세요."}
               </p>
-              {msg && <p className="mt-1 text-xs text-red-600">{msg}</p>}
+              {msg && <p className="mt-1 text-xs text-blue-700">{msg}</p>}
 
-              {/* 관계 유형 선택 */}
               {pendingPair && (
                 <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
                   <p className="mb-2 text-xs font-medium text-blue-900 dark:text-blue-100">
-                    “{annoText(annoById.get(pendingPair.from))}” →{" "}
-                    “{annoText(annoById.get(pendingPair.to))}” 의 관계는?
+                    “{annoText(annoById.get(pendingPair.from))}” 와 “
+                    {annoText(annoById.get(pendingPair.to))}” 의 관계는?
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {RELATION_LABELS.map((r) => (
+                    {PAIR_RELATIONS.map((r) => (
                       <button
                         key={r.value}
                         type="button"
@@ -291,7 +408,8 @@ export function ReadingWorkspace({
                         onClick={() => handleAddRelation(r.value)}
                         className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-gray-900 dark:text-blue-300"
                       >
-                        {r.label}
+                        {r.label}{" "}
+                        <span className="text-blue-400">{r.hint}</span>
                       </button>
                     ))}
                     <button
@@ -310,7 +428,6 @@ export function ReadingWorkspace({
             </div>
           )}
 
-          {/* 지문 */}
           <article className="flex flex-col gap-5">
             {paragraphs.map((p) => (
               <div key={p.id}>
@@ -323,6 +440,7 @@ export function ReadingWorkspace({
                   tool={tool}
                   pending={pending}
                   arrowFrom={arrowFrom}
+                  badgesByMark={badgesByMark}
                   onAdd={(s, e) => handleAdd(p.id, s, e)}
                   onErase={handleErase}
                   onPickEndpoint={handlePickEndpoint}
@@ -369,35 +487,30 @@ export function ReadingWorkspace({
                 </p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
-                  {marks.map((a) => {
-                    const t = paraById.get(a.paragraph_id)?.text ?? "";
-                    return (
-                      <li
-                        key={a.id}
-                        className="flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm dark:border-gray-800"
+                  {marks.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm dark:border-gray-800"
+                    >
+                      <span
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                          a.type === "underline" ? "bg-blue-500" : "bg-rose-500"
+                        }`}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">
+                        {annoText(a)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleErase(a.id)}
+                        disabled={pending}
+                        className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                        aria-label="삭제"
                       >
-                        <span
-                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                            a.type === "underline"
-                              ? "bg-blue-500"
-                              : "bg-rose-500"
-                          }`}
-                        />
-                        <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">
-                          {t.slice(a.span_start, a.span_end)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleErase(a.id)}
-                          disabled={pending}
-                          className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
-                          aria-label="삭제"
-                        >
-                          ✕
-                        </button>
-                      </li>
-                    );
-                  })}
+                        ✕
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
@@ -409,38 +522,39 @@ export function ReadingWorkspace({
               </p>
               {relations.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
-                  화살표 도구로 두 표시를 이으면 관계도가 그려져요.
+                  관계 연결·나열 도구로 표시를 이으면 여기에 정리돼요.
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {relations.map((a) => (
                     <li
                       key={a.id}
-                      className="rounded-lg border border-gray-200 p-2.5 text-sm dark:border-gray-800"
+                      className="flex items-start gap-1.5 rounded-lg border border-gray-200 p-2.5 text-sm dark:border-gray-800"
                     >
-                      <div className="flex items-start gap-1.5">
-                        <span className="min-w-0 flex-1">
-                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
-                            {annoText(a) || "(삭제됨)"}
-                          </span>
-                          <span className="mx-1 text-blue-500">
-                            ↓ {relationLabel(a.relation_type)}
-                          </span>
-                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
-                            {annoText(annoById.get(a.target_ref ?? "")) ||
-                              "(삭제됨)"}
-                          </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
+                          {annoText(a) || "(삭제됨)"}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleErase(a.id)}
-                          disabled={pending}
-                          className="shrink-0 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
-                          aria-label="관계 삭제"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                        <span className="mx-1 text-xs font-medium text-blue-600">
+                          {a.relation_type === "compare_contrast"
+                            ? "↔"
+                            : "→"}{" "}
+                          {REL_LABEL[a.relation_type ?? "listing"]}
+                        </span>
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
+                          {annoText(annoById.get(a.target_ref ?? "")) ||
+                            "(삭제됨)"}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleErase(a.id)}
+                        disabled={pending}
+                        className="shrink-0 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                        aria-label="관계 삭제"
+                      >
+                        ✕
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -464,8 +578,9 @@ export function ReadingWorkspace({
               🤖
             </div>
             <div className="min-w-0 rounded-2xl rounded-tl-sm bg-blue-50 px-4 py-2.5 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
-              읽으면서 중요한 부분을 표시해 보세요. 제가 옆에서 보고 있다가
-              필요할 때 도와줄게요. <span className="text-blue-400">(코치 응답 준비 중)</span>
+              읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 제가 옆에서 보고
+              있다가 도와줄게요.{" "}
+              <span className="text-blue-400">(코치 응답 준비 중)</span>
             </div>
           </div>
           <div className="flex items-end gap-2">
@@ -490,13 +605,13 @@ export function ReadingWorkspace({
   );
 }
 
-/** 문단 텍스트를 주석(밑줄/동그라미) 구간에 맞춰 런 단위로 렌더 */
 function AnnotatedParagraph({
   text,
   annos,
   tool,
   pending,
   arrowFrom,
+  badgesByMark,
   onAdd,
   onErase,
   onPickEndpoint,
@@ -506,6 +621,7 @@ function AnnotatedParagraph({
   tool: ToolId | null;
   pending: boolean;
   arrowFrom: string | null;
+  badgesByMark: Map<string, Badge[]>;
   onAdd: (start: number, end: number) => void;
   onErase: (id: string) => void;
   onPickEndpoint: (markId: string) => void;
@@ -551,49 +667,73 @@ function AnnotatedParagraph({
     if (off) onAdd(off.start, off.end);
   }
 
+  const badged = new Set<string>();
+
   return (
     <p
       ref={ref}
       onMouseUp={onSelectEnd}
       onTouchEnd={onSelectEnd}
       className={`whitespace-pre-wrap text-[17px] leading-9 text-gray-800 dark:text-gray-100 ${
-        tool === "underline" || tool === "circle"
-          ? "cursor-text select-text"
-          : ""
+        tool === "underline" || tool === "circle" ? "cursor-text select-text" : ""
       }`}
     >
       {runs.map((r, i) => {
         const marked = r.underline || r.circle;
         const isFrom = arrowFrom != null && r.ids.includes(arrowFrom);
         const clickable =
-          marked && !pending && (tool === "erase" || tool === "arrow");
+          marked &&
+          !pending &&
+          (tool === "erase" || tool === "arrow" || tool === "listing");
         const cls = [
           r.underline
             ? "underline decoration-blue-500 decoration-2 underline-offset-4"
             : "",
-          r.circle
-            ? "rounded-full border-2 border-rose-400 px-1 py-0.5"
-            : "",
+          r.circle ? "rounded-full border-2 border-rose-400 px-1 py-0.5" : "",
           clickable ? "cursor-pointer hover:opacity-70" : "",
           isFrom ? "rounded bg-blue-200/60 ring-2 ring-blue-400" : "",
         ]
           .filter(Boolean)
           .join(" ");
+
+        // 이 런에서 처음 등장하는 표시의 배지 수집
+        const badges: Badge[] = [];
+        for (const id of r.ids) {
+          if (badged.has(id)) continue;
+          const bs = badgesByMark.get(id);
+          if (bs && bs.length) {
+            badges.push(...bs);
+            badged.add(id);
+          }
+        }
+
         return (
-          <span
-            key={i}
-            className={cls || undefined}
-            onClick={
-              clickable
-                ? () => {
-                    if (!r.ids[0]) return;
-                    if (tool === "erase") onErase(r.ids[0]);
-                    else if (tool === "arrow") onPickEndpoint(r.ids[0]);
-                  }
-                : undefined
-            }
-          >
-            {text.slice(r.start, r.end)}
+          <span key={i}>
+            {badges.map((b, k) => (
+              <sup
+                key={k}
+                data-badge
+                className={`mx-0.5 select-none rounded px-1 text-[10px] font-bold ${
+                  TONE[b.tone] ?? TONE.gray
+                }`}
+              >
+                {b.text}
+              </sup>
+            ))}
+            <span
+              className={cls || undefined}
+              onClick={
+                clickable
+                  ? () => {
+                      if (!r.ids[0]) return;
+                      if (tool === "erase") onErase(r.ids[0]);
+                      else onPickEndpoint(r.ids[0]);
+                    }
+                  : undefined
+              }
+            >
+              {text.slice(r.start, r.end)}
+            </span>
           </span>
         );
       })}

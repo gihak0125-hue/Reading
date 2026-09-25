@@ -62,7 +62,9 @@ export async function deleteAnnotation(
 export type RelationType =
   | "compare_contrast"
   | "cause_effect"
+  | "process"
   | "problem_solution"
+  | "question_answer"
   | "listing";
 
 /**
@@ -93,6 +95,7 @@ export async function addRelation(input: {
     span_start: from.span_start,
     span_end: from.span_end,
     type: "arrow",
+    from_ref: input.fromAnnotationId,
     target_ref: input.toAnnotationId,
     relation_type: input.relationType,
   });

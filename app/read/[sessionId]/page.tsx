@@ -37,7 +37,7 @@ export default async function ReadingPage({
   const { data: annotations } = await supabase
     .from("annotations")
     .select(
-      "id, paragraph_id, type, span_start, span_end, target_ref, relation_type",
+      "id, paragraph_id, type, span_start, span_end, target_ref, from_ref, relation_type",
     )
     .eq("session_id", session.id);
 
