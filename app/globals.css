@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #f6f8fc;
   --foreground: #171717;
 }
 
@@ -14,13 +14,67 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #0a0e1a;
     --foreground: #ededed;
   }
 }
 
+/* 항상 화면 전체를 덮는 기본 그라데이션 */
+html {
+  background: linear-gradient(180deg, #eef4ff 0%, #f6f8fc 45%, #ffffff 100%);
+}
+
 body {
-  background: var(--background);
+  position: relative;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* 부드러운 색빛 번짐(모서리마다) — 생기와 동기부여 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(55vw 55vw at 4% -6%, rgba(59, 130, 246, 0.18), transparent 62%),
+    radial-gradient(48vw 48vw at 106% 6%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(58vw 58vw at 104% 106%, rgba(16, 185, 129, 0.14), transparent 62%),
+    radial-gradient(48vw 48vw at -8% 108%, rgba(245, 158, 11, 0.13), transparent 60%);
+}
+
+/* 아주 옅은 점 패턴(공부 노트 느낌), 가장자리로 갈수록 사라짐 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(
+    rgba(79, 70, 229, 0.06) 1px,
+    transparent 1.5px
+  );
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 82%);
+  mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 82%);
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background: linear-gradient(180deg, #0b1122 0%, #0a0e1a 52%, #080a11 100%);
+  }
+  body::before {
+    background:
+      radial-gradient(55vw 55vw at 4% -6%, rgba(59, 130, 246, 0.24), transparent 62%),
+      radial-gradient(48vw 48vw at 106% 6%, rgba(139, 92, 246, 0.22), transparent 60%),
+      radial-gradient(58vw 58vw at 104% 106%, rgba(16, 185, 129, 0.18), transparent 62%),
+      radial-gradient(48vw 48vw at -8% 108%, rgba(245, 158, 11, 0.15), transparent 60%);
+  }
+  body::after {
+    background-image: radial-gradient(
+      rgba(148, 163, 184, 0.07) 1px,
+      transparent 1.5px
+    );
+  }
 }
