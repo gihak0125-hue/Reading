@@ -11,9 +11,9 @@ export default function Home() {
           추론적 독해 AI 에이전트
         </h1>
         <p className="text-base leading-relaxed text-gray-600 dark:text-gray-300">
-          저는 정답부터 찾지 않을게요. 지문을 읽으며 스스로 핵심을 짚고, 정보를
-          잇고, 제 생각을 설명해 볼게요. 막히는 곳은 AI 읽기 코치가 저에게 맞는
-          질문과 힌트로 도와줘요.
+          정답을 먼저 제시하지 않습니다. 지문을 읽으며 스스로 핵심을 찾고, 정보를
+          잇고, 자기 생각을 설명하도록 안내합니다. 막히는 지점은 AI 읽기 코치가
+          학습자에게 맞는 질문과 힌트로 돕습니다.
         </p>
         <div className="mt-2">
           <Link
