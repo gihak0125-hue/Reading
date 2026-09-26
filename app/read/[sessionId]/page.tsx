@@ -17,7 +17,7 @@ export default async function ReadingPage({
 
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, student_id, passage_id")
+    .select("id, student_id, passage_id, status")
     .eq("id", sessionId)
     .single();
   if (!session || session.student_id !== user.id) notFound();
@@ -52,6 +52,7 @@ export default async function ReadingPage({
     <ReadingWorkspace
       sessionId={session.id}
       title={passage.title}
+      status={session.status}
       paragraphs={(paragraphs ?? []) as ParagraphData[]}
       annotations={(annotations ?? []) as AnnotationData[]}
       messages={(messages ?? []) as CoachTurn[]}

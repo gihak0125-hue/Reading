@@ -3,12 +3,20 @@ import { getSessionProfile } from "@/lib/auth";
 import { startSession } from "./actions";
 
 export default async function ReadListPage() {
-  const { supabase } = await getSessionProfile("/read");
+  const { supabase, user } = await getSessionProfile("/read");
 
   const { data: passages } = await supabase
     .from("passages")
     .select("id, title, difficulty, source")
     .order("created_at", { ascending: false });
+
+  const { data: sessions } = await supabase
+    .from("sessions")
+    .select("id, passage_id, status, started_at")
+    .eq("student_id", user.id)
+    .order("started_at", { ascending: false });
+
+  const titleOf = new Map((passages ?? []).map((p) => [p.id, p.title]));
 
   return (
     <main className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-5 py-10">
@@ -52,6 +60,35 @@ export default async function ReadListPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {sessions && sessions.length > 0 && (
+        <section className="mt-4 flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">내 읽기 기록</h2>
+          <ul className="flex flex-col gap-2">
+            {sessions.map((s) => (
+              <li key={s.id}>
+                <Link
+                  href={`/read/${s.id}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 hover:border-blue-400 dark:border-gray-800"
+                >
+                  <span className="min-w-0 truncate">
+                    {titleOf.get(s.passage_id) ?? "지문"}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
+                      s.status === "completed"
+                        ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
+                        : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                    }`}
+                  >
+                    {s.status === "completed" ? "완료" : "이어 읽기"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </main>
   );

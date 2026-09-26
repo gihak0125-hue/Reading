@@ -252,3 +252,25 @@ export async function sendCoachMessage(input: {
   revalidatePath(`/read/${input.sessionId}`);
   return { reply: result.message };
 }
+
+/** 읽기 세션을 완료 표시 */
+export async function completeSession(sessionId: string): Promise<void> {
+  const { supabase } = await requireOwnedSession(sessionId);
+  await supabase
+    .from("sessions")
+    .update({ status: "completed", ended_at: new Date().toISOString() })
+    .eq("id", sessionId);
+  revalidatePath(`/read/${sessionId}`);
+  revalidatePath("/read");
+}
+
+/** 완료한 세션을 다시 진행 중으로 */
+export async function reopenSession(sessionId: string): Promise<void> {
+  const { supabase } = await requireOwnedSession(sessionId);
+  await supabase
+    .from("sessions")
+    .update({ status: "in_progress", ended_at: null })
+    .eq("id", sessionId);
+  revalidatePath(`/read/${sessionId}`);
+  revalidatePath("/read");
+}

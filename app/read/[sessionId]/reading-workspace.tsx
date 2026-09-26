@@ -14,6 +14,8 @@ import {
   deleteAnnotation,
   addRelation,
   sendCoachMessage,
+  completeSession,
+  reopenSession,
 } from "../actions";
 
 export type ParagraphData = { id: string; seq: number; text: string };
@@ -235,12 +237,14 @@ function recognizeSpan(
 export function ReadingWorkspace({
   sessionId,
   title,
+  status,
   paragraphs,
   annotations,
   messages,
 }: {
   sessionId: string;
   title: string;
+  status: string;
   paragraphs: ParagraphData[];
   annotations: AnnotationData[];
   messages: CoachTurn[];
@@ -524,6 +528,17 @@ export function ReadingWorkspace({
     }
   }
 
+  function handleComplete() {
+    startTransition(async () => {
+      await completeSession(sessionId);
+    });
+  }
+  function handleReopen() {
+    startTransition(async () => {
+      await reopenSession(sessionId);
+    });
+  }
+
   function sendCoach(hint: boolean) {
     const text = draft.trim();
     if (!hint && !text) return;
@@ -570,13 +585,34 @@ export function ReadingWorkspace({
             </li>
           ))}
         </ol>
-        <button
-          type="button"
-          onClick={() => setShowTools((v) => !v)}
-          className="shrink-0 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
-        >
-          ✨ AI 읽기 코치
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {status === "completed" ? (
+            <button
+              type="button"
+              onClick={handleReopen}
+              disabled={pending}
+              className="rounded-full border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100 disabled:opacity-60 dark:border-green-800 dark:bg-green-950 dark:text-green-300"
+            >
+              완료됨 ✓ · 다시 읽기
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleComplete}
+              disabled={pending}
+              className="rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              읽기 마치기
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowTools((v) => !v)}
+            className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+          >
+            ✨ AI 읽기 코치
+          </button>
+        </div>
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
