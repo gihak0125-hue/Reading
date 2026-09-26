@@ -166,17 +166,36 @@ function paraOffsetAtPoint(
   return { paraId, offset: offsetInContainer(p, c.node, c.offset) };
 }
 
-/** 화면 좌표에 있는 표시(mark) id */
-function markAtPoint(x: number, y: number): string | null {
+/** 화면 좌표에서 가장 가까운 표시(mark) id (maxDist 이내) */
+function markNearPoint(
+  wrap: HTMLElement,
+  x: number,
+  y: number,
+  maxDist = 44,
+): string | null {
+  // 먼저 정확히 위에 있는지
   const els = document.elementsFromPoint(x, y);
   for (const el of els) {
     const m = (el as HTMLElement).closest?.("[data-marks]") as HTMLElement | null;
-    if (m) {
+    if (m && wrap.contains(m)) {
       const ids = m.getAttribute("data-marks")?.split(" ");
       if (ids && ids[0]) return ids[0];
     }
   }
-  return null;
+  // 없으면 가장 가까운 표시
+  let best: string | null = null;
+  let bestD = maxDist;
+  wrap.querySelectorAll<HTMLElement>("[data-marks]").forEach((el) => {
+    const r = el.getBoundingClientRect();
+    const dx = Math.max(r.left - x, 0, x - r.right);
+    const dy = Math.max(r.top - y, 0, y - r.bottom);
+    const d = Math.hypot(dx, dy);
+    if (d < bestD) {
+      bestD = d;
+      best = el.getAttribute("data-marks")?.split(" ")[0] ?? null;
+    }
+  });
+  return best;
 }
 
 /** 밑줄/동그라미 획 → (문단, 구간) 인식 */
@@ -445,8 +464,12 @@ export function ReadingWorkspace({
     }
 
     if (tool === "arrow" || tool === "listing") {
-      const from = markAtPoint(pts[0].x, pts[0].y);
-      const to = markAtPoint(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      const from = markNearPoint(wrap, pts[0].x, pts[0].y);
+      const to = markNearPoint(
+        wrap,
+        pts[pts.length - 1].x,
+        pts[pts.length - 1].y,
+      );
       if (!from || !to) {
         setMsg("표시(밑줄·동그라미)에서 시작해 다른 표시로 그어 주세요.");
         return;
@@ -473,7 +496,7 @@ export function ReadingWorkspace({
     if (tool === "erase") {
       let target: string | null = null;
       for (const p of pts) {
-        const m = markAtPoint(p.x, p.y);
+        const m = markNearPoint(wrap, p.x, p.y, 24);
         if (m) {
           target = m;
           break;
