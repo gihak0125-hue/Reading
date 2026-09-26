@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type RefObject,
+} from "react";
 import Link from "next/link";
 import {
   addAnnotation,
@@ -43,7 +50,6 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "erase", label: "지우기", glyph: "⌫" },
 ];
 
-// 관계 연결(짝) 유형 — 나열은 별도 도구
 const PAIR_RELATIONS: { value: RelationType; label: string; hint: string }[] = [
   { value: "cause_effect", label: "인과", hint: "→" },
   { value: "process", label: "과정", hint: "→" },
@@ -88,7 +94,6 @@ const REL_COLOR: Record<RelationType, { box: string; accent: string }> = {
 
 const PHASES = ["핵심원리", "관계 연결", "구조화", "자기설명"];
 type PadTab = "key" | "structure" | "explain";
-
 type Badge = { text: string; tone: string };
 const TONE: Record<string, string> = {
   amber: "bg-amber-200 text-amber-900",
@@ -97,6 +102,8 @@ const TONE: Record<string, string> = {
   violet: "bg-violet-200 text-violet-900",
   gray: "bg-gray-300 text-gray-800",
 };
+
+type Pt = { x: number; y: number };
 
 /** 배지([data-badge]) 텍스트를 제외하고 컨테이너 내 오프셋 계산 */
 function offsetInContainer(
@@ -120,23 +127,90 @@ function offsetInContainer(
   return len;
 }
 
-function selectionOffsets(
-  container: HTMLElement,
-): { start: number; end: number } | null {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
-  const range = sel.getRangeAt(0);
-  if (
-    !container.contains(range.startContainer) ||
-    !container.contains(range.endContainer)
-  )
-    return null;
-  const a = offsetInContainer(container, range.startContainer, range.startOffset);
-  const b = offsetInContainer(container, range.endContainer, range.endOffset);
-  const start = Math.min(a, b);
-  const end = Math.max(a, b);
+/** 화면 좌표 → 텍스트 caret 위치 */
+function caretOffset(x: number, y: number): { node: Node; offset: number } | null {
+  const d = document as Document & {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (
+      x: number,
+      y: number,
+    ) => { offsetNode: Node; offset: number } | null;
+  };
+  if (d.caretRangeFromPoint) {
+    const r = d.caretRangeFromPoint(x, y);
+    if (r) return { node: r.startContainer, offset: r.startOffset };
+  }
+  if (d.caretPositionFromPoint) {
+    const p = d.caretPositionFromPoint(x, y);
+    if (p) return { node: p.offsetNode, offset: p.offset };
+  }
+  return null;
+}
+
+/** 화면 좌표 → (문단 id, 문자 오프셋) */
+function paraOffsetAtPoint(
+  wrap: HTMLElement,
+  x: number,
+  y: number,
+): { paraId: string; offset: number } | null {
+  const c = caretOffset(x, y);
+  if (!c) return null;
+  const el =
+    c.node.nodeType === 3
+      ? (c.node.parentElement as HTMLElement | null)
+      : (c.node as HTMLElement);
+  const p = el?.closest("[data-para-id]") as HTMLElement | null;
+  if (!p || !wrap.contains(p)) return null;
+  const paraId = p.getAttribute("data-para-id");
+  if (!paraId) return null;
+  return { paraId, offset: offsetInContainer(p, c.node, c.offset) };
+}
+
+/** 화면 좌표에 있는 표시(mark) id */
+function markAtPoint(x: number, y: number): string | null {
+  const els = document.elementsFromPoint(x, y);
+  for (const el of els) {
+    const m = (el as HTMLElement).closest?.("[data-marks]") as HTMLElement | null;
+    if (m) {
+      const ids = m.getAttribute("data-marks")?.split(" ");
+      if (ids && ids[0]) return ids[0];
+    }
+  }
+  return null;
+}
+
+/** 밑줄/동그라미 획 → (문단, 구간) 인식 */
+function recognizeSpan(
+  wrap: HTMLElement,
+  pts: Pt[],
+  type: "underline" | "circle",
+): { paraId: string; start: number; end: number } | null {
+  const yShifts =
+    type === "underline" ? [-4, -10, -16, -22, 0] : [0, -8, 8, -16];
+  const byPara = new Map<string, number[]>();
+  for (const pt of pts) {
+    for (const dy of yShifts) {
+      const hit = paraOffsetAtPoint(wrap, pt.x, pt.y + dy);
+      if (hit) {
+        const arr = byPara.get(hit.paraId) ?? [];
+        arr.push(hit.offset);
+        byPara.set(hit.paraId, arr);
+        break;
+      }
+    }
+  }
+  let bestPara: string | null = null;
+  let best: number[] = [];
+  for (const [pid, arr] of byPara)
+    if (arr.length > best.length) {
+      best = arr;
+      bestPara = pid;
+    }
+  if (!bestPara || best.length < 1) return null;
+  const start = Math.min(...best);
+  const end = Math.max(...best);
   if (end <= start) return null;
-  return { start, end };
+  return { paraId: bestPara, start, end };
 }
 
 export function ReadingWorkspace({
@@ -156,7 +230,6 @@ export function ReadingWorkspace({
   const [showTools, setShowTools] = useState(true);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
-  const [arrowFrom, setArrowFrom] = useState<string | null>(null);
   const [pendingPair, setPendingPair] = useState<{
     from: string;
     to: string;
@@ -166,32 +239,13 @@ export function ReadingWorkspace({
   const [draft, setDraft] = useState("");
   const [coachPending, startCoach] = useTransition();
   const [coachNote, setCoachNote] = useState<string | null>(null);
+
   const articleRef = useRef<HTMLDivElement>(null);
-
-  const studentTurns = useMemo(
-    () => messages.filter((m) => m.role === "student"),
-    [messages],
-  );
-  const lastAgent = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--)
-      if (messages[i].role === "agent") return messages[i].content;
-    return null;
-  }, [messages]);
-
-  function sendCoach(hint: boolean) {
-    const text = draft.trim();
-    if (!hint && !text) return;
-    setCoachNote(null);
-    startCoach(async () => {
-      const res = await sendCoachMessage({ sessionId, text, hint });
-      if (res.needsKey)
-        setCoachNote(
-          "AI 코치를 켜려면 OpenAI 키가 필요해요. (설명은 저장됐어요)",
-        );
-      else if (res.error) setCoachNote(res.error);
-      else setDraft("");
-    });
-  }
+  const stroke = useRef<{ active: boolean; pts: Pt[] }>({
+    active: false,
+    pts: [],
+  });
+  const [tempPath, setTempPath] = useState("");
 
   const marks = useMemo(
     () => annotations.filter((a) => a.type === "underline" || a.type === "circle"),
@@ -236,7 +290,6 @@ export function ReadingWorkspace({
     return m;
   }, [paragraphs]);
 
-  // 표시별 관계 배지 계산
   const badgesByMark = useMemo(() => {
     const map = new Map<string, Badge[]>();
     const push = (id: string | null, b: Badge) => {
@@ -267,7 +320,6 @@ export function ReadingWorkspace({
         push(to, { text: `${n}↔`, tone: "violet" });
       }
     }
-    // 나열 번호(연결 체인 기준)
     const listing = relations.filter(
       (r) => r.relation_type === "listing" && r.from_ref && r.target_ref,
     );
@@ -295,6 +347,16 @@ export function ReadingWorkspace({
     return map;
   }, [relations]);
 
+  const studentTurns = useMemo(
+    () => messages.filter((m) => m.role === "student"),
+    [messages],
+  );
+  const lastAgent = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--)
+      if (messages[i].role === "agent") return messages[i].content;
+    return null;
+  }, [messages]);
+
   function annoText(a?: AnnotationData | null): string {
     if (!a) return "";
     return (paraById.get(a.paragraph_id)?.text ?? "").slice(
@@ -305,75 +367,14 @@ export function ReadingWorkspace({
 
   function selectTool(id: ToolId) {
     setTool((cur) => (cur === id ? null : id));
-    setArrowFrom(null);
     setPendingPair(null);
-    setMsg(
-      id === "arrow"
-        ? "표시(밑줄·동그라미) 두 개를 차례로 탭해 관계로 이으세요."
-        : id === "listing"
-          ? "나열할 항목들을 순서대로 탭하세요. 1·2·3 번호가 붙어요."
-          : null,
-    );
-  }
-
-  function handleAdd(paragraphId: string, start: number, end: number) {
-    if (tool !== "underline" && tool !== "circle") return;
-    startTransition(async () => {
-      const res = await addAnnotation({
-        sessionId,
-        paragraphId,
-        type: tool,
-        spanStart: start,
-        spanEnd: end,
-      });
-      if (res.error) setMsg(res.error);
-      else {
-        setMsg(null);
-        window.getSelection()?.removeAllRanges();
-      }
-    });
+    setMsg(null);
   }
 
   function handleErase(id: string) {
-    if (arrowFrom === id) setArrowFrom(null);
     startTransition(async () => {
       await deleteAnnotation(id, sessionId);
     });
-  }
-
-  function handlePickEndpoint(markId: string) {
-    if (tool === "arrow") {
-      if (!arrowFrom) {
-        setArrowFrom(markId);
-        setMsg("연결할 두 번째 표시를 탭하세요.");
-      } else if (arrowFrom === markId) {
-        setArrowFrom(null);
-        setMsg(null);
-      } else {
-        setPendingPair({ from: arrowFrom, to: markId });
-        setMsg(null);
-      }
-    } else if (tool === "listing") {
-      if (!arrowFrom) {
-        setArrowFrom(markId);
-        setMsg("다음 항목을 탭하세요.");
-      } else if (arrowFrom === markId) {
-        setArrowFrom(null);
-        setMsg(null);
-      } else {
-        const from = arrowFrom;
-        startTransition(async () => {
-          const res = await addRelation({
-            sessionId,
-            fromAnnotationId: from,
-            toAnnotationId: markId,
-            relationType: "listing",
-          });
-          if (res.error) setMsg(res.error);
-        });
-        setArrowFrom(markId); // 체인 이어가기
-      }
-    }
   }
 
   function handleAddRelation(rt: RelationType) {
@@ -388,7 +389,111 @@ export function ReadingWorkspace({
       });
       if (res.error) setMsg(res.error);
       setPendingPair(null);
-      setArrowFrom(null);
+    });
+  }
+
+  // ── 손그림 처리 ──
+  function onPointerDown(e: React.PointerEvent) {
+    if (!tool) return;
+    articleRef.current?.setPointerCapture?.(e.pointerId);
+    stroke.current = { active: true, pts: [{ x: e.clientX, y: e.clientY }] };
+    setMsg(null);
+    e.preventDefault();
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!stroke.current.active) return;
+    stroke.current.pts.push({ x: e.clientX, y: e.clientY });
+    const wr = articleRef.current?.getBoundingClientRect();
+    if (!wr) return;
+    const d = stroke.current.pts
+      .map(
+        (p, i) =>
+          `${i ? "L" : "M"} ${(p.x - wr.left).toFixed(1)} ${(p.y - wr.top).toFixed(1)}`,
+      )
+      .join(" ");
+    setTempPath(d);
+  }
+  function onPointerUp() {
+    if (!stroke.current.active) return;
+    const pts = stroke.current.pts;
+    stroke.current = { active: false, pts: [] };
+    setTempPath("");
+    handleStroke(pts);
+  }
+
+  function handleStroke(pts: Pt[]) {
+    const wrap = articleRef.current;
+    if (!wrap || pts.length === 0 || !tool) return;
+
+    if (tool === "underline" || tool === "circle") {
+      const span = recognizeSpan(wrap, pts, tool);
+      if (!span) {
+        setMsg("표시할 글자 위를 그어 주세요.");
+        return;
+      }
+      startTransition(async () => {
+        const res = await addAnnotation({
+          sessionId,
+          paragraphId: span.paraId,
+          type: tool,
+          spanStart: span.start,
+          spanEnd: span.end,
+        });
+        if (res.error) setMsg(res.error);
+      });
+      return;
+    }
+
+    if (tool === "arrow" || tool === "listing") {
+      const from = markAtPoint(pts[0].x, pts[0].y);
+      const to = markAtPoint(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      if (!from || !to) {
+        setMsg("표시(밑줄·동그라미)에서 시작해 다른 표시로 그어 주세요.");
+        return;
+      }
+      if (from === to) {
+        setMsg("서로 다른 두 표시를 이어 주세요.");
+        return;
+      }
+      if (tool === "arrow") {
+        setPendingPair({ from, to });
+      } else {
+        startTransition(async () => {
+          await addRelation({
+            sessionId,
+            fromAnnotationId: from,
+            toAnnotationId: to,
+            relationType: "listing",
+          });
+        });
+      }
+      return;
+    }
+
+    if (tool === "erase") {
+      let target: string | null = null;
+      for (const p of pts) {
+        const m = markAtPoint(p.x, p.y);
+        if (m) {
+          target = m;
+          break;
+        }
+      }
+      if (target) handleErase(target);
+      else setMsg("지울 표시 위를 그어 주세요.");
+    }
+  }
+
+  function sendCoach(hint: boolean) {
+    const text = draft.trim();
+    if (!hint && !text) return;
+    setCoachNote(null);
+    startCoach(async () => {
+      const res = await sendCoachMessage({ sessionId, text, hint });
+      if (res.needsKey)
+        setCoachNote("AI 코치를 켜려면 API 키가 필요해요. (설명은 저장됐어요)");
+      else if (res.error) setCoachNote(res.error);
+      else setDraft("");
     });
   }
 
@@ -406,7 +511,6 @@ export function ReadingWorkspace({
           </Link>
           <span className="truncate font-semibold">📄 {title}</span>
         </div>
-
         <ol className="hidden items-center gap-1.5 md:flex">
           {PHASES.map((p, i) => (
             <li key={p} className="flex items-center gap-1.5">
@@ -426,7 +530,6 @@ export function ReadingWorkspace({
             </li>
           ))}
         </ol>
-
         <button
           type="button"
           onClick={() => setShowTools((v) => !v)}
@@ -436,7 +539,6 @@ export function ReadingWorkspace({
         </button>
       </header>
 
-      {/* 본문 + 사고 패드 */}
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
         {/* 본문 */}
         <section className="relative flex-1 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
@@ -475,16 +577,16 @@ export function ReadingWorkspace({
               </div>
               <p className="mt-2 text-xs text-gray-500">
                 {tool === "underline" || tool === "circle"
-                  ? `'${TOOLS.find((t) => t.id === tool)?.label}' 선택됨 — 표시할 글자를 드래그(길게 눌러 선택)하세요.`
-                  : tool === "erase"
-                    ? "'지우기' — 표시를 탭하면 지워집니다."
-                    : tool === "arrow"
-                      ? "'관계 연결' — 표시 두 개를 차례로 탭하세요."
-                      : tool === "listing"
-                        ? "'나열' — 항목들을 순서대로 탭하면 1·2·3 번호가 붙어요."
-                        : "도구를 먼저 선택한 후, 본문에서 표시할 곳을 선택하세요."}
+                  ? `'${TOOLS.find((t) => t.id === tool)?.label}' — 손가락/펜으로 글자 위를 그으면 표시돼요.`
+                  : tool === "arrow"
+                    ? "'관계 연결' — 한 표시에서 다른 표시로 그으면 연결돼요."
+                    : tool === "listing"
+                      ? "'나열' — 항목을 순서대로 이어 그으면 1·2·3 번호가 붙어요."
+                      : tool === "erase"
+                        ? "'지우기' — 표시 위를 그으면 지워져요."
+                        : "도구를 고르면 손으로 그려서 표시할 수 있어요. (도구를 끄면 읽기·스크롤)"}
               </p>
-              {msg && <p className="mt-1 text-xs text-blue-700">{msg}</p>}
+              {msg && <p className="mt-1 text-xs text-red-600">{msg}</p>}
 
               {pendingPair && (
                 <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
@@ -501,16 +603,12 @@ export function ReadingWorkspace({
                         onClick={() => handleAddRelation(r.value)}
                         className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-gray-900 dark:text-blue-300"
                       >
-                        {r.label}{" "}
-                        <span className="text-blue-400">{r.hint}</span>
+                        {r.label} <span className="text-blue-400">{r.hint}</span>
                       </button>
                     ))}
                     <button
                       type="button"
-                      onClick={() => {
-                        setPendingPair(null);
-                        setArrowFrom(null);
-                      }}
+                      onClick={() => setPendingPair(null)}
                       className="rounded-md px-2 py-1.5 text-xs text-gray-500 hover:underline"
                     >
                       취소
@@ -521,32 +619,54 @@ export function ReadingWorkspace({
             </div>
           )}
 
-          <div className="relative" ref={articleRef}>
+          {/* 지문 + 손그림 레이어 */}
+          <div
+            ref={articleRef}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            style={{
+              touchAction: tool ? "none" : undefined,
+              userSelect: tool ? "none" : undefined,
+              WebkitUserSelect: tool ? "none" : undefined,
+              cursor: tool ? "crosshair" : undefined,
+            }}
+            className="relative"
+          >
             <RelationArrows
               containerRef={articleRef}
               relations={arrowRelations}
               depKey={arrowDepKey}
             />
-          <article className="flex flex-col gap-5">
-            {paragraphs.map((p) => (
-              <div key={p.id}>
-                <span className="mb-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800">
-                  {p.seq}문단
-                </span>
-                <AnnotatedParagraph
-                  text={p.text}
-                  annos={marks.filter((a) => a.paragraph_id === p.id)}
-                  tool={tool}
-                  pending={pending}
-                  arrowFrom={arrowFrom}
-                  badgesByMark={badgesByMark}
-                  onAdd={(s, e) => handleAdd(p.id, s, e)}
-                  onErase={handleErase}
-                  onPickEndpoint={handlePickEndpoint}
+            {tempPath && (
+              <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
+                <path
+                  d={tempPath}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity={0.7}
                 />
-              </div>
-            ))}
-          </article>
+              </svg>
+            )}
+            <article className="flex flex-col gap-5">
+              {paragraphs.map((p) => (
+                <div key={p.id}>
+                  <span className="mb-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800">
+                    {p.seq}문단
+                  </span>
+                  <AnnotatedParagraph
+                    paragraphId={p.id}
+                    text={p.text}
+                    annos={marks.filter((a) => a.paragraph_id === p.id)}
+                    badgesByMark={badgesByMark}
+                  />
+                </div>
+              ))}
+            </article>
           </div>
         </section>
 
@@ -622,7 +742,7 @@ export function ReadingWorkspace({
               </p>
               {relations.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
-                  관계 연결·나열 도구로 표시를 이으면 여기에 정리돼요.
+                  관계 연결·나열로 표시를 이으면 여기에 정리돼요.
                 </p>
               ) : (
                 <ul className="flex flex-col gap-3">
@@ -756,28 +876,16 @@ export function ReadingWorkspace({
 }
 
 function AnnotatedParagraph({
+  paragraphId,
   text,
   annos,
-  tool,
-  pending,
-  arrowFrom,
   badgesByMark,
-  onAdd,
-  onErase,
-  onPickEndpoint,
 }: {
+  paragraphId: string;
   text: string;
   annos: AnnotationData[];
-  tool: ToolId | null;
-  pending: boolean;
-  arrowFrom: string | null;
   badgesByMark: Map<string, Badge[]>;
-  onAdd: (start: number, end: number) => void;
-  onErase: (id: string) => void;
-  onPickEndpoint: (markId: string) => void;
 }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-
   const runs = useMemo(() => {
     const len = text.length;
     const cuts = new Set<number>([0, len]);
@@ -809,44 +917,23 @@ function AnnotatedParagraph({
     return out;
   }, [text, annos]);
 
-  function onSelectEnd() {
-    if (tool !== "underline" && tool !== "circle") return;
-    const el = ref.current;
-    if (!el) return;
-    const off = selectionOffsets(el);
-    if (off) onAdd(off.start, off.end);
-  }
-
   const badged = new Set<string>();
 
   return (
     <p
-      ref={ref}
-      onMouseUp={onSelectEnd}
-      onTouchEnd={onSelectEnd}
-      className={`whitespace-pre-wrap text-[17px] leading-9 text-gray-800 dark:text-gray-100 ${
-        tool === "underline" || tool === "circle" ? "cursor-text select-text" : ""
-      }`}
+      data-para-id={paragraphId}
+      className="whitespace-pre-wrap text-[17px] leading-9 text-gray-800 dark:text-gray-100"
     >
       {runs.map((r, i) => {
-        const marked = r.underline || r.circle;
-        const isFrom = arrowFrom != null && r.ids.includes(arrowFrom);
-        const clickable =
-          marked &&
-          !pending &&
-          (tool === "erase" || tool === "arrow" || tool === "listing");
         const cls = [
           r.underline
             ? "underline decoration-blue-500 decoration-2 underline-offset-4"
             : "",
           r.circle ? "rounded-full border-2 border-rose-400 px-1 py-0.5" : "",
-          clickable ? "cursor-pointer hover:opacity-70" : "",
-          isFrom ? "rounded bg-blue-200/60 ring-2 ring-blue-400" : "",
         ]
           .filter(Boolean)
           .join(" ");
 
-        // 이 런에서 처음 등장하는 표시의 배지 수집
         const badges: Badge[] = [];
         for (const id of r.ids) {
           if (badged.has(id)) continue;
@@ -873,15 +960,6 @@ function AnnotatedParagraph({
             <span
               className={cls || undefined}
               data-marks={r.ids.length ? r.ids.join(" ") : undefined}
-              onClick={
-                clickable
-                  ? () => {
-                      if (!r.ids[0]) return;
-                      if (tool === "erase") onErase(r.ids[0]);
-                      else onPickEndpoint(r.ids[0]);
-                    }
-                  : undefined
-              }
             >
               {text.slice(r.start, r.end)}
             </span>
@@ -892,13 +970,13 @@ function AnnotatedParagraph({
   );
 }
 
-/** 연결한 표시들 사이에 본문 위로 곡선 화살표를 그린다(인과·과정=한방향, 비교대조=양방향) */
+/** 연결한 표시들 사이에 본문 위로 곡선 화살표 (인과·과정=한방향, 비교대조=양방향) */
 function RelationArrows({
   containerRef,
   relations,
   depKey,
 }: {
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  containerRef: RefObject<HTMLDivElement | null>;
   relations: AnnotationData[];
   depKey: string;
 }) {
@@ -957,7 +1035,7 @@ function RelationArrows({
         if (py > 0) {
           px = -px;
           py = -py;
-        } // 항상 위로 볼록하게
+        }
         const cx = mx + px * off;
         const cy = my + py * off;
         const d = `M ${fx.toFixed(1)} ${(fy - 3).toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${tx.toFixed(1)} ${(ty - 3).toFixed(1)}`;
@@ -971,7 +1049,6 @@ function RelationArrows({
       setPaths(out);
     };
 
-    // 폰트/레이아웃 안정화 후 측정
     const raf = requestAnimationFrame(compute);
     const ro = new ResizeObserver(compute);
     ro.observe(wrap);
@@ -1036,18 +1113,5 @@ function RelationArrows({
         />
       ))}
     </svg>
-  );
-}
-
-function PadEmpty({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div>
-      <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-        {title}
-      </p>
-      <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
-        {hint}
-      </p>
-    </div>
   );
 }
