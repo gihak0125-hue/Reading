@@ -59,6 +59,32 @@ const REL_LABEL: Record<RelationType, string> = {
   question_answer: "문답",
   listing: "나열",
 };
+const REL_COLOR: Record<RelationType, { box: string; accent: string }> = {
+  cause_effect: {
+    box: "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100",
+    accent: "text-blue-600 dark:text-blue-300",
+  },
+  process: {
+    box: "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100",
+    accent: "text-blue-600 dark:text-blue-300",
+  },
+  compare_contrast: {
+    box: "border-violet-300 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-100",
+    accent: "text-violet-600 dark:text-violet-300",
+  },
+  problem_solution: {
+    box: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100",
+    accent: "text-amber-600 dark:text-amber-300",
+  },
+  question_answer: {
+    box: "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100",
+    accent: "text-emerald-600 dark:text-emerald-300",
+  },
+  listing: {
+    box: "border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100",
+    accent: "text-gray-500 dark:text-gray-400",
+  },
+};
 
 const PHASES = ["핵심원리", "관계 연결", "구조화", "자기설명"];
 type PadTab = "key" | "structure" | "explain";
@@ -567,38 +593,49 @@ export function ReadingWorkspace({
                   관계 연결·나열 도구로 표시를 이으면 여기에 정리돼요.
                 </p>
               ) : (
-                <ul className="flex flex-col gap-2">
-                  {relations.map((a) => (
-                    <li
-                      key={a.id}
-                      className="flex items-start gap-1.5 rounded-lg border border-gray-200 p-2.5 text-sm dark:border-gray-800"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
-                          {annoText(a) || "(삭제됨)"}
-                        </span>
-                        <span className="mx-1 text-xs font-medium text-blue-600">
-                          {a.relation_type === "compare_contrast"
-                            ? "↔"
-                            : "→"}{" "}
-                          {REL_LABEL[a.relation_type ?? "listing"]}
-                        </span>
-                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
-                          {annoText(annoById.get(a.target_ref ?? "")) ||
-                            "(삭제됨)"}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleErase(a.id)}
-                        disabled={pending}
-                        className="shrink-0 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
-                        aria-label="관계 삭제"
+                <ul className="flex flex-col gap-3">
+                  {relations.map((a) => {
+                    const rt = a.relation_type ?? "listing";
+                    const c = REL_COLOR[rt];
+                    const twoway = rt === "compare_contrast";
+                    return (
+                      <li
+                        key={a.id}
+                        className="relative rounded-xl border border-gray-200 p-3 dark:border-gray-800"
                       >
-                        ✕
-                      </button>
-                    </li>
-                  ))}
+                        <button
+                          type="button"
+                          onClick={() => handleErase(a.id)}
+                          disabled={pending}
+                          className="absolute right-1.5 top-1.5 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                          aria-label="관계 삭제"
+                        >
+                          ✕
+                        </button>
+                        <div className="flex flex-col items-center gap-1 text-center">
+                          <div
+                            className={`w-full rounded-lg border px-2.5 py-1.5 text-xs font-medium ${c.box}`}
+                          >
+                            {annoText(a) || "(삭제됨)"}
+                          </div>
+                          <div
+                            className={`flex items-center gap-1 text-xs font-bold ${c.accent}`}
+                          >
+                            <span className="text-base leading-none">
+                              {twoway ? "↕" : "↓"}
+                            </span>
+                            {REL_LABEL[rt]}
+                          </div>
+                          <div
+                            className={`w-full rounded-lg border px-2.5 py-1.5 text-xs font-medium ${c.box}`}
+                          >
+                            {annoText(annoById.get(a.target_ref ?? "")) ||
+                              "(삭제됨)"}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
