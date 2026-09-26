@@ -4,6 +4,7 @@ import {
   ReadingWorkspace,
   type ParagraphData,
   type AnnotationData,
+  type CoachTurn,
 } from "./reading-workspace";
 
 export default async function ReadingPage({
@@ -41,12 +42,19 @@ export default async function ReadingPage({
     )
     .eq("session_id", session.id);
 
+  const { data: messages } = await supabase
+    .from("agent_messages")
+    .select("id, role, content, created_at")
+    .eq("session_id", session.id)
+    .order("created_at", { ascending: true });
+
   return (
     <ReadingWorkspace
       sessionId={session.id}
       title={passage.title}
       paragraphs={(paragraphs ?? []) as ParagraphData[]}
       annotations={(annotations ?? []) as AnnotationData[]}
+      messages={(messages ?? []) as CoachTurn[]}
     />
   );
 }

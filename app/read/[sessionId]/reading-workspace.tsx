@@ -2,9 +2,20 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { addAnnotation, deleteAnnotation, addRelation } from "../actions";
+import {
+  addAnnotation,
+  deleteAnnotation,
+  addRelation,
+  sendCoachMessage,
+} from "../actions";
 
 export type ParagraphData = { id: string; seq: number; text: string };
+export type CoachTurn = {
+  id: string;
+  role: "student" | "agent";
+  content: string;
+  created_at: string;
+};
 export type RelationType =
   | "compare_contrast"
   | "cause_effect"
@@ -107,11 +118,13 @@ export function ReadingWorkspace({
   title,
   paragraphs,
   annotations,
+  messages,
 }: {
   sessionId: string;
   title: string;
   paragraphs: ParagraphData[];
   annotations: AnnotationData[];
+  messages: CoachTurn[];
 }) {
   const [tool, setTool] = useState<ToolId | null>(null);
   const [showTools, setShowTools] = useState(true);
@@ -123,6 +136,35 @@ export function ReadingWorkspace({
     to: string;
   } | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const [draft, setDraft] = useState("");
+  const [coachPending, startCoach] = useTransition();
+  const [coachNote, setCoachNote] = useState<string | null>(null);
+
+  const studentTurns = useMemo(
+    () => messages.filter((m) => m.role === "student"),
+    [messages],
+  );
+  const lastAgent = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--)
+      if (messages[i].role === "agent") return messages[i].content;
+    return null;
+  }, [messages]);
+
+  function sendCoach(hint: boolean) {
+    const text = draft.trim();
+    if (!hint && !text) return;
+    setCoachNote(null);
+    startCoach(async () => {
+      const res = await sendCoachMessage({ sessionId, text, hint });
+      if (res.needsKey)
+        setCoachNote(
+          "AI 코치를 켜려면 OpenAI 키가 필요해요. (설명은 저장됐어요)",
+        );
+      else if (res.error) setCoachNote(res.error);
+      else setDraft("");
+    });
+  }
 
   const marks = useMemo(
     () => annotations.filter((a) => a.type === "underline" || a.type === "circle"),
@@ -562,39 +604,78 @@ export function ReadingWorkspace({
             </div>
           )}
           {tab === "explain" && (
-            <PadEmpty
-              title="내 설명"
-              hint="AI 코치의 질문에 답한 내용이 여기에 쌓여요. (곧 추가)"
-            />
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                내 설명 {studentTurns.length > 0 && `(${studentTurns.length})`}
+              </p>
+              {studentTurns.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
+                  아래 코치 입력창에 내 생각을 쓰면 여기에 쌓여요.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {studentTurns.map((m) => (
+                    <li
+                      key={m.id}
+                      className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-300"
+                    >
+                      {m.content}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
         </aside>
       </div>
 
       {/* AI 읽기 코치 바 */}
       <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-4 md:flex-row md:items-center">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-4 md:flex-row md:items-end">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-100 text-lg dark:bg-blue-950">
               🤖
             </div>
-            <div className="min-w-0 rounded-2xl rounded-tl-sm bg-blue-50 px-4 py-2.5 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
-              읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 제가 옆에서 보고
-              있다가 도와줄게요.{" "}
-              <span className="text-blue-400">(코치 응답 준비 중)</span>
+            <div className="min-w-0">
+              <div className="rounded-2xl rounded-tl-sm bg-blue-50 px-4 py-2.5 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
+                {coachPending
+                  ? "생각 중이에요…"
+                  : (lastAgent ??
+                    "읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 궁금한 점이나 내 생각을 아래에 적어줘요.")}
+              </div>
+              {coachNote && (
+                <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
+              )}
+              <button
+                type="button"
+                onClick={() => sendCoach(true)}
+                disabled={coachPending}
+                className="mt-1 rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-950"
+              >
+                💡 힌트
+              </button>
             </div>
           </div>
           <div className="flex items-end gap-2">
             <textarea
-              rows={1}
+              rows={2}
               maxLength={300}
-              disabled
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendCoach(false);
+                }
+              }}
               placeholder="내 설명 입력 (예: … 때문에 … 라고 생각합니다.)"
-              className="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 md:w-72"
+              className="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 md:w-72"
             />
             <button
               type="button"
-              disabled
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              onClick={() => sendCoach(false)}
+              disabled={coachPending || !draft.trim()}
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               보내기
             </button>
