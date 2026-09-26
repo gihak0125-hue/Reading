@@ -52,7 +52,7 @@
 - [x] 코치 바 작동(입력/보내기/힌트), 내 설명 탭, 키 없으면 안내
 - [ ] 0005 적용(agent_messages insert RLS) + '내 설명 저장' 검증 (사용자)
 - [x] LLM 제공자 교체 가능(OpenAI 호환): 기본 **Upstage Solar**(교사 무료, 한국어) — base_url + solar-pro4
-- [ ] **Upstage API 키 발급 → .env.local 에 넣고 AI 응답 검증** (사용자)
+- [x] **AI 코치 실제 작동 검증 완료** ✅ (OpenAI gpt-4o-mini, 결제 활성). 정답 즉답 없이 되묻기·힌트 정상.
 - [ ] AI 코치 바(질문·힌트·설명 입력) — 실제 코칭은 M3(OpenAI)
 
 ## 중요 제약
