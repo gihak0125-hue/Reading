@@ -253,6 +253,7 @@ export function ReadingWorkspace({
     from: string;
     to: string;
   } | null>(null);
+  const [listingLast, setListingLast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const [draft, setDraft] = useState("");
@@ -387,6 +388,7 @@ export function ReadingWorkspace({
   function selectTool(id: ToolId) {
     setTool((cur) => (cur === id ? null : id));
     setPendingPair(null);
+    setListingLast(null);
     setMsg(null);
   }
 
@@ -463,7 +465,33 @@ export function ReadingWorkspace({
       return;
     }
 
-    if (tool === "arrow" || tool === "listing") {
+    if (tool === "listing") {
+      // 항목을 순서대로 탭 → 번호 매기기
+      const mid = pts[Math.floor(pts.length / 2)] ?? pts[0];
+      const target =
+        markNearPoint(wrap, mid.x, mid.y) ??
+        markNearPoint(wrap, pts[0].x, pts[0].y);
+      if (!target) {
+        setMsg("번호를 매길 표시(밑줄·동그라미)를 탭하세요.");
+        return;
+      }
+      if (listingLast && listingLast !== target) {
+        const from = listingLast;
+        startTransition(async () => {
+          await addRelation({
+            sessionId,
+            fromAnnotationId: from,
+            toAnnotationId: target,
+            relationType: "listing",
+          });
+        });
+      }
+      setListingLast(target);
+      setMsg("다음 항목을 탭하세요. (도구를 바꾸면 나열 끝)");
+      return;
+    }
+
+    if (tool === "arrow") {
       const from = markNearPoint(wrap, pts[0].x, pts[0].y);
       const to = markNearPoint(
         wrap,
@@ -478,18 +506,7 @@ export function ReadingWorkspace({
         setMsg("서로 다른 두 표시를 이어 주세요.");
         return;
       }
-      if (tool === "arrow") {
-        setPendingPair({ from, to });
-      } else {
-        startTransition(async () => {
-          await addRelation({
-            sessionId,
-            fromAnnotationId: from,
-            toAnnotationId: to,
-            relationType: "listing",
-          });
-        });
-      }
+      setPendingPair({ from, to });
       return;
     }
 
@@ -604,7 +621,7 @@ export function ReadingWorkspace({
                   : tool === "arrow"
                     ? "'관계 연결' — 한 표시에서 다른 표시로 그으면 연결돼요."
                     : tool === "listing"
-                      ? "'나열' — 항목을 순서대로 이어 그으면 1·2·3 번호가 붙어요."
+                      ? "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요."
                       : tool === "erase"
                         ? "'지우기' — 표시 위를 그으면 지워져요."
                         : "도구를 고르면 손으로 그려서 표시할 수 있어요. (도구를 끄면 읽기·스크롤)"}
