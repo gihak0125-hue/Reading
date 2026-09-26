@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   addAnnotation,
@@ -166,6 +166,7 @@ export function ReadingWorkspace({
   const [draft, setDraft] = useState("");
   const [coachPending, startCoach] = useTransition();
   const [coachNote, setCoachNote] = useState<string | null>(null);
+  const articleRef = useRef<HTMLDivElement>(null);
 
   const studentTurns = useMemo(
     () => messages.filter((m) => m.role === "student"),
@@ -199,6 +200,30 @@ export function ReadingWorkspace({
   const relations = useMemo(
     () => annotations.filter((a) => a.type === "arrow"),
     [annotations],
+  );
+  const arrowRelations = useMemo(
+    () =>
+      relations.filter(
+        (r) =>
+          r.relation_type === "cause_effect" ||
+          r.relation_type === "process" ||
+          r.relation_type === "compare_contrast",
+      ),
+    [relations],
+  );
+  const arrowDepKey = useMemo(
+    () =>
+      JSON.stringify(
+        arrowRelations.map((r) => [
+          r.id,
+          r.from_ref,
+          r.target_ref,
+          r.relation_type,
+        ]),
+      ) +
+      "|" +
+      annotations.map((a) => `${a.id}:${a.span_start}:${a.span_end}`).join(","),
+    [arrowRelations, annotations],
   );
   const annoById = useMemo(() => {
     const m = new Map<string, AnnotationData>();
@@ -496,6 +521,12 @@ export function ReadingWorkspace({
             </div>
           )}
 
+          <div className="relative" ref={articleRef}>
+            <RelationArrows
+              containerRef={articleRef}
+              relations={arrowRelations}
+              depKey={arrowDepKey}
+            />
           <article className="flex flex-col gap-5">
             {paragraphs.map((p) => (
               <div key={p.id}>
@@ -516,6 +547,7 @@ export function ReadingWorkspace({
               </div>
             ))}
           </article>
+          </div>
         </section>
 
         {/* 사고 패드 */}
@@ -840,6 +872,7 @@ function AnnotatedParagraph({
             ))}
             <span
               className={cls || undefined}
+              data-marks={r.ids.length ? r.ids.join(" ") : undefined}
               onClick={
                 clickable
                   ? () => {
@@ -856,6 +889,153 @@ function AnnotatedParagraph({
         );
       })}
     </p>
+  );
+}
+
+/** 연결한 표시들 사이에 본문 위로 곡선 화살표를 그린다(인과·과정=한방향, 비교대조=양방향) */
+function RelationArrows({
+  containerRef,
+  relations,
+  depKey,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  relations: AnnotationData[];
+  depKey: string;
+}) {
+  const [paths, setPaths] = useState<
+    { id: string; d: string; tone: "blue" | "violet"; twoway: boolean }[]
+  >([]);
+
+  useEffect(() => {
+    const wrap = containerRef.current;
+    if (!wrap) return;
+
+    const rectOf = (markId: string | null) => {
+      if (!markId) return null;
+      const els = wrap.querySelectorAll<HTMLElement>(
+        `[data-marks~="${markId}"]`,
+      );
+      if (!els.length) return null;
+      let x1 = Infinity,
+        y1 = Infinity,
+        x2 = -Infinity,
+        y2 = -Infinity;
+      els.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        x1 = Math.min(x1, r.left);
+        y1 = Math.min(y1, r.top);
+        x2 = Math.max(x2, r.right);
+        y2 = Math.max(y2, r.bottom);
+      });
+      return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+    };
+
+    const compute = () => {
+      const wr = wrap.getBoundingClientRect();
+      const out: {
+        id: string;
+        d: string;
+        tone: "blue" | "violet";
+        twoway: boolean;
+      }[] = [];
+      for (const r of relations) {
+        const fr = rectOf(r.from_ref);
+        const tr = rectOf(r.target_ref);
+        if (!fr || !tr) continue;
+        const fx = fr.x + fr.w / 2 - wr.left;
+        const fy = fr.y - wr.top;
+        const tx = tr.x + tr.w / 2 - wr.left;
+        const ty = tr.y - wr.top;
+        const mx = (fx + tx) / 2;
+        const my = (fy + ty) / 2;
+        const dx = tx - fx;
+        const dy = ty - fy;
+        const len = Math.hypot(dx, dy) || 1;
+        const off = Math.min(48, len * 0.35) + 10;
+        let px = -dy / len;
+        let py = dx / len;
+        if (py > 0) {
+          px = -px;
+          py = -py;
+        } // 항상 위로 볼록하게
+        const cx = mx + px * off;
+        const cy = my + py * off;
+        const d = `M ${fx.toFixed(1)} ${(fy - 3).toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${tx.toFixed(1)} ${(ty - 3).toFixed(1)}`;
+        out.push({
+          id: r.id,
+          d,
+          tone: r.relation_type === "compare_contrast" ? "violet" : "blue",
+          twoway: r.relation_type === "compare_contrast",
+        });
+      }
+      setPaths(out);
+    };
+
+    // 폰트/레이아웃 안정화 후 측정
+    const raf = requestAnimationFrame(compute);
+    const ro = new ResizeObserver(compute);
+    ro.observe(wrap);
+    window.addEventListener("resize", compute);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener("resize", compute);
+    };
+  }, [containerRef, relations, depKey]);
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+      aria-hidden
+    >
+      <defs>
+        <marker
+          id="ah-blue"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+        >
+          <path d="M0,0 L10,5 L0,10 z" fill="#2563eb" />
+        </marker>
+        <marker
+          id="ah-violet"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto"
+        >
+          <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed" />
+        </marker>
+        <marker
+          id="ah-violet-start"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed" />
+        </marker>
+      </defs>
+      {paths.map((p) => (
+        <path
+          key={p.id}
+          d={p.d}
+          fill="none"
+          stroke={p.tone === "blue" ? "#2563eb" : "#7c3aed"}
+          strokeWidth={2}
+          strokeOpacity={0.85}
+          markerEnd={`url(#ah-${p.tone})`}
+          markerStart={p.twoway ? "url(#ah-violet-start)" : undefined}
+        />
+      ))}
+    </svg>
   );
 }
 
