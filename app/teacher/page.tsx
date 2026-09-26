@@ -23,16 +23,16 @@ export default async function TeacherPage() {
         </div>
         <div className="flex gap-2">
           <Link
+            href="/teacher/classes"
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+          >
+            학급 관리
+          </Link>
+          <Link
             href="/teacher/activity"
             className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             학생 활동
-          </Link>
-          <Link
-            href="/dashboard"
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
-          >
-            대시보드
           </Link>
         </div>
       </header>

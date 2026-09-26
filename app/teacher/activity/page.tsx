@@ -17,8 +17,17 @@ export default async function ActivityPage() {
   const [{ data: profiles }, { data: passages }, { data: annos }, { data: msgs }] =
     await Promise.all([
       studentIds.length
-        ? supabase.from("profiles").select("id, display_name").in("id", studentIds)
-        : Promise.resolve({ data: [] as { id: string; display_name: string | null }[] }),
+        ? supabase
+            .from("profiles")
+            .select("id, display_name, class_id")
+            .in("id", studentIds)
+        : Promise.resolve({
+            data: [] as {
+              id: string;
+              display_name: string | null;
+              class_id: string | null;
+            }[],
+          }),
       passageIds.length
         ? supabase.from("passages").select("id, title").in("id", passageIds)
         : Promise.resolve({ data: [] as { id: string; title: string }[] }),
@@ -31,6 +40,14 @@ export default async function ActivityPage() {
     ]);
 
   const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const classIdOf = new Map((profiles ?? []).map((p) => [p.id, p.class_id]));
+  const classIds = [
+    ...new Set((profiles ?? []).map((p) => p.class_id).filter(Boolean)),
+  ] as string[];
+  const { data: classes } = classIds.length
+    ? await supabase.from("classes").select("id, name").in("id", classIds)
+    : { data: [] as { id: string; name: string }[] };
+  const classNameOf = new Map((classes ?? []).map((c) => [c.id, c.name]));
   const titleOf = new Map((passages ?? []).map((p) => [p.id, p.title]));
   const marksCount = new Map<string, number>();
   const relCount = new Map<string, number>();
@@ -71,6 +88,7 @@ export default async function ActivityPage() {
             <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900">
               <tr>
                 <th className="px-4 py-2.5">학생</th>
+                <th className="px-4 py-2.5">학급</th>
                 <th className="px-4 py-2.5">지문</th>
                 <th className="px-4 py-2.5 text-center">표시</th>
                 <th className="px-4 py-2.5 text-center">관계</th>
@@ -87,6 +105,9 @@ export default async function ActivityPage() {
                 >
                   <td className="px-4 py-2.5">
                     {nameOf.get(s.student_id) ?? "학생"}
+                  </td>
+                  <td className="px-4 py-2.5 text-gray-500">
+                    {classNameOf.get(classIdOf.get(s.student_id) ?? "") ?? "—"}
                   </td>
                   <td className="px-4 py-2.5">
                     {titleOf.get(s.passage_id) ?? "(지문)"}

@@ -51,13 +51,25 @@ export default async function DashboardPage() {
               title="학생 활동"
               desc="학생이 표시·연결한 내용과 자기설명을 확인합니다."
             />
+            <Card
+              href="/teacher/classes"
+              title="학급 관리"
+              desc="학급을 만들고 참여코드를 학생에게 나눠줍니다."
+            />
           </>
         ) : (
-          <Card
-            href="/read"
-            title="읽기 시작"
-            desc="지문을 골라 추론적 독해를 시작합니다."
-          />
+          <>
+            <Card
+              href="/read"
+              title="읽기 시작"
+              desc="지문을 골라 추론적 독해를 시작합니다."
+            />
+            <Card
+              href="/join"
+              title="학급 참여"
+              desc="선생님이 준 참여코드로 우리 반에 들어갑니다."
+            />
+          </>
         )}
         <Card
           href="/"
