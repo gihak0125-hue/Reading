@@ -49,7 +49,8 @@
 - [x] sendCoachMessage 액션: 학생 설명 저장 + 컨텍스트(지문/표시/관계/이력) → OpenAI → 응답 저장
 - [x] 코치 바 작동(입력/보내기/힌트), 내 설명 탭, 키 없으면 안내
 - [ ] 0005 적용(agent_messages insert RLS) + '내 설명 저장' 검증 (사용자)
-- [ ] **OpenAI 키 발급 → AI 응답 활성화·검증** (사용자, 결제 필요)
+- [x] LLM 제공자 교체 가능(OpenAI 호환): 기본 **Upstage Solar**(교사 무료, 한국어) — base_url + solar-pro4
+- [ ] **Upstage API 키 발급 → .env.local 에 넣고 AI 응답 검증** (사용자)
 - [ ] AI 코치 바(질문·힌트·설명 입력) — 실제 코칭은 M3(OpenAI)
 
 ## 중요 제약
