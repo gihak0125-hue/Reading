@@ -40,16 +40,23 @@ export default async function DashboardPage() {
 
       <section className="grid gap-4 sm:grid-cols-2">
         {role === "teacher" ? (
-          <Card
-            href="/teacher"
-            title="지문 관리"
-            desc="추론적 독해 지문을 등록하고 핵심정보를 태깅합니다."
-          />
+          <>
+            <Card
+              href="/teacher"
+              title="지문 관리"
+              desc="추론적 독해 지문을 등록하고 핵심정보를 태깅합니다."
+            />
+            <Card
+              href="/teacher/activity"
+              title="학생 활동"
+              desc="학생이 표시·연결한 내용과 자기설명을 확인합니다."
+            />
+          </>
         ) : (
           <Card
             href="/read"
             title="읽기 시작"
-            desc="지문을 골라 5단계 추론적 독해를 시작합니다."
+            desc="지문을 골라 추론적 독해를 시작합니다."
           />
         )}
         <Card
