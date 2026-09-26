@@ -11,9 +11,9 @@ export default function Home() {
           추론적 독해 AI 에이전트
         </h1>
         <p className="text-base leading-relaxed text-gray-600 dark:text-gray-300">
-          정답을 먼저 알려주지 않습니다. 스스로 핵심 정보를 찾고, 관계를 잇고,
-          글의 구조를 추론하고, 자기설명하도록 돕습니다. 막힌 지점을 진단해
-          너에게 맞는 힌트를 제공합니다.
+          정답을 먼저 알려주지 않습니다. 지문을 읽으며 스스로 핵심 정보를 찾고,
+          관계를 잇고, 자기 생각을 설명하도록 돕습니다. AI 읽기 코치가 막힌
+          지점을 살펴 너에게 맞는 질문과 힌트를 건넵니다.
         </p>
         <div className="mt-2">
           <Link
@@ -26,33 +26,35 @@ export default function Home() {
       </header>
 
       <section className="rounded-xl border border-gray-200 p-6 dark:border-gray-800">
-        <h2 className="mb-4 text-lg font-semibold">읽기 5단계</h2>
-        <ol className="flex flex-col gap-3 text-sm text-gray-700 dark:text-gray-300">
+        <h2 className="mb-4 text-lg font-semibold">이렇게 읽어요</h2>
+        <ul className="flex flex-col gap-3 text-sm text-gray-700 dark:text-gray-300">
           <li>
-            <span className="font-semibold">1. 핵심정보 선별</span> — 문단에서
-            핵심어·핵심문장을 직접 표시
+            <span className="font-semibold">✍️ 손으로 표시</span> — 손가락·펜으로
+            핵심어에 밑줄·동그라미
           </li>
           <li>
-            <span className="font-semibold">2. 관계 연결</span> — 관련 정보를
-            화살표로 잇고 관계 유형 판단
+            <span className="font-semibold">🔗 관계 잇기</span> — 정보를 화살표로
+            연결하고 관계 유형(인과·비교대조·문제해결·나열) 판단
           </li>
           <li>
-            <span className="font-semibold">3. 구조 추론</span> — 글의 조직
-            방식과 논지 흐름 파악
+            <span className="font-semibold">💬 자기설명</span> — 정답 확인 전에 내
+            말로 먼저 설명
           </li>
           <li>
-            <span className="font-semibold">4. 자기설명</span> — 정답 확인 전에
-            내 말로 먼저 설명
+            <span className="font-semibold">🤖 AI 읽기 코치</span> — 정답 대신
+            되묻고, 막힐 때 힌트로 도와줌
           </li>
-          <li>
-            <span className="font-semibold">5. 독해 확인</span> — 중심 내용과
-            암묵적 관계 점검
-          </li>
-        </ol>
+        </ul>
+        <p className="mt-4 text-xs text-gray-400">
+          정해진 순서는 없어요. 쭉 읽어 나가며 자유롭게 표시하면 됩니다.
+        </p>
       </section>
 
-      <footer className="mt-auto text-sm text-gray-500 dark:text-gray-400">
-        초기 스캐폴딩(M1). 로그인·지문·에이전트 기능은 준비 중입니다.
+      <footer className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+        <span>학생은 지문을 읽고 표시하며, 교사는 활동을 확인합니다.</span>
+        <Link href="/login" className="text-blue-600 hover:underline dark:text-blue-400">
+          시작하기 →
+        </Link>
       </footer>
     </main>
   );
