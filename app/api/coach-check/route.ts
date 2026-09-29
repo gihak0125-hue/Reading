@@ -17,7 +17,7 @@ export async function GET() {
       messages: [{ role: "user", content: "hi" }],
       max_tokens: 1,
     });
-    return NextResponse.json({ ok: true, model: res.model, ...info });
+    return NextResponse.json({ ok: true, actualModel: res.model, ...info });
   } catch (e) {
     const err = e as { name?: string; status?: number; message?: string };
     return NextResponse.json({
