@@ -617,7 +617,7 @@ export function ReadingWorkspace({
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
         {/* 본문 */}
-        <section className="relative flex-1 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+        <section className="relative flex-1 rounded-2xl border border-white/60 bg-white/90 p-5 shadow-xl shadow-blue-200/20 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/80 dark:shadow-black/30">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">📖 본문</h2>
             <button
@@ -747,7 +747,7 @@ export function ReadingWorkspace({
         </section>
 
         {/* 사고 패드 */}
-        <aside className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950 lg:w-[340px] lg:shrink-0">
+        <aside className="rounded-2xl border border-white/60 bg-white/85 p-5 shadow-xl shadow-blue-200/20 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/75 dark:shadow-black/30 lg:w-[340px] lg:shrink-0">
           <h2 className="mb-3 font-semibold">📝 사고 패드</h2>
           <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1 text-sm dark:bg-gray-800">
             {(

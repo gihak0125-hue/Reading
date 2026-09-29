@@ -25,7 +25,7 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="rounded-xl border border-gray-200 p-6 dark:border-gray-800">
+      <section className="rounded-2xl border border-white/60 bg-white/70 p-6 shadow-xl shadow-blue-200/30 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
         <h2 className="mb-4 text-lg font-semibold">이렇게 읽어요</h2>
         <ul className="flex flex-col gap-3 text-sm text-gray-700 dark:text-gray-300">
           <li>
