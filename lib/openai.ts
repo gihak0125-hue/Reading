@@ -12,21 +12,26 @@ import { requireEnv } from "@/lib/env";
 
 let _client: OpenAI | null = null;
 
+/** 복사·붙여넣기로 섞일 수 있는 공백/제어문자/비ASCII 제거(키는 출력 가능한 ASCII만) */
+function cleanKey(v: string): string {
+  return v.replace(/[^\x21-\x7E]/g, "");
+}
+
 /** 지연 초기화: 키가 없어도 빌드는 통과, 실제 호출 시점에만 검사 */
 export function getOpenAI(): OpenAI {
   if (!_client) {
     _client = new OpenAI({
-      apiKey: requireEnv("OPENAI_API_KEY"),
-      baseURL: process.env.OPENAI_BASE_URL || undefined,
+      apiKey: cleanKey(requireEnv("OPENAI_API_KEY")),
+      baseURL: (process.env.OPENAI_BASE_URL || "").trim() || undefined,
     });
   }
   return _client;
 }
 
 export const MODEL_DEFAULT = () =>
-  process.env.OPENAI_MODEL_DEFAULT ?? "gpt-4o-mini";
+  (process.env.OPENAI_MODEL_DEFAULT || "").trim() || "gpt-4o-mini";
 export const MODEL_ESCALATION = () =>
-  process.env.OPENAI_MODEL_ESCALATION ?? MODEL_DEFAULT();
+  (process.env.OPENAI_MODEL_ESCALATION || "").trim() || MODEL_DEFAULT();
 
 /**
  * 승급 여부 판단.
