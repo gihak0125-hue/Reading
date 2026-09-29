@@ -57,6 +57,53 @@ export async function createPassage(
   redirect(`/teacher/${passage.id}`);
 }
 
+export async function updatePassage(
+  _prev: PassageState,
+  formData: FormData,
+): Promise<PassageState> {
+  const { supabase, user } = await requireTeacher();
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const source = String(formData.get("source") ?? "").trim() || null;
+  const difficultyRaw = String(formData.get("difficulty") ?? "");
+  const difficulty = difficultyRaw ? Number(difficultyRaw) : null;
+
+  if (!id) return { error: "잘못된 요청입니다." };
+  if (!title) return { error: "제목을 입력하세요." };
+  if (!body) return { error: "본문을 입력하세요." };
+
+  const { data: cur } = await supabase
+    .from("passages")
+    .select("body, created_by")
+    .eq("id", id)
+    .single();
+  if (!cur || cur.created_by !== user.id)
+    return { error: "권한이 없거나 지문을 찾을 수 없습니다." };
+
+  const { error: uErr } = await supabase
+    .from("passages")
+    .update({ title, source, difficulty, body })
+    .eq("id", id);
+  if (uErr) return { error: `수정 실패: ${uErr.message}` };
+
+  // 본문이 바뀌면 문단을 다시 나눈다(기존 문단·태깅은 초기화)
+  if (body !== cur.body) {
+    const paras = splitParagraphs(body);
+    if (paras.length === 0) return { error: "문단을 인식하지 못했습니다." };
+    await supabase.from("passage_paragraphs").delete().eq("passage_id", id);
+    const rows = paras.map((text, i) => ({ passage_id: id, seq: i + 1, text }));
+    const { error: pErr } = await supabase
+      .from("passage_paragraphs")
+      .insert(rows);
+    if (pErr) return { error: `문단 저장 실패: ${pErr.message}` };
+  }
+
+  revalidatePath(`/teacher/${id}`);
+  revalidatePath("/teacher");
+  redirect(`/teacher/${id}`);
+}
+
 export async function deletePassage(formData: FormData): Promise<void> {
   const { supabase } = await requireTeacher();
   const id = String(formData.get("id") ?? "");

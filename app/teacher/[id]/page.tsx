@@ -50,12 +50,20 @@ export default async function PassageDetailPage({
             {passage.source ? ` · ${passage.source}` : ""}
           </p>
         </div>
-        <Link
-          href="/teacher"
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
-        >
-          목록
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href={`/teacher/${passage.id}/edit`}
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            수정
+          </Link>
+          <Link
+            href="/teacher"
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+          >
+            목록
+          </Link>
+        </div>
       </header>
 
       <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
