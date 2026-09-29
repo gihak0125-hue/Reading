@@ -147,3 +147,146 @@ export async function deleteKeyInfo(
   await supabase.from("passage_key_info").delete().eq("id", id);
   revalidatePath(`/teacher/${passageId}`);
 }
+
+// ===== AI 지문 분석 (핵심문장·관계 추천 → 교사 검토) =====
+
+export type KeyInfoSuggest = {
+  paragraphId: string;
+  paragraphSeq: number;
+  text: string;
+  kind: "keyword" | "key_sentence";
+  spanStart: number;
+  spanEnd: number;
+};
+export type RelationSuggest = {
+  fromParagraphId: string;
+  fromStart: number;
+  fromEnd: number;
+  fromText: string;
+  toParagraphId: string;
+  toStart: number;
+  toEnd: number;
+  toText: string;
+  relationType: string;
+};
+export type AnalyzeState =
+  | { error?: string }
+  | { keyInfos: KeyInfoSuggest[]; relations: RelationSuggest[] };
+
+/** AI로 지문을 분석해 추천 목록을 반환(저장은 하지 않음) */
+export async function analyzePassageAction(
+  passageId: string,
+): Promise<AnalyzeState> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("title, created_by")
+    .eq("id", passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+
+  const { data: paras } = await supabase
+    .from("passage_paragraphs")
+    .select("id, seq, text")
+    .eq("passage_id", passageId)
+    .order("seq", { ascending: true });
+  if (!paras || paras.length === 0) return { error: "문단이 없습니다." };
+
+  const { analyzePassage } = await import("@/lib/agent/analyze");
+  const result = await analyzePassage(
+    passage.title,
+    paras.map((p) => ({ seq: p.seq, text: p.text })),
+  );
+  if ("error" in result)
+    return {
+      error:
+        result.error === "no_key"
+          ? "AI 키가 필요해요(코치 설정 확인)."
+          : "분석에 실패했어요. 잠시 후 다시 시도해 주세요.",
+    };
+
+  const bySeq = new Map(paras.map((p) => [p.seq, p]));
+  const keyInfos: KeyInfoSuggest[] = [];
+  for (const k of result.keyInfos) {
+    const p = bySeq.get(k.paragraphSeq);
+    if (!p || !k.text) continue;
+    const idx = p.text.indexOf(k.text);
+    if (idx < 0) continue;
+    keyInfos.push({
+      paragraphId: p.id,
+      paragraphSeq: p.seq,
+      text: k.text,
+      kind: k.kind === "keyword" ? "keyword" : "key_sentence",
+      spanStart: idx,
+      spanEnd: idx + k.text.length,
+    });
+  }
+  const relations: RelationSuggest[] = [];
+  for (const r of result.relations) {
+    const pf = bySeq.get(r.fromParagraphSeq);
+    const pt = bySeq.get(r.toParagraphSeq);
+    if (!pf || !pt || !r.fromText || !r.toText) continue;
+    const fi = pf.text.indexOf(r.fromText);
+    const ti = pt.text.indexOf(r.toText);
+    if (fi < 0 || ti < 0) continue;
+    relations.push({
+      fromParagraphId: pf.id,
+      fromStart: fi,
+      fromEnd: fi + r.fromText.length,
+      fromText: r.fromText,
+      toParagraphId: pt.id,
+      toStart: ti,
+      toEnd: ti + r.toText.length,
+      toText: r.toText,
+      relationType: r.relationType,
+    });
+  }
+  return { keyInfos, relations };
+}
+
+/** 교사가 검토·선택한 추천을 정답 기준으로 저장 */
+export async function saveSuggestions(input: {
+  passageId: string;
+  keyInfos: { paragraphId: string; spanStart: number; spanEnd: number; kind: string }[];
+  relations: RelationSuggest[];
+}): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("created_by")
+    .eq("id", input.passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+
+  if (input.keyInfos.length) {
+    const { error } = await supabase.from("passage_key_info").insert(
+      input.keyInfos.map((k) => ({
+        paragraph_id: k.paragraphId,
+        span_start: k.spanStart,
+        span_end: k.spanEnd,
+        kind: k.kind,
+      })),
+    );
+    if (error) return { error: `핵심정보 저장 실패: ${error.message}` };
+  }
+  if (input.relations.length) {
+    const { error } = await supabase.from("passage_key_relations").insert(
+      input.relations.map((r) => ({
+        passage_id: input.passageId,
+        from_paragraph_id: r.fromParagraphId,
+        from_start: r.fromStart,
+        from_end: r.fromEnd,
+        to_paragraph_id: r.toParagraphId,
+        to_start: r.toStart,
+        to_end: r.toEnd,
+        relation_type: r.relationType,
+      })),
+    );
+    if (error) return { error: `관계 저장 실패: ${error.message}` };
+  }
+
+  revalidatePath(`/teacher/${input.passageId}`);
+  return { ok: true };
+}
