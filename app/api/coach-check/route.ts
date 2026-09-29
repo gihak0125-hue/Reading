@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getOpenAI, MODEL_DEFAULT } from "@/lib/openai";
 
-// 진단용(임시): OpenAI 호출이 왜 실패하는지 확인. 확인 후 삭제 예정.
+export const dynamic = "force-dynamic";
+
+// 진단용(임시). 런타임에 env를 읽는다(bracket 접근 → 인라인 방지).
 export async function GET() {
-  const key = process.env.OPENAI_API_KEY ?? "";
-  // 첫 번째 비ASCII(출력가능 ASCII 아님) 문자의 위치와 코드 찾기
+  const name = "OPENAI_API_KEY";
+  const key = process.env[name] ?? "";
   let badIndex = -1;
   let badCode = -1;
   for (let i = 0; i < key.length; i++) {
@@ -16,12 +18,12 @@ export async function GET() {
     }
   }
   const info = {
+    probe: "PROBE_A7",
     keyLen: key.length,
-    keyPrefix: key.slice(0, 8),
     keyHasNonAscii: badIndex !== -1,
     badIndex,
-    badCode, // 10=줄바꿈, 32=공백, 160=nbsp, 8226=•, 8203=zero-width 등
-    baseURL: process.env.OPENAI_BASE_URL ?? null,
+    badCode,
+    baseURL: process.env["OPENAI_BASE_URL"] ?? null,
     model: MODEL_DEFAULT(),
   };
   try {
@@ -37,7 +39,7 @@ export async function GET() {
       ok: false,
       name: err?.name ?? null,
       status: err?.status ?? null,
-      message: (err?.message ?? String(e)).slice(0, 200),
+      message: (err?.message ?? String(e)).slice(0, 160),
       ...info,
     });
   }
