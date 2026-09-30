@@ -31,7 +31,9 @@ export type RelationType =
   | "process"
   | "problem_solution"
   | "question_answer"
-  | "listing";
+  | "listing"
+  | "similarity"
+  | "contrast";
 export type AnnotationData = {
   id: string;
   paragraph_id: string;
@@ -43,22 +45,40 @@ export type AnnotationData = {
   relation_type: RelationType | null;
 };
 
-type ToolId = "underline" | "circle" | "arrow" | "listing" | "erase";
+type ToolId =
+  | "underline"
+  | "circle"
+  | "cause"
+  | "process"
+  | "problem"
+  | "qa"
+  | "similar"
+  | "contrast"
+  | "listing"
+  | "erase";
+
+const REL_TOOL_TYPE: Partial<Record<ToolId, RelationType>> = {
+  cause: "cause_effect",
+  process: "process",
+  problem: "problem_solution",
+  qa: "question_answer",
+  similar: "similarity",
+  contrast: "contrast",
+};
+
 const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "underline", label: "밑줄", glyph: "▁" },
   { id: "circle", label: "동그라미", glyph: "◯" },
-  { id: "arrow", label: "관계 연결", glyph: "→" },
+  { id: "cause", label: "원인·결과", glyph: "→" },
+  { id: "process", label: "과정", glyph: "⇢" },
+  { id: "problem", label: "문제·해결", glyph: "P·S" },
+  { id: "qa", label: "문답", glyph: "Q·A" },
+  { id: "similar", label: "공통점", glyph: "=" },
+  { id: "contrast", label: "차이점", glyph: "≠" },
   { id: "listing", label: "나열", glyph: "①" },
   { id: "erase", label: "지우기", glyph: "⌫" },
 ];
 
-const PAIR_RELATIONS: { value: RelationType; label: string; hint: string }[] = [
-  { value: "cause_effect", label: "인과", hint: "→" },
-  { value: "process", label: "과정", hint: "→" },
-  { value: "compare_contrast", label: "비교·대조", hint: "↔" },
-  { value: "problem_solution", label: "문제-해결", hint: "P·S" },
-  { value: "question_answer", label: "문답", hint: "Q·A" },
-];
 const REL_LABEL: Record<RelationType, string> = {
   cause_effect: "인과",
   process: "과정",
@@ -66,16 +86,15 @@ const REL_LABEL: Record<RelationType, string> = {
   problem_solution: "문제-해결",
   question_answer: "문답",
   listing: "나열",
+  similarity: "공통점",
+  contrast: "차이점",
 };
+
+const BLUE =
+  "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100";
 const REL_COLOR: Record<RelationType, { box: string; accent: string }> = {
-  cause_effect: {
-    box: "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100",
-    accent: "text-blue-600 dark:text-blue-300",
-  },
-  process: {
-    box: "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100",
-    accent: "text-blue-600 dark:text-blue-300",
-  },
+  cause_effect: { box: BLUE, accent: "text-blue-600 dark:text-blue-300" },
+  process: { box: BLUE, accent: "text-blue-600 dark:text-blue-300" },
   compare_contrast: {
     box: "border-violet-300 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-100",
     accent: "text-violet-600 dark:text-violet-300",
@@ -87,6 +106,14 @@ const REL_COLOR: Record<RelationType, { box: string; accent: string }> = {
   question_answer: {
     box: "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100",
     accent: "text-emerald-600 dark:text-emerald-300",
+  },
+  similarity: {
+    box: "border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100",
+    accent: "text-sky-600 dark:text-sky-300",
+  },
+  contrast: {
+    box: "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100",
+    accent: "text-rose-600 dark:text-rose-300",
   },
   listing: {
     box: "border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100",
@@ -102,12 +129,13 @@ const TONE: Record<string, string> = {
   green: "bg-emerald-200 text-emerald-900",
   blue: "bg-blue-200 text-blue-900",
   violet: "bg-violet-200 text-violet-900",
+  sky: "bg-sky-200 text-sky-900",
+  rose: "bg-rose-200 text-rose-900",
   gray: "bg-gray-300 text-gray-800",
 };
 
 type Pt = { x: number; y: number };
 
-/** 배지([data-badge]) 텍스트를 제외하고 컨테이너 내 오프셋 계산 */
 function offsetInContainer(
   container: HTMLElement,
   node: Node,
@@ -129,8 +157,10 @@ function offsetInContainer(
   return len;
 }
 
-/** 화면 좌표 → 텍스트 caret 위치 */
-function caretOffset(x: number, y: number): { node: Node; offset: number } | null {
+function caretOffset(
+  x: number,
+  y: number,
+): { node: Node; offset: number } | null {
   const d = document as Document & {
     caretRangeFromPoint?: (x: number, y: number) => Range | null;
     caretPositionFromPoint?: (
@@ -149,7 +179,6 @@ function caretOffset(x: number, y: number): { node: Node; offset: number } | nul
   return null;
 }
 
-/** 화면 좌표 → (문단 id, 문자 오프셋) */
 function paraOffsetAtPoint(
   wrap: HTMLElement,
   x: number,
@@ -168,14 +197,12 @@ function paraOffsetAtPoint(
   return { paraId, offset: offsetInContainer(p, c.node, c.offset) };
 }
 
-/** 화면 좌표에서 가장 가까운 표시(mark) id (maxDist 이내) */
 function markNearPoint(
   wrap: HTMLElement,
   x: number,
   y: number,
   maxDist = 44,
 ): string | null {
-  // 먼저 정확히 위에 있는지
   const els = document.elementsFromPoint(x, y);
   for (const el of els) {
     const m = (el as HTMLElement).closest?.("[data-marks]") as HTMLElement | null;
@@ -184,7 +211,6 @@ function markNearPoint(
       if (ids && ids[0]) return ids[0];
     }
   }
-  // 없으면 가장 가까운 표시
   let best: string | null = null;
   let bestD = maxDist;
   wrap.querySelectorAll<HTMLElement>("[data-marks]").forEach((el) => {
@@ -200,7 +226,6 @@ function markNearPoint(
   return best;
 }
 
-/** 밑줄/동그라미 획 → (문단, 구간) 인식 */
 function recognizeSpan(
   wrap: HTMLElement,
   pts: Pt[],
@@ -253,10 +278,7 @@ export function ReadingWorkspace({
   const [showTools, setShowTools] = useState(true);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
-  const [pendingPair, setPendingPair] = useState<{
-    from: string;
-    to: string;
-  } | null>(null);
+  const [relFrom, setRelFrom] = useState<string | null>(null);
   const [listingLast, setListingLast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -272,7 +294,8 @@ export function ReadingWorkspace({
   const [tempPath, setTempPath] = useState("");
 
   const marks = useMemo(
-    () => annotations.filter((a) => a.type === "underline" || a.type === "circle"),
+    () =>
+      annotations.filter((a) => a.type === "underline" || a.type === "circle"),
     [annotations],
   );
   const relations = useMemo(
@@ -285,7 +308,9 @@ export function ReadingWorkspace({
         (r) =>
           r.relation_type === "cause_effect" ||
           r.relation_type === "process" ||
-          r.relation_type === "compare_contrast",
+          r.relation_type === "compare_contrast" ||
+          r.relation_type === "similarity" ||
+          r.relation_type === "contrast",
       ),
     [relations],
   );
@@ -338,6 +363,14 @@ export function ReadingWorkspace({
         n++;
         push(from, { text: `${n}→`, tone: "blue" });
         push(to, { text: `→${n}`, tone: "blue" });
+      } else if (rt === "similarity") {
+        n++;
+        push(from, { text: `${n}=`, tone: "sky" });
+        push(to, { text: `${n}=`, tone: "sky" });
+      } else if (rt === "contrast") {
+        n++;
+        push(from, { text: `${n}≠`, tone: "rose" });
+        push(to, { text: `${n}≠`, tone: "rose" });
       } else if (rt === "compare_contrast") {
         n++;
         push(from, { text: `${n}↔`, tone: "violet" });
@@ -391,33 +424,18 @@ export function ReadingWorkspace({
 
   function selectTool(id: ToolId) {
     setTool((cur) => (cur === id ? null : id));
-    setPendingPair(null);
+    setRelFrom(null);
     setListingLast(null);
     setMsg(null);
   }
 
   function handleErase(id: string) {
+    if (relFrom === id) setRelFrom(null);
     startTransition(async () => {
       await deleteAnnotation(id, sessionId);
     });
   }
 
-  function handleAddRelation(rt: RelationType) {
-    if (!pendingPair) return;
-    const pair = pendingPair;
-    startTransition(async () => {
-      const res = await addRelation({
-        sessionId,
-        fromAnnotationId: pair.from,
-        toAnnotationId: pair.to,
-        relationType: rt,
-      });
-      if (res.error) setMsg(res.error);
-      setPendingPair(null);
-    });
-  }
-
-  // ── 손그림 처리 ──
   function onPointerDown(e: React.PointerEvent) {
     if (!tool) return;
     articleRef.current?.setPointerCapture?.(e.pointerId);
@@ -470,7 +488,6 @@ export function ReadingWorkspace({
     }
 
     if (tool === "listing") {
-      // 항목을 순서대로 탭 → 번호 매기기
       const mid = pts[Math.floor(pts.length / 2)] ?? pts[0];
       const target =
         markNearPoint(wrap, mid.x, mid.y) ??
@@ -495,7 +512,22 @@ export function ReadingWorkspace({
       return;
     }
 
-    if (tool === "arrow") {
+    if (tool === "erase") {
+      let target: string | null = null;
+      for (const p of pts) {
+        const m = markNearPoint(wrap, p.x, p.y, 24);
+        if (m) {
+          target = m;
+          break;
+        }
+      }
+      if (target) handleErase(target);
+      else setMsg("지울 표시 위를 그어 주세요.");
+      return;
+    }
+
+    const relType = REL_TOOL_TYPE[tool];
+    if (relType) {
       const from = markNearPoint(wrap, pts[0].x, pts[0].y);
       const to = markNearPoint(
         wrap,
@@ -510,21 +542,15 @@ export function ReadingWorkspace({
         setMsg("서로 다른 두 표시를 이어 주세요.");
         return;
       }
-      setPendingPair({ from, to });
-      return;
-    }
-
-    if (tool === "erase") {
-      let target: string | null = null;
-      for (const p of pts) {
-        const m = markNearPoint(wrap, p.x, p.y, 24);
-        if (m) {
-          target = m;
-          break;
-        }
-      }
-      if (target) handleErase(target);
-      else setMsg("지울 표시 위를 그어 주세요.");
+      startTransition(async () => {
+        const res = await addRelation({
+          sessionId,
+          fromAnnotationId: from,
+          toAnnotationId: to,
+          relationType: relType,
+        });
+        if (res.error) setMsg(res.error);
+      });
     }
   }
 
@@ -552,9 +578,19 @@ export function ReadingWorkspace({
     });
   }
 
+  const toolHint = () => {
+    if (tool === "underline" || tool === "circle")
+      return `'${TOOLS.find((t) => t.id === tool)?.label}' — 손가락/펜으로 글자 위를 그으면 표시돼요.`;
+    if (tool === "listing")
+      return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
+    if (tool === "erase") return "'지우기' — 표시 위를 그으면 지워져요.";
+    if (tool && REL_TOOL_TYPE[tool])
+      return `'${TOOLS.find((t) => t.id === tool)?.label}' — 표시 두 개를(첫 표시 → 다음 표시) 이어 그으면 관계가 표시돼요. 먼저 밑줄·동그라미로 표시부터 하세요.`;
+    return "도구를 고르면 손으로 그려서 표시할 수 있어요. (도구를 끄면 읽기·스크롤)";
+  };
+
   return (
     <div className="flex min-h-full flex-col">
-      {/* 헤더 */}
       <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
         <div className="flex min-w-0 items-center gap-2">
           <Link
@@ -616,7 +652,6 @@ export function ReadingWorkspace({
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
-        {/* 본문 */}
         <section className="relative flex-1 rounded-2xl border border-white/60 bg-white/90 p-5 shadow-xl shadow-blue-200/20 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/80 dark:shadow-black/30">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">📖 본문</h2>
@@ -639,63 +674,23 @@ export function ReadingWorkspace({
                       key={t.id}
                       type="button"
                       onClick={() => selectTool(t.id)}
-                      className={`flex min-w-[64px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
+                      className={`flex min-w-[60px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
                         active
                           ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                           : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
                       }`}
                     >
-                      <span className="text-lg leading-none">{t.glyph}</span>
+                      <span className="text-base leading-none">{t.glyph}</span>
                       {t.label}
                     </button>
                   );
                 })}
               </div>
-              <p className="mt-2 text-xs text-gray-500">
-                {tool === "underline" || tool === "circle"
-                  ? `'${TOOLS.find((t) => t.id === tool)?.label}' — 손가락/펜으로 글자 위를 그으면 표시돼요.`
-                  : tool === "arrow"
-                    ? "'관계 연결' — 한 표시에서 다른 표시로 그으면 연결돼요."
-                    : tool === "listing"
-                      ? "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요."
-                      : tool === "erase"
-                        ? "'지우기' — 표시 위를 그으면 지워져요."
-                        : "도구를 고르면 손으로 그려서 표시할 수 있어요. (도구를 끄면 읽기·스크롤)"}
-              </p>
+              <p className="mt-2 text-xs text-gray-500">{toolHint()}</p>
               {msg && <p className="mt-1 text-xs text-red-600">{msg}</p>}
-
-              {pendingPair && (
-                <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
-                  <p className="mb-2 text-xs font-medium text-blue-900 dark:text-blue-100">
-                    “{annoText(annoById.get(pendingPair.from))}” 와 “
-                    {annoText(annoById.get(pendingPair.to))}” 의 관계는?
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {PAIR_RELATIONS.map((r) => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        disabled={pending}
-                        onClick={() => handleAddRelation(r.value)}
-                        className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-gray-900 dark:text-blue-300"
-                      >
-                        {r.label} <span className="text-blue-400">{r.hint}</span>
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setPendingPair(null)}
-                      className="rounded-md px-2 py-1.5 text-xs text-gray-500 hover:underline"
-                    >
-                      취소
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* 지문 + 손그림 레이어 */}
           <div
             ref={articleRef}
             onPointerDown={onPointerDown}
@@ -746,7 +741,6 @@ export function ReadingWorkspace({
           </div>
         </section>
 
-        {/* 사고 패드 */}
         <aside className="rounded-2xl border border-white/60 bg-white/85 p-5 shadow-xl shadow-blue-200/20 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/75 dark:shadow-black/30 lg:w-[340px] lg:shrink-0">
           <h2 className="mb-3 font-semibold">📝 사고 패드</h2>
           <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1 text-sm dark:bg-gray-800">
@@ -818,14 +812,17 @@ export function ReadingWorkspace({
               </p>
               {relations.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
-                  관계 연결·나열로 표시를 이으면 여기에 정리돼요.
+                  관계 도구로 표시를 이으면 여기에 정리돼요.
                 </p>
               ) : (
                 <ul className="flex flex-col gap-3">
                   {relations.map((a) => {
                     const rt = a.relation_type ?? "listing";
                     const c = REL_COLOR[rt];
-                    const twoway = rt === "compare_contrast";
+                    const twoway =
+                      rt === "compare_contrast" ||
+                      rt === "similarity" ||
+                      rt === "contrast";
                     return (
                       <li
                         key={a.id}
@@ -894,7 +891,6 @@ export function ReadingWorkspace({
         </aside>
       </div>
 
-      {/* AI 읽기 코치 바 */}
       <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-4 md:flex-row md:items-end">
           <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -1046,7 +1042,20 @@ function AnnotatedParagraph({
   );
 }
 
-/** 연결한 표시들 사이에 본문 위로 곡선 화살표 (인과·과정=한방향, 비교대조=양방향) */
+type ArrowTone = "blue" | "violet" | "sky" | "rose";
+function toneOf(rt: RelationType | null): ArrowTone {
+  if (rt === "similarity") return "sky";
+  if (rt === "contrast") return "rose";
+  if (rt === "compare_contrast") return "violet";
+  return "blue";
+}
+const TONE_HEX: Record<ArrowTone, string> = {
+  blue: "#2563eb",
+  violet: "#7c3aed",
+  sky: "#0ea5e9",
+  rose: "#e11d48",
+};
+
 function RelationArrows({
   containerRef,
   relations,
@@ -1057,7 +1066,7 @@ function RelationArrows({
   depKey: string;
 }) {
   const [paths, setPaths] = useState<
-    { id: string; d: string; tone: "blue" | "violet"; twoway: boolean }[]
+    { id: string; d: string; tone: ArrowTone; twoway: boolean }[]
   >([]);
 
   useEffect(() => {
@@ -1066,9 +1075,7 @@ function RelationArrows({
 
     const rectOf = (markId: string | null) => {
       if (!markId) return null;
-      const els = wrap.querySelectorAll<HTMLElement>(
-        `[data-marks~="${markId}"]`,
-      );
+      const els = wrap.querySelectorAll<HTMLElement>(`[data-marks~="${markId}"]`);
       if (!els.length) return null;
       let x1 = Infinity,
         y1 = Infinity,
@@ -1086,12 +1093,8 @@ function RelationArrows({
 
     const compute = () => {
       const wr = wrap.getBoundingClientRect();
-      const out: {
-        id: string;
-        d: string;
-        tone: "blue" | "violet";
-        twoway: boolean;
-      }[] = [];
+      const out: { id: string; d: string; tone: ArrowTone; twoway: boolean }[] =
+        [];
       for (const r of relations) {
         const fr = rectOf(r.from_ref);
         const tr = rectOf(r.target_ref);
@@ -1115,11 +1118,15 @@ function RelationArrows({
         const cx = mx + px * off;
         const cy = my + py * off;
         const d = `M ${fx.toFixed(1)} ${(fy - 3).toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${tx.toFixed(1)} ${(ty - 3).toFixed(1)}`;
+        const rt = r.relation_type;
         out.push({
           id: r.id,
           d,
-          tone: r.relation_type === "compare_contrast" ? "violet" : "blue",
-          twoway: r.relation_type === "compare_contrast",
+          tone: toneOf(rt),
+          twoway:
+            rt === "compare_contrast" ||
+            rt === "similarity" ||
+            rt === "contrast",
         });
       }
       setPaths(out);
@@ -1136,56 +1143,50 @@ function RelationArrows({
     };
   }, [containerRef, relations, depKey]);
 
+  const tones: ArrowTone[] = ["blue", "violet", "sky", "rose"];
   return (
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       aria-hidden
     >
       <defs>
-        <marker
-          id="ah-blue"
-          viewBox="0 0 10 10"
-          refX="8"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-        >
-          <path d="M0,0 L10,5 L0,10 z" fill="#2563eb" />
-        </marker>
-        <marker
-          id="ah-violet"
-          viewBox="0 0 10 10"
-          refX="8"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-        >
-          <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed" />
-        </marker>
-        <marker
-          id="ah-violet-start"
-          viewBox="0 0 10 10"
-          refX="8"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto-start-reverse"
-        >
-          <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed" />
-        </marker>
+        {tones.map((tn) => (
+          <g key={tn}>
+            <marker
+              id={`ah-${tn}`}
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
+            >
+              <path d="M0,0 L10,5 L0,10 z" fill={TONE_HEX[tn]} />
+            </marker>
+            <marker
+              id={`ah-${tn}-start`}
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M0,0 L10,5 L0,10 z" fill={TONE_HEX[tn]} />
+            </marker>
+          </g>
+        ))}
       </defs>
       {paths.map((p) => (
         <path
           key={p.id}
           d={p.d}
           fill="none"
-          stroke={p.tone === "blue" ? "#2563eb" : "#7c3aed"}
+          stroke={TONE_HEX[p.tone]}
           strokeWidth={2}
           strokeOpacity={0.85}
           markerEnd={`url(#ah-${p.tone})`}
-          markerStart={p.twoway ? "url(#ah-violet-start)" : undefined}
+          markerStart={p.twoway ? `url(#ah-${p.tone}-start)` : undefined}
         />
       ))}
     </svg>

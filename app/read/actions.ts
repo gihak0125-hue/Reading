@@ -12,6 +12,8 @@ const REL_KO: Record<string, string> = {
   problem_solution: "문제-해결",
   question_answer: "문답",
   listing: "나열",
+  similarity: "공통점",
+  contrast: "차이점",
 };
 
 /** 세션 소유자 확인 후 supabase 반환(없으면 리다이렉트) */
@@ -75,7 +77,9 @@ export type RelationType =
   | "process"
   | "problem_solution"
   | "question_answer"
-  | "listing";
+  | "listing"
+  | "similarity"
+  | "contrast";
 
 /**
  * 두 표시(A→B)를 관계로 연결한다.
