@@ -42,6 +42,11 @@ export default async function DashboardPage() {
         {role === "teacher" ? (
           <>
             <Card
+              href="/teacher/dashboard"
+              title="대시보드"
+              desc="우리 반 읽기 활동을 지표로 한눈에 봅니다."
+            />
+            <Card
               href="/teacher"
               title="지문 관리"
               desc="추론적 독해 지문을 등록하고 핵심정보를 태깅합니다."
@@ -78,9 +83,6 @@ export default async function DashboardPage() {
         />
       </section>
 
-      <p className="mt-auto text-sm text-gray-400">
-        M1: 로그인 완료. 다음 단계로 지문/읽기 화면을 준비 중입니다.
-      </p>
     </main>
   );
 }
