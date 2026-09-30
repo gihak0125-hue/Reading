@@ -57,7 +57,6 @@ export async function addAnnotation(
     .single();
   if (error) return { error: `저장 실패: ${error.message}` };
 
-  revalidatePath(`/read/${input.sessionId}`);
   return { id: data.id };
 }
 
@@ -68,7 +67,6 @@ export async function deleteAnnotation(
 ): Promise<void> {
   const { supabase } = await requireOwnedSession(sessionId);
   await supabase.from("annotations").delete().eq("id", id);
-  revalidatePath(`/read/${sessionId}`);
 }
 
 export type RelationType =
@@ -90,7 +88,7 @@ export async function addRelation(input: {
   fromAnnotationId: string;
   toAnnotationId: string;
   relationType: RelationType;
-}): Promise<{ error?: string }> {
+}): Promise<{ error?: string; id?: string }> {
   if (input.fromAnnotationId === input.toAnnotationId)
     return { error: "서로 다른 두 표시를 연결하세요." };
   const { supabase } = await requireOwnedSession(input.sessionId);
@@ -103,20 +101,23 @@ export async function addRelation(input: {
   if (!from || from.session_id !== input.sessionId)
     return { error: "시작 표시를 찾을 수 없습니다." };
 
-  const { error } = await supabase.from("annotations").insert({
-    session_id: input.sessionId,
-    paragraph_id: from.paragraph_id,
-    span_start: from.span_start,
-    span_end: from.span_end,
-    type: "arrow",
-    from_ref: input.fromAnnotationId,
-    target_ref: input.toAnnotationId,
-    relation_type: input.relationType,
-  });
+  const { data, error } = await supabase
+    .from("annotations")
+    .insert({
+      session_id: input.sessionId,
+      paragraph_id: from.paragraph_id,
+      span_start: from.span_start,
+      span_end: from.span_end,
+      type: "arrow",
+      from_ref: input.fromAnnotationId,
+      target_ref: input.toAnnotationId,
+      relation_type: input.relationType,
+    })
+    .select("id")
+    .single();
   if (error) return { error: `연결 실패: ${error.message}` };
 
-  revalidatePath(`/read/${input.sessionId}`);
-  return {};
+  return { id: data.id };
 }
 
 /** 한 표시에 역할(문제/해결/질문/답) 태그를 단다. from만 또는 target만 채운 arrow 주석. */
@@ -125,7 +126,7 @@ export async function addMarkTag(input: {
   annotationId: string;
   relationType: "problem_solution" | "question_answer";
   role: "from" | "to";
-}): Promise<{ error?: string }> {
+}): Promise<{ error?: string; id?: string }> {
   const { supabase } = await requireOwnedSession(input.sessionId);
 
   const { data: mark } = await supabase
@@ -136,20 +137,23 @@ export async function addMarkTag(input: {
   if (!mark || mark.session_id !== input.sessionId)
     return { error: "표시를 찾을 수 없습니다." };
 
-  const { error } = await supabase.from("annotations").insert({
-    session_id: input.sessionId,
-    paragraph_id: mark.paragraph_id,
-    span_start: mark.span_start,
-    span_end: mark.span_end,
-    type: "arrow",
-    from_ref: input.role === "from" ? input.annotationId : null,
-    target_ref: input.role === "to" ? input.annotationId : null,
-    relation_type: input.relationType,
-  });
+  const { data, error } = await supabase
+    .from("annotations")
+    .insert({
+      session_id: input.sessionId,
+      paragraph_id: mark.paragraph_id,
+      span_start: mark.span_start,
+      span_end: mark.span_end,
+      type: "arrow",
+      from_ref: input.role === "from" ? input.annotationId : null,
+      target_ref: input.role === "to" ? input.annotationId : null,
+      relation_type: input.relationType,
+    })
+    .select("id")
+    .single();
   if (error) return { error: `표시 실패: ${error.message}` };
 
-  revalidatePath(`/read/${input.sessionId}`);
-  return {};
+  return { id: data.id };
 }
 
 /** 지문을 골라 읽기 세션을 시작한다(이미 진행 중이면 그 세션으로 이어감). */

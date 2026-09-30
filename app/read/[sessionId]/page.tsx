@@ -22,31 +22,31 @@ export default async function ReadingPage({
     .single();
   if (!session || session.student_id !== user.id) notFound();
 
-  const { data: passage } = await supabase
-    .from("passages")
-    .select("id, title")
-    .eq("id", session.passage_id)
-    .single();
+  const [
+    { data: passage },
+    { data: paragraphs },
+    { data: annotations },
+    { data: messages },
+  ] = await Promise.all([
+    supabase.from("passages").select("id, title").eq("id", session.passage_id).single(),
+    supabase
+      .from("passage_paragraphs")
+      .select("id, seq, text")
+      .eq("passage_id", session.passage_id)
+      .order("seq", { ascending: true }),
+    supabase
+      .from("annotations")
+      .select(
+        "id, paragraph_id, type, span_start, span_end, target_ref, from_ref, relation_type",
+      )
+      .eq("session_id", session.id),
+    supabase
+      .from("agent_messages")
+      .select("id, role, content, created_at")
+      .eq("session_id", session.id)
+      .order("created_at", { ascending: true }),
+  ]);
   if (!passage) notFound();
-
-  const { data: paragraphs } = await supabase
-    .from("passage_paragraphs")
-    .select("id, seq, text")
-    .eq("passage_id", session.passage_id)
-    .order("seq", { ascending: true });
-
-  const { data: annotations } = await supabase
-    .from("annotations")
-    .select(
-      "id, paragraph_id, type, span_start, span_end, target_ref, from_ref, relation_type",
-    )
-    .eq("session_id", session.id);
-
-  const { data: messages } = await supabase
-    .from("agent_messages")
-    .select("id, role, content, created_at")
-    .eq("session_id", session.id)
-    .order("created_at", { ascending: true });
 
   return (
     <ReadingWorkspace

@@ -3,7 +3,6 @@
 import {
   useEffect,
   useMemo,
-  useOptimistic,
   useRef,
   useState,
   useTransition,
@@ -46,10 +45,6 @@ export type AnnotationData = {
   from_ref: string | null;
   relation_type: RelationType | null;
 };
-
-type OptAction =
-  | { kind: "add"; anno: AnnotationData }
-  | { kind: "del"; id: string };
 
 type ToolId =
   | "underline"
@@ -302,16 +297,31 @@ export function ReadingWorkspace({
   const [listingLast, setListingLast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // 낙관적 표시: 서버 응답 전에 화면에 먼저 반영, 저장되면 실제 데이터로 대체
-  const [optimistic, addOptimistic] = useOptimistic(
-    annotations,
-    (state: AnnotationData[], act: OptAction) =>
-      act.kind === "del"
-        ? state.filter((x) => x.id !== act.id)
-        : [...state, act.anno],
-  );
+  // 낙관적 표시: 화면에 즉시 반영하고 서버 저장은 뒤에서(전체 새로고침 없음)
+  const [annos, setAnnos] = useState<AnnotationData[]>(annotations);
   const optIdRef = useRef(0);
-  const optId = () => `opt-${++optIdRef.current}`;
+  const tempAnno = (a: Omit<AnnotationData, "id">): AnnotationData => ({
+    ...a,
+    id: `opt-${++optIdRef.current}`,
+  });
+  function commitAdd(
+    temp: AnnotationData,
+    run: () => Promise<{ error?: string; id?: string }>,
+  ) {
+    setAnnos((prev) => [...prev, temp]);
+    startTransition(async () => {
+      const res = await run();
+      if (res.error) {
+        setAnnos((prev) => prev.filter((a) => a.id !== temp.id));
+        setMsg(res.error);
+      } else if (res.id) {
+        const realId = res.id;
+        setAnnos((prev) =>
+          prev.map((a) => (a.id === temp.id ? { ...a, id: realId } : a)),
+        );
+      }
+    });
+  }
 
   const [draft, setDraft] = useState("");
   const [coachPending, startCoach] = useTransition();
@@ -331,12 +341,12 @@ export function ReadingWorkspace({
 
   const marks = useMemo(
     () =>
-      optimistic.filter((a) => a.type === "underline" || a.type === "circle"),
-    [optimistic],
+      annos.filter((a) => a.type === "underline" || a.type === "circle"),
+    [annos],
   );
   const relations = useMemo(
-    () => optimistic.filter((a) => a.type === "arrow"),
-    [optimistic],
+    () => annos.filter((a) => a.type === "arrow"),
+    [annos],
   );
   const arrowRelations = useMemo(
     () =>
@@ -361,14 +371,14 @@ export function ReadingWorkspace({
         ]),
       ) +
       "|" +
-      optimistic.map((a) => `${a.id}:${a.span_start}:${a.span_end}`).join(","),
-    [arrowRelations, optimistic],
+      annos.map((a) => `${a.id}:${a.span_start}:${a.span_end}`).join(","),
+    [arrowRelations, annos],
   );
   const annoById = useMemo(() => {
     const m = new Map<string, AnnotationData>();
-    for (const a of optimistic) m.set(a.id, a);
+    for (const a of annos) m.set(a.id, a);
     return m;
-  }, [optimistic]);
+  }, [annos]);
   const paraById = useMemo(() => {
     const m = new Map<string, ParagraphData>();
     for (const p of paragraphs) m.set(p.id, p);
@@ -502,8 +512,8 @@ export function ReadingWorkspace({
 
   function handleErase(id: string) {
     if (relFrom === id) setRelFrom(null);
+    setAnnos((prev) => prev.filter((a) => a.id !== id));
     startTransition(async () => {
-      addOptimistic({ kind: "del", id });
       await deleteAnnotation(id, sessionId);
     });
   }
@@ -546,29 +556,24 @@ export function ReadingWorkspace({
         setMsg("표시할 글자 위를 그어 주세요.");
         return;
       }
-      startTransition(async () => {
-        addOptimistic({
-          kind: "add",
-          anno: {
-            id: optId(),
-            paragraph_id: span.paraId,
-            type: tool,
-            span_start: span.start,
-            span_end: span.end,
-            target_ref: null,
-            from_ref: null,
-            relation_type: null,
-          },
-        });
-        const res = await addAnnotation({
+      const temp = tempAnno({
+        paragraph_id: span.paraId,
+        type: tool,
+        span_start: span.start,
+        span_end: span.end,
+        target_ref: null,
+        from_ref: null,
+        relation_type: null,
+      });
+      commitAdd(temp, () =>
+        addAnnotation({
           sessionId,
           paragraphId: span.paraId,
           type: tool,
           spanStart: span.start,
           spanEnd: span.end,
-        });
-        if (res.error) setMsg(res.error);
-      });
+        }),
+      );
       return;
     }
 
@@ -584,27 +589,23 @@ export function ReadingWorkspace({
       if (listingLast && listingLast !== target) {
         const from = listingLast;
         const fm = annoById.get(from);
-        startTransition(async () => {
-          addOptimistic({
-            kind: "add",
-            anno: {
-              id: optId(),
-              paragraph_id: fm?.paragraph_id ?? "",
-              type: "arrow",
-              span_start: fm?.span_start ?? 0,
-              span_end: fm?.span_end ?? 0,
-              from_ref: from,
-              target_ref: target,
-              relation_type: "listing",
-            },
-          });
-          await addRelation({
+        const temp = tempAnno({
+          paragraph_id: fm?.paragraph_id ?? "",
+          type: "arrow",
+          span_start: fm?.span_start ?? 0,
+          span_end: fm?.span_end ?? 0,
+          from_ref: from,
+          target_ref: target,
+          relation_type: "listing",
+        });
+        commitAdd(temp, () =>
+          addRelation({
             sessionId,
             fromAnnotationId: from,
             toAnnotationId: target,
             relationType: "listing",
-          });
-        });
+          }),
+        );
       }
       setListingLast(target);
       setMsg("다음 항목을 탭하세요. (도구를 바꾸면 나열 끝)");
@@ -641,28 +642,23 @@ export function ReadingWorkspace({
       }
       const tid = target;
       const mk = annoById.get(tid);
-      startTransition(async () => {
-        addOptimistic({
-          kind: "add",
-          anno: {
-            id: optId(),
-            paragraph_id: mk?.paragraph_id ?? "",
-            type: "arrow",
-            span_start: mk?.span_start ?? 0,
-            span_end: mk?.span_end ?? 0,
-            from_ref: roleDef.role === "from" ? tid : null,
-            target_ref: roleDef.role === "to" ? tid : null,
-            relation_type: roleDef.type,
-          },
-        });
-        const res = await addMarkTag({
+      const temp = tempAnno({
+        paragraph_id: mk?.paragraph_id ?? "",
+        type: "arrow",
+        span_start: mk?.span_start ?? 0,
+        span_end: mk?.span_end ?? 0,
+        from_ref: roleDef.role === "from" ? tid : null,
+        target_ref: roleDef.role === "to" ? tid : null,
+        relation_type: roleDef.type,
+      });
+      commitAdd(temp, () =>
+        addMarkTag({
           sessionId,
           annotationId: tid,
           relationType: roleDef.type,
           role: roleDef.role,
-        });
-        if (res.error) setMsg(res.error);
-      });
+        }),
+      );
       return;
     }
 
@@ -683,28 +679,23 @@ export function ReadingWorkspace({
         return;
       }
       const fromMark = annoById.get(from);
-      startTransition(async () => {
-        addOptimistic({
-          kind: "add",
-          anno: {
-            id: optId(),
-            paragraph_id: fromMark?.paragraph_id ?? "",
-            type: "arrow",
-            span_start: fromMark?.span_start ?? 0,
-            span_end: fromMark?.span_end ?? 0,
-            from_ref: from,
-            target_ref: to,
-            relation_type: relType,
-          },
-        });
-        const res = await addRelation({
+      const temp = tempAnno({
+        paragraph_id: fromMark?.paragraph_id ?? "",
+        type: "arrow",
+        span_start: fromMark?.span_start ?? 0,
+        span_end: fromMark?.span_end ?? 0,
+        from_ref: from,
+        target_ref: to,
+        relation_type: relType,
+      });
+      commitAdd(temp, () =>
+        addRelation({
           sessionId,
           fromAnnotationId: from,
           toAnnotationId: to,
           relationType: relType,
-        });
-        if (res.error) setMsg(res.error);
-      });
+        }),
+      );
     }
   }
 
