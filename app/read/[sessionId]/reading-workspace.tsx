@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useOptimistic,
   useRef,
   useState,
   useTransition,
@@ -45,6 +46,10 @@ export type AnnotationData = {
   from_ref: string | null;
   relation_type: RelationType | null;
 };
+
+type OptAction =
+  | { kind: "add"; anno: AnnotationData }
+  | { kind: "del"; id: string };
 
 type ToolId =
   | "underline"
@@ -297,6 +302,17 @@ export function ReadingWorkspace({
   const [listingLast, setListingLast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // 낙관적 표시: 서버 응답 전에 화면에 먼저 반영, 저장되면 실제 데이터로 대체
+  const [optimistic, addOptimistic] = useOptimistic(
+    annotations,
+    (state: AnnotationData[], act: OptAction) =>
+      act.kind === "del"
+        ? state.filter((x) => x.id !== act.id)
+        : [...state, act.anno],
+  );
+  const optIdRef = useRef(0);
+  const optId = () => `opt-${++optIdRef.current}`;
+
   const [draft, setDraft] = useState("");
   const [coachPending, startCoach] = useTransition();
   const [coachNote, setCoachNote] = useState<string | null>(null);
@@ -315,12 +331,12 @@ export function ReadingWorkspace({
 
   const marks = useMemo(
     () =>
-      annotations.filter((a) => a.type === "underline" || a.type === "circle"),
-    [annotations],
+      optimistic.filter((a) => a.type === "underline" || a.type === "circle"),
+    [optimistic],
   );
   const relations = useMemo(
-    () => annotations.filter((a) => a.type === "arrow"),
-    [annotations],
+    () => optimistic.filter((a) => a.type === "arrow"),
+    [optimistic],
   );
   const arrowRelations = useMemo(
     () =>
@@ -345,14 +361,14 @@ export function ReadingWorkspace({
         ]),
       ) +
       "|" +
-      annotations.map((a) => `${a.id}:${a.span_start}:${a.span_end}`).join(","),
-    [arrowRelations, annotations],
+      optimistic.map((a) => `${a.id}:${a.span_start}:${a.span_end}`).join(","),
+    [arrowRelations, optimistic],
   );
   const annoById = useMemo(() => {
     const m = new Map<string, AnnotationData>();
-    for (const a of annotations) m.set(a.id, a);
+    for (const a of optimistic) m.set(a.id, a);
     return m;
-  }, [annotations]);
+  }, [optimistic]);
   const paraById = useMemo(() => {
     const m = new Map<string, ParagraphData>();
     for (const p of paragraphs) m.set(p.id, p);
@@ -487,6 +503,7 @@ export function ReadingWorkspace({
   function handleErase(id: string) {
     if (relFrom === id) setRelFrom(null);
     startTransition(async () => {
+      addOptimistic({ kind: "del", id });
       await deleteAnnotation(id, sessionId);
     });
   }
@@ -530,6 +547,19 @@ export function ReadingWorkspace({
         return;
       }
       startTransition(async () => {
+        addOptimistic({
+          kind: "add",
+          anno: {
+            id: optId(),
+            paragraph_id: span.paraId,
+            type: tool,
+            span_start: span.start,
+            span_end: span.end,
+            target_ref: null,
+            from_ref: null,
+            relation_type: null,
+          },
+        });
         const res = await addAnnotation({
           sessionId,
           paragraphId: span.paraId,
@@ -553,7 +583,21 @@ export function ReadingWorkspace({
       }
       if (listingLast && listingLast !== target) {
         const from = listingLast;
+        const fm = annoById.get(from);
         startTransition(async () => {
+          addOptimistic({
+            kind: "add",
+            anno: {
+              id: optId(),
+              paragraph_id: fm?.paragraph_id ?? "",
+              type: "arrow",
+              span_start: fm?.span_start ?? 0,
+              span_end: fm?.span_end ?? 0,
+              from_ref: from,
+              target_ref: target,
+              relation_type: "listing",
+            },
+          });
           await addRelation({
             sessionId,
             fromAnnotationId: from,
@@ -596,7 +640,21 @@ export function ReadingWorkspace({
         return;
       }
       const tid = target;
+      const mk = annoById.get(tid);
       startTransition(async () => {
+        addOptimistic({
+          kind: "add",
+          anno: {
+            id: optId(),
+            paragraph_id: mk?.paragraph_id ?? "",
+            type: "arrow",
+            span_start: mk?.span_start ?? 0,
+            span_end: mk?.span_end ?? 0,
+            from_ref: roleDef.role === "from" ? tid : null,
+            target_ref: roleDef.role === "to" ? tid : null,
+            relation_type: roleDef.type,
+          },
+        });
         const res = await addMarkTag({
           sessionId,
           annotationId: tid,
@@ -624,7 +682,21 @@ export function ReadingWorkspace({
         setMsg("서로 다른 두 표시를 이어 주세요.");
         return;
       }
+      const fromMark = annoById.get(from);
       startTransition(async () => {
+        addOptimistic({
+          kind: "add",
+          anno: {
+            id: optId(),
+            paragraph_id: fromMark?.paragraph_id ?? "",
+            type: "arrow",
+            span_start: fromMark?.span_start ?? 0,
+            span_end: fromMark?.span_end ?? 0,
+            from_ref: from,
+            target_ref: to,
+            relation_type: relType,
+          },
+        });
         const res = await addRelation({
           sessionId,
           fromAnnotationId: from,
