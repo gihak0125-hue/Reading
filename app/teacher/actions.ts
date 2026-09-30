@@ -6,12 +6,65 @@ import { requireTeacher } from "@/lib/auth";
 
 export type PassageState = { error?: string };
 
-/** 본문을 빈 줄 기준으로 문단 배열로 나눈다. */
+/** 본문을 문단 배열로 나눈다. 빈 줄 / 들여쓰기 / 줄바꿈(CRLF) 처리. */
 function splitParagraphs(body: string): string[] {
-  return body
-    .split(/\n\s*\n/)
-    .map((p) => p.replace(/\s+$/g, "").replace(/^\s+/g, ""))
-    .filter((p) => p.length > 0);
+  const t = body.replace(/\r\n?/g, "\n");
+  const IND = /^[ \t\u00A0\u3000]+/;
+  const lines = t.split("\n");
+  const paras: string[] = [];
+  let cur = "";
+  for (const line of lines) {
+    if (!line.trim()) {
+      if (cur) {
+        paras.push(cur);
+        cur = "";
+      }
+      continue;
+    }
+    if (IND.test(line) && cur) {
+      paras.push(cur);
+      cur = line.trim();
+    } else {
+      cur = cur ? cur + " " + line.trim() : line.trim();
+    }
+  }
+  if (cur) paras.push(cur);
+  if (paras.length === 1) {
+    const byLine = t.split(/\n/).map((s) => s.trim()).filter(Boolean);
+    if (byLine.length > 1) return byLine;
+  }
+  return paras.filter(Boolean);
+}
+
+/** 원문에서 needle 을 공백/줄바꿈 무시하고 찾아 원본 구간(start,end) 반환 */
+function findSpan(
+  text: string,
+  needle: string,
+): { start: number; end: number } | null {
+  let norm = "";
+  const map: number[] = [];
+  let prevWs = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (/\s/.test(c)) {
+      if (!prevWs && norm.length) {
+        norm += " ";
+        map.push(i);
+      }
+      prevWs = true;
+    } else {
+      norm += c;
+      map.push(i);
+      prevWs = false;
+    }
+  }
+  const nNeedle = needle.replace(/\s+/g, " ").trim();
+  if (!nNeedle) return null;
+  const idx = norm.indexOf(nNeedle);
+  if (idx < 0) return null;
+  const start = map[idx];
+  const end = map[idx + nNeedle.length - 1] + 1;
+  return { start, end };
 }
 
 export async function createPassage(
@@ -87,10 +140,14 @@ export async function updatePassage(
     .eq("id", id);
   if (uErr) return { error: `수정 실패: ${uErr.message}` };
 
-  // 본문이 바뀌면 문단을 다시 나눈다(기존 문단·태깅은 초기화)
-  if (body !== cur.body) {
-    const paras = splitParagraphs(body);
-    if (paras.length === 0) return { error: "문단을 인식하지 못했습니다." };
+  // 본문이 바뀌었거나 문단 분리 결과가 달라지면 문단을 다시 나눈다(태깅 초기화)
+  const paras = splitParagraphs(body);
+  if (paras.length === 0) return { error: "문단을 인식하지 못했습니다." };
+  const { count: curCount } = await supabase
+    .from("passage_paragraphs")
+    .select("*", { count: "exact", head: true })
+    .eq("passage_id", id);
+  if (body !== cur.body || (curCount ?? 0) !== paras.length) {
     await supabase.from("passage_paragraphs").delete().eq("passage_id", id);
     const rows = paras.map((text, i) => ({ passage_id: id, seq: i + 1, text }));
     const { error: pErr } = await supabase
@@ -211,15 +268,15 @@ export async function analyzePassageAction(
   for (const k of result.keyInfos) {
     const p = bySeq.get(k.paragraphSeq);
     if (!p || !k.text) continue;
-    const idx = p.text.indexOf(k.text);
-    if (idx < 0) continue;
+    const span = findSpan(p.text, k.text);
+    if (!span) continue;
     keyInfos.push({
       paragraphId: p.id,
       paragraphSeq: p.seq,
-      text: k.text,
+      text: p.text.slice(span.start, span.end),
       kind: k.kind === "keyword" ? "keyword" : "key_sentence",
-      spanStart: idx,
-      spanEnd: idx + k.text.length,
+      spanStart: span.start,
+      spanEnd: span.end,
     });
   }
   const relations: RelationSuggest[] = [];
@@ -227,18 +284,18 @@ export async function analyzePassageAction(
     const pf = bySeq.get(r.fromParagraphSeq);
     const pt = bySeq.get(r.toParagraphSeq);
     if (!pf || !pt || !r.fromText || !r.toText) continue;
-    const fi = pf.text.indexOf(r.fromText);
-    const ti = pt.text.indexOf(r.toText);
-    if (fi < 0 || ti < 0) continue;
+    const fspan = findSpan(pf.text, r.fromText);
+    const tspan = findSpan(pt.text, r.toText);
+    if (!fspan || !tspan) continue;
     relations.push({
       fromParagraphId: pf.id,
-      fromStart: fi,
-      fromEnd: fi + r.fromText.length,
-      fromText: r.fromText,
+      fromStart: fspan.start,
+      fromEnd: fspan.end,
+      fromText: pf.text.slice(fspan.start, fspan.end),
       toParagraphId: pt.id,
-      toStart: ti,
-      toEnd: ti + r.toText.length,
-      toText: r.toText,
+      toStart: tspan.start,
+      toEnd: tspan.end,
+      toText: pt.text.slice(tspan.start, tspan.end),
       relationType: r.relationType,
     });
   }
