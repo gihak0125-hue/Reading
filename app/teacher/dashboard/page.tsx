@@ -1,6 +1,38 @@
 import Link from "next/link";
 import { requireTeacher } from "@/lib/auth";
 
+type Anno = {
+  id: string;
+  session_id: string;
+  paragraph_id: string;
+  type: string;
+  span_start: number;
+  span_end: number;
+  from_ref: string | null;
+  target_ref: string | null;
+  relation_type: string | null;
+};
+type KeyInfo = {
+  paragraph_id: string;
+  span_start: number;
+  span_end: number;
+  kind: string;
+};
+type KeyRel = {
+  passage_id: string;
+  from_paragraph_id: string;
+  from_start: number;
+  from_end: number;
+  to_paragraph_id: string;
+  to_start: number;
+  to_end: number;
+  relation_type: string;
+};
+
+const overlaps = (as: number, ae: number, bs: number, be: number) =>
+  as < be && ae > bs;
+const clip = (t: string, n = 40) => (t.length > n ? t.slice(0, n) + "…" : t);
+
 export default async function TeacherDashboard() {
   const { supabase, user } = await requireTeacher("/teacher/dashboard");
 
@@ -19,21 +51,54 @@ export default async function TeacherDashboard() {
   const classList = classes ?? [];
   const passageList = passages ?? [];
   const classIds = classList.map((c) => c.id);
+  const myPassageIds = passageList.map((p) => p.id);
 
-  const { data: students } = classIds.length
-    ? await supabase
-        .from("profiles")
-        .select("id, display_name, class_id")
-        .in("class_id", classIds)
-    : {
-        data: [] as {
-          id: string;
-          display_name: string | null;
-          class_id: string | null;
-        }[],
-      };
+  const [{ data: students }, { data: paragraphs }, { data: keyRels }] =
+    await Promise.all([
+      classIds.length
+        ? supabase
+            .from("profiles")
+            .select("id, display_name, class_id")
+            .in("class_id", classIds)
+        : Promise.resolve({
+            data: [] as {
+              id: string;
+              display_name: string | null;
+              class_id: string | null;
+            }[],
+          }),
+      myPassageIds.length
+        ? supabase
+            .from("passage_paragraphs")
+            .select("id, passage_id, text")
+            .in("passage_id", myPassageIds)
+        : Promise.resolve({
+            data: [] as { id: string; passage_id: string; text: string }[],
+          }),
+      myPassageIds.length
+        ? supabase
+            .from("passage_key_relations")
+            .select(
+              "passage_id, from_paragraph_id, from_start, from_end, to_paragraph_id, to_start, to_end, relation_type",
+            )
+            .in("passage_id", myPassageIds)
+        : Promise.resolve({ data: [] as KeyRel[] }),
+    ]);
   const studentList = students ?? [];
   const studentIds = studentList.map((s) => s.id);
+  const paraList = paragraphs ?? [];
+  const paraToPassage = new Map(paraList.map((p) => [p.id, p.passage_id]));
+  const paraText = new Map(paraList.map((p) => [p.id, p.text]));
+  const myParaIds = paraList.map((p) => p.id);
+  const keyRelList = (keyRels ?? []) as KeyRel[];
+
+  const { data: keyInfos } = myParaIds.length
+    ? await supabase
+        .from("passage_key_info")
+        .select("paragraph_id, span_start, span_end, kind")
+        .in("paragraph_id", myParaIds)
+    : { data: [] as KeyInfo[] };
+  const keyInfoList = (keyInfos ?? []) as KeyInfo[];
 
   const { data: sessions } = studentIds.length
     ? await supabase
@@ -52,18 +117,18 @@ export default async function TeacherDashboard() {
       };
   const sessionList = sessions ?? [];
   const sessionIds = sessionList.map((s) => s.id);
-  const passageIds = [...new Set(sessionList.map((s) => s.passage_id))];
+  const touchedPassageIds = [...new Set(sessionList.map((s) => s.passage_id))];
 
   const [{ data: annos }, { data: msgs }, { data: sessPassages }] =
     await Promise.all([
       sessionIds.length
         ? supabase
             .from("annotations")
-            .select("session_id, type")
+            .select(
+              "id, session_id, paragraph_id, type, span_start, span_end, from_ref, target_ref, relation_type",
+            )
             .in("session_id", sessionIds)
-        : Promise.resolve({
-            data: [] as { session_id: string; type: string }[],
-          }),
+        : Promise.resolve({ data: [] as Anno[] }),
       sessionIds.length
         ? supabase
             .from("agent_messages")
@@ -72,21 +137,37 @@ export default async function TeacherDashboard() {
         : Promise.resolve({
             data: [] as { session_id: string; role: string }[],
           }),
-      passageIds.length
-        ? supabase.from("passages").select("id, title").in("id", passageIds)
+      touchedPassageIds.length
+        ? supabase
+            .from("passages")
+            .select("id, title")
+            .in("id", touchedPassageIds)
         : Promise.resolve({ data: [] as { id: string; title: string }[] }),
     ]);
+  const annoList = (annos ?? []) as Anno[];
 
-  const marks = new Map<string, number>();
-  for (const a of annos ?? [])
-    if (a.type !== "arrow")
-      marks.set(a.session_id, (marks.get(a.session_id) ?? 0) + 1);
+  // 세션별 표시(마크)와 화살표, 전역 마크 위치 맵
+  const marksBySession = new Map<
+    string,
+    { p: string; s: number; e: number }[]
+  >();
+  const arrowsBySession = new Map<string, Anno[]>();
+  const markPos = new Map<string, { p: string; s: number; e: number }>();
+  const marksCount = new Map<string, number>();
+  for (const a of annoList) {
+    if (a.type === "arrow") {
+      (arrowsBySession.get(a.session_id) ?? arrowsBySession.set(a.session_id, []).get(a.session_id)!).push(a);
+    } else {
+      markPos.set(a.id, { p: a.paragraph_id, s: a.span_start, e: a.span_end });
+      (marksBySession.get(a.session_id) ?? marksBySession.set(a.session_id, []).get(a.session_id)!).push({ p: a.paragraph_id, s: a.span_start, e: a.span_end });
+      marksCount.set(a.session_id, (marksCount.get(a.session_id) ?? 0) + 1);
+    }
+  }
   let explainTotal = 0;
   for (const m of msgs ?? []) if (m.role === "student") explainTotal++;
 
   const titleOf = new Map((sessPassages ?? []).map((p) => [p.id, p.title]));
   const nameOf = new Map(studentList.map((s) => [s.id, s.display_name]));
-
   const completed = sessionList.filter((s) => s.status === "completed").length;
   const inProgress = sessionList.length - completed;
 
@@ -95,16 +176,14 @@ export default async function TeacherDashboard() {
       studentList.filter((s) => s.class_id === c.id).map((s) => s.id),
     );
     const sess = sessionList.filter((s) => sids.has(s.student_id));
-    const done = sess.filter((s) => s.status === "completed").length;
     return {
       id: c.id,
       name: c.name,
       students: sids.size,
       sessions: sess.length,
-      done,
+      done: sess.filter((s) => s.status === "completed").length,
     };
   });
-
   const recent = sessionList.slice(0, 6);
   const fmt = (iso: string) =>
     new Date(iso).toLocaleDateString("ko-KR", {
@@ -113,6 +192,82 @@ export default async function TeacherDashboard() {
       hour: "2-digit",
       minute: "2-digit",
     });
+
+  // ── 많은 학생이 어려워한 부분: 정답 기준 대비 학생 표시율 ──
+  const sessionsByPassage = new Map<string, typeof sessionList>();
+  for (const s of sessionList)
+    (sessionsByPassage.get(s.passage_id) ?? sessionsByPassage.set(s.passage_id, []).get(s.passage_id)!).push(s);
+  const studentsOnPassage = (pid: string) =>
+    new Set((sessionsByPassage.get(pid) ?? []).map((s) => s.student_id)).size;
+
+  type Hard = {
+    key: string;
+    kind: "sentence" | "keyword" | "relation";
+    passage: string;
+    text: string;
+    covered: number;
+    total: number;
+  };
+  const hard: Hard[] = [];
+
+  for (const k of keyInfoList) {
+    const pid = paraToPassage.get(k.paragraph_id);
+    if (!pid) continue;
+    const total = studentsOnPassage(pid);
+    if (total === 0) continue;
+    const coveredStudents = new Set<string>();
+    for (const s of sessionsByPassage.get(pid) ?? []) {
+      const ms = marksBySession.get(s.id) ?? [];
+      if (ms.some((m) => m.p === k.paragraph_id && overlaps(m.s, m.e, k.span_start, k.span_end)))
+        coveredStudents.add(s.student_id);
+    }
+    const t = (paraText.get(k.paragraph_id) ?? "").slice(k.span_start, k.span_end);
+    hard.push({
+      key: `ki-${k.paragraph_id}-${k.span_start}`,
+      kind: k.kind === "keyword" ? "keyword" : "sentence",
+      passage: titleOf.get(pid) ?? "(지문)",
+      text: clip(t),
+      covered: coveredStudents.size,
+      total,
+    });
+  }
+
+  for (const r of keyRelList) {
+    const total = studentsOnPassage(r.passage_id);
+    if (total === 0) continue;
+    const coveredStudents = new Set<string>();
+    for (const s of sessionsByPassage.get(r.passage_id) ?? []) {
+      const arrs = arrowsBySession.get(s.id) ?? [];
+      const ok = arrs.some((a) => {
+        const f = a.from_ref ? markPos.get(a.from_ref) : null;
+        const t = a.target_ref ? markPos.get(a.target_ref) : null;
+        if (!f || !t) return false;
+        const fwd =
+          f.p === r.from_paragraph_id && overlaps(f.s, f.e, r.from_start, r.from_end) &&
+          t.p === r.to_paragraph_id && overlaps(t.s, t.e, r.to_start, r.to_end);
+        const rev =
+          t.p === r.from_paragraph_id && overlaps(t.s, t.e, r.from_start, r.from_end) &&
+          f.p === r.to_paragraph_id && overlaps(f.s, f.e, r.to_start, r.to_end);
+        return fwd || rev;
+      });
+      if (ok) coveredStudents.add(s.student_id);
+    }
+    const ft = clip((paraText.get(r.from_paragraph_id) ?? "").slice(r.from_start, r.from_end), 18);
+    const tt = clip((paraText.get(r.to_paragraph_id) ?? "").slice(r.to_start, r.to_end), 18);
+    hard.push({
+      key: `kr-${r.from_paragraph_id}-${r.from_start}-${r.to_start}`,
+      kind: "relation",
+      passage: titleOf.get(r.passage_id) ?? "(지문)",
+      text: `${ft} ↔ ${tt}`,
+      covered: coveredStudents.size,
+      total,
+    });
+  }
+
+  const rateOf = (h: Hard) => h.covered / h.total;
+  hard.sort((a, b) => rateOf(a) - rateOf(b) || b.total - a.total);
+  const hardTop = hard.filter((h) => h.total >= 1).slice(0, 8);
+  const kindLabel = { sentence: "핵심문장", keyword: "핵심어", relation: "관계" };
 
   const stats: { label: string; value: number; tone: string }[] = [
     { label: "학급", value: classList.length, tone: "text-blue-600 dark:text-blue-300" },
@@ -128,9 +283,7 @@ export default async function TeacherDashboard() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">교사 대시보드</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            우리 반 읽기 활동을 한눈에 봅니다.
-          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">우리 반 읽기 활동을 한눈에 봅니다.</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           <Link href="/teacher" className="rounded-md border border-gray-300 px-3 py-2 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">지문 관리</Link>
@@ -141,14 +294,42 @@ export default async function TeacherDashboard() {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-white/60 bg-white/70 p-4 text-center shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30"
-          >
+          <div key={s.label} className="rounded-2xl border border-white/60 bg-white/70 p-4 text-center shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
             <div className={`text-3xl font-bold tabular-nums ${s.tone}`}>{s.value}</div>
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
           </div>
         ))}
+      </section>
+
+      <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold">많은 학생이 어려워한 부분</h2>
+          <span className="text-xs text-gray-400">표시율 낮을수록 어려움</span>
+        </div>
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">교사가 저장한 핵심정보·관계를 학생들이 얼마나 찾았는지 보여줍니다.</p>
+        {hardTop.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">
+            아직 분석할 자료가 없어요. 지문에서 <Link href="/teacher" className="text-blue-600 hover:underline dark:text-blue-400">핵심정보·관계를 저장</Link>하고 학생들이 읽으면 여기에 나타나요.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {hardTop.map((h) => {
+              const pct = Math.round((h.covered / h.total) * 100);
+              const low = pct < 50;
+              return (
+                <li key={h.key} className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-sm dark:border-gray-800">
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${h.kind === "relation" ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" : h.kind === "keyword" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"}`}>{kindLabel[h.kind]}</span>
+                  <span className="min-w-0 flex-1 truncate" title={h.text}>{h.text}</span>
+                  <span className="hidden max-w-[8rem] shrink-0 truncate text-xs text-gray-400 sm:block">{h.passage}</span>
+                  <div className="hidden h-2 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800 sm:block">
+                    <div className={`h-full ${low ? "bg-rose-500" : "bg-blue-500"}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className={`w-24 shrink-0 text-right text-xs tabular-nums ${low ? "font-semibold text-rose-600 dark:text-rose-400" : "text-gray-500 dark:text-gray-400"}`}>{h.covered}/{h.total} ({pct}%)</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
@@ -186,23 +367,16 @@ export default async function TeacherDashboard() {
           <Link href="/teacher/activity" className="text-xs text-blue-600 hover:underline dark:text-blue-400">전체 보기 →</Link>
         </div>
         {recent.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">
-            아직 학생 읽기 기록이 없어요. 학생이 지문을 읽고 표시하면 여기에 나타나요.
-          </p>
+          <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">아직 학생 읽기 기록이 없어요.</p>
         ) : (
           <ul className="flex flex-col gap-1.5">
             {recent.map((s) => (
               <li key={s.id}>
-                <Link
-                  href={`/teacher/activity/${s.id}`}
-                  className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-sm hover:border-blue-300 hover:bg-blue-50/40 dark:border-gray-800 dark:hover:border-blue-800 dark:hover:bg-blue-950/30"
-                >
+                <Link href={`/teacher/activity/${s.id}`} className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-sm hover:border-blue-300 hover:bg-blue-50/40 dark:border-gray-800 dark:hover:border-blue-800 dark:hover:bg-blue-950/30">
                   <span className="w-20 shrink-0 truncate font-medium">{nameOf.get(s.student_id) ?? "학생"}</span>
                   <span className="min-w-0 flex-1 truncate text-gray-600 dark:text-gray-300">{titleOf.get(s.passage_id) ?? "(지문)"}</span>
-                  <span className="shrink-0 text-xs text-gray-400 tabular-nums">표시 {marks.get(s.id) ?? 0}</span>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${s.status === "completed" ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800"}`}>
-                    {s.status === "completed" ? "완료" : "진행 중"}
-                  </span>
+                  <span className="shrink-0 text-xs text-gray-400 tabular-nums">표시 {marksCount.get(s.id) ?? 0}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${s.status === "completed" ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800"}`}>{s.status === "completed" ? "완료" : "진행 중"}</span>
                   <span className="hidden w-24 shrink-0 text-right text-xs text-gray-400 sm:block">{fmt(s.started_at)}</span>
                 </Link>
               </li>
