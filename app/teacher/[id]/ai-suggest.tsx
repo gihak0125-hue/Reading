@@ -15,6 +15,8 @@ const REL: Record<string, string> = {
   problem_solution: "문제-해결",
   question_answer: "문답",
   listing: "나열",
+  similarity: "공통점(비교)",
+  contrast: "차이점(대조)",
 };
 
 export function AiSuggest({ passageId }: { passageId: string }) {
