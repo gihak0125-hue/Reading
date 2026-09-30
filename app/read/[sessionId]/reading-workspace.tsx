@@ -13,6 +13,7 @@ import {
   addAnnotation,
   deleteAnnotation,
   addRelation,
+  addMarkTag,
   sendCoachMessage,
   completeSession,
   reopenSession,
@@ -51,7 +52,9 @@ type ToolId =
   | "cause"
   | "process"
   | "problem"
-  | "qa"
+  | "solution"
+  | "question"
+  | "answer"
   | "similar"
   | "contrast"
   | "listing"
@@ -60,10 +63,21 @@ type ToolId =
 const REL_TOOL_TYPE: Partial<Record<ToolId, RelationType>> = {
   cause: "cause_effect",
   process: "process",
-  problem: "problem_solution",
-  qa: "question_answer",
   similar: "similarity",
   contrast: "contrast",
+};
+
+// 단일 표시에 역할을 찍는 도구(문제/해결/질문/답)
+const ROLE_TOOL: Partial<
+  Record<
+    ToolId,
+    { type: "problem_solution" | "question_answer"; role: "from" | "to" }
+  >
+> = {
+  problem: { type: "problem_solution", role: "from" },
+  solution: { type: "problem_solution", role: "to" },
+  question: { type: "question_answer", role: "from" },
+  answer: { type: "question_answer", role: "to" },
 };
 
 const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
@@ -71,8 +85,10 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "circle", label: "동그라미", glyph: "◯" },
   { id: "cause", label: "원인·결과", glyph: "→" },
   { id: "process", label: "과정", glyph: "⇢" },
-  { id: "problem", label: "문제·해결", glyph: "P·S" },
-  { id: "qa", label: "문답", glyph: "Q·A" },
+  { id: "problem", label: "문제", glyph: "P" },
+  { id: "solution", label: "해결", glyph: "S" },
+  { id: "question", label: "질문", glyph: "Q" },
+  { id: "answer", label: "답", glyph: "A" },
   { id: "similar", label: "공통점", glyph: "=" },
   { id: "contrast", label: "차이점", glyph: "≠" },
   { id: "listing", label: "나열", glyph: "①" },
@@ -356,7 +372,7 @@ export function ReadingWorkspace({
       const rt = r.relation_type;
       const from = r.from_ref;
       const to = r.target_ref;
-      if (!to || rt === "listing") continue;
+      if (rt === "listing") continue;
       if (rt === "problem_solution") {
         push(from, { text: "P", tone: "amber" });
         push(to, { text: "S", tone: "amber" });
@@ -565,6 +581,33 @@ export function ReadingWorkspace({
       return;
     }
 
+    const roleDef = ROLE_TOOL[tool];
+    if (roleDef) {
+      let target: string | null = null;
+      for (const p of pts) {
+        const m = markNearPoint(wrap, p.x, p.y, 40);
+        if (m) {
+          target = m;
+          break;
+        }
+      }
+      if (!target) {
+        setMsg("역할을 찍을 표시(밑줄·동그라미)를 탭하세요.");
+        return;
+      }
+      const tid = target;
+      startTransition(async () => {
+        const res = await addMarkTag({
+          sessionId,
+          annotationId: tid,
+          relationType: roleDef.type,
+          role: roleDef.role,
+        });
+        if (res.error) setMsg(res.error);
+      });
+      return;
+    }
+
     const relType = REL_TOOL_TYPE[tool];
     if (relType) {
       const from = markNearPoint(wrap, pts[0].x, pts[0].y);
@@ -623,6 +666,8 @@ export function ReadingWorkspace({
     if (tool === "listing")
       return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
     if (tool === "erase") return "'지우기' — 표시 위를 그으면 지워져요.";
+    if (tool && ROLE_TOOL[tool])
+      return `'${TOOLS.find((t) => t.id === tool)?.label}' — 해당하는 표시(밑줄·동그라미) 하나를 탭하면 역할이 찍혀요.`;
     if (tool && REL_TOOL_TYPE[tool])
       return `'${TOOLS.find((t) => t.id === tool)?.label}' — 표시 두 개를(첫 표시 → 다음 표시) 이어 그으면 관계가 표시돼요. 먼저 밑줄·동그라미로 표시부터 하세요.`;
     return "도구를 고르면 손으로 그려서 표시할 수 있어요. (도구를 끄면 읽기·스크롤)";
@@ -839,6 +884,45 @@ export function ReadingWorkspace({
                   {relations.map((a) => {
                     const rt = a.relation_type ?? "listing";
                     const c = REL_COLOR[rt];
+                    const singleRole = !a.from_ref !== !a.target_ref;
+                    if (singleRole) {
+                      const roleLabel =
+                        rt === "problem_solution"
+                          ? a.from_ref
+                            ? "문제 (P)"
+                            : "해결 (S)"
+                          : rt === "question_answer"
+                            ? a.from_ref
+                              ? "질문 (Q)"
+                              : "답 (A)"
+                            : REL_LABEL[rt];
+                      return (
+                        <li
+                          key={a.id}
+                          className="relative rounded-xl border border-gray-200 p-3 dark:border-gray-800"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleErase(a.id)}
+                            disabled={pending}
+                            className="absolute right-1.5 top-1.5 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                            aria-label="표시 삭제"
+                          >
+                            ✕
+                          </button>
+                          <div className="flex flex-col items-center gap-1 text-center">
+                            <div className={`text-xs font-bold ${c.accent}`}>
+                              {roleLabel}
+                            </div>
+                            <div
+                              className={`w-full rounded-lg border px-2.5 py-1.5 text-xs font-medium ${c.box}`}
+                            >
+                              {annoText(a) || "(삭제됨)"}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    }
                     const twoway =
                       rt === "compare_contrast" ||
                       rt === "similarity" ||

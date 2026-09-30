@@ -119,6 +119,39 @@ export async function addRelation(input: {
   return {};
 }
 
+/** 한 표시에 역할(문제/해결/질문/답) 태그를 단다. from만 또는 target만 채운 arrow 주석. */
+export async function addMarkTag(input: {
+  sessionId: string;
+  annotationId: string;
+  relationType: "problem_solution" | "question_answer";
+  role: "from" | "to";
+}): Promise<{ error?: string }> {
+  const { supabase } = await requireOwnedSession(input.sessionId);
+
+  const { data: mark } = await supabase
+    .from("annotations")
+    .select("paragraph_id, span_start, span_end, session_id")
+    .eq("id", input.annotationId)
+    .single();
+  if (!mark || mark.session_id !== input.sessionId)
+    return { error: "표시를 찾을 수 없습니다." };
+
+  const { error } = await supabase.from("annotations").insert({
+    session_id: input.sessionId,
+    paragraph_id: mark.paragraph_id,
+    span_start: mark.span_start,
+    span_end: mark.span_end,
+    type: "arrow",
+    from_ref: input.role === "from" ? input.annotationId : null,
+    target_ref: input.role === "to" ? input.annotationId : null,
+    relation_type: input.relationType,
+  });
+  if (error) return { error: `표시 실패: ${error.message}` };
+
+  revalidatePath(`/read/${input.sessionId}`);
+  return {};
+}
+
 /** 지문을 골라 읽기 세션을 시작한다(이미 진행 중이면 그 세션으로 이어감). */
 export async function startSession(formData: FormData): Promise<void> {
   const { supabase, user } = await getSessionProfile("/read");
@@ -214,11 +247,26 @@ export async function sendCoachMessage(input: {
     }));
   const relations = (annos ?? [])
     .filter((a) => a.type === "arrow")
-    .map((a) => ({
-      from: markText(a.from_ref),
-      to: markText(a.target_ref),
-      relation: REL_KO[a.relation_type ?? "listing"] ?? "관계",
-    }));
+    .map((a) => {
+      const rt = a.relation_type ?? "listing";
+      const hasFrom = !!a.from_ref;
+      const hasTo = !!a.target_ref;
+      if (hasFrom !== hasTo) {
+        let role = REL_KO[rt] ?? "관계";
+        if (rt === "problem_solution") role = hasFrom ? "문제" : "해결";
+        else if (rt === "question_answer") role = hasFrom ? "질문" : "답";
+        return {
+          from: markText(hasFrom ? a.from_ref : a.target_ref),
+          to: "",
+          relation: role,
+        };
+      }
+      return {
+        from: markText(a.from_ref),
+        to: markText(a.target_ref),
+        relation: REL_KO[rt] ?? "관계",
+      };
+    });
 
   const passageText = (paragraphs ?? []).map((p) => p.text).join("\n\n");
 

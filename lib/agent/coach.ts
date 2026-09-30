@@ -61,7 +61,11 @@ export async function runCoach(
   const relText =
     ctx.relations.length > 0
       ? ctx.relations
-          .map((r) => `- "${r.from}" —[${r.relation}]→ "${r.to}"`)
+          .map((r) =>
+            r.to
+              ? `- "${r.from}" —[${r.relation}]→ "${r.to}"`
+              : `- "${r.from}" → [${r.relation}](으)로 표시함`,
+          )
           .join("\n")
       : "(아직 없음)";
 
