@@ -155,10 +155,11 @@ export async function sendCoachMessage(input: {
   sessionId: string;
   text: string;
   hint?: boolean;
+  mode?: "activity";
 }): Promise<CoachResult> {
   const { supabase } = await requireOwnedSession(input.sessionId);
   const text = input.text.trim();
-  if (!input.hint && !text) return { error: "내용을 입력하세요." };
+  if (!input.hint && !input.mode && !text) return { error: "내용을 입력하세요." };
 
   // 1) 학생 메시지 저장(힌트 요청은 저장하지 않음)
   if (text) {
@@ -221,6 +222,11 @@ export async function sendCoachMessage(input: {
 
   const passageText = (paragraphs ?? []).map((p) => p.text).join("\n\n");
 
+  // 활동 기반 피드백인데 표시·관계가 하나도 없으면 조용히 넘어간다
+  if (input.mode === "activity" && marks.length === 0 && relations.length === 0) {
+    return {};
+  }
+
   // 3) 코치 실행
   const result = await runCoach({
     passageTitle: passage?.title ?? "",
@@ -233,6 +239,7 @@ export async function sendCoachMessage(input: {
     })),
     studentMessage: text,
     hintRequested: input.hint,
+    mode: input.mode === "activity" ? "activity" : "chat",
   });
 
   if ("error" in result) {

@@ -121,7 +121,6 @@ const REL_COLOR: Record<RelationType, { box: string; accent: string }> = {
   },
 };
 
-const PHASES = ["핵심원리", "관계 연결", "구조화", "자기설명"];
 type PadTab = "key" | "structure" | "explain";
 type Badge = { text: string; tone: string };
 const TONE: Record<string, string> = {
@@ -285,6 +284,11 @@ export function ReadingWorkspace({
   const [draft, setDraft] = useState("");
   const [coachPending, startCoach] = useTransition();
   const [coachNote, setCoachNote] = useState<string | null>(null);
+  const autoRef = useRef<{ count: number; at: number; off: boolean }>({
+    count: annotations.length,
+    at: 0,
+    off: false,
+  });
 
   const articleRef = useRef<HTMLDivElement>(null);
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({
@@ -409,6 +413,45 @@ export function ReadingWorkspace({
       if (messages[i].role === "agent") return messages[i].content;
     return null;
   }, [messages]);
+
+  // 학생이 읽으며 표시/연결하면(입력 없이도) 코치가 먼저 짧게 피드백
+  useEffect(() => {
+    if (status === "completed") return;
+    const a = autoRef.current;
+    if (a.off) return;
+    const total = marks.length + relations.length;
+    if (total <= a.count) {
+      a.count = total;
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (coachPending || Date.now() - a.at < 12000) return;
+      a.count = total;
+      a.at = Date.now();
+      startCoach(async () => {
+        const res = await sendCoachMessage({
+          sessionId,
+          text: "",
+          mode: "activity",
+        });
+        if (res.needsKey) a.off = true;
+      });
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [marks.length, relations.length, status, sessionId, coachPending, startCoach]);
+
+  function askFeedback() {
+    setCoachNote(null);
+    startCoach(async () => {
+      const res = await sendCoachMessage({
+        sessionId,
+        text: "",
+        mode: "activity",
+      });
+      if (res.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
+      else if (res.error) setCoachNote(res.error);
+    });
+  }
 
   function annoText(a?: AnnotationData | null): string {
     if (!a) return "";
@@ -598,25 +641,6 @@ export function ReadingWorkspace({
           </Link>
           <span className="truncate font-semibold">📄 {title}</span>
         </div>
-        <ol className="hidden items-center gap-1.5 md:flex">
-          {PHASES.map((p, i) => (
-            <li key={p} className="flex items-center gap-1.5">
-              <span
-                className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${
-                  i < 2
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-400 dark:bg-gray-800"
-                }`}
-              >
-                <span className="tabular-nums">{i + 1}</span>
-                {p}
-              </span>
-              {i < PHASES.length - 1 && (
-                <span className="text-gray-300 dark:text-gray-600">›</span>
-              )}
-            </li>
-          ))}
-        </ol>
         <div className="flex shrink-0 items-center gap-2">
           {status === "completed" ? (
             <button
@@ -903,14 +927,24 @@ export function ReadingWorkspace({
               {coachNote && (
                 <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
               )}
-              <button
-                type="button"
-                onClick={() => sendCoach(true)}
-                disabled={coachPending}
-                className="mt-1 rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-950"
-              >
-                💡 힌트
-              </button>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => sendCoach(true)}
+                  disabled={coachPending}
+                  className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-950"
+                >
+                  💡 힌트
+                </button>
+                <button
+                  type="button"
+                  onClick={askFeedback}
+                  disabled={coachPending}
+                  className="rounded-md px-2 py-1 text-xs text-violet-600 hover:bg-violet-50 disabled:opacity-50 dark:hover:bg-violet-950"
+                >
+                  🔎 내 표시 봐주기
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex items-end gap-2">

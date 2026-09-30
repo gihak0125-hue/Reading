@@ -37,6 +37,7 @@ export type CoachContext = {
   history: Turn[];
   studentMessage: string;
   hintRequested?: boolean;
+  mode?: "chat" | "activity";
   attempt?: number;
 };
 
@@ -48,6 +49,8 @@ export async function runCoach(
   if (!process.env.OPENAI_API_KEY) {
     return { error: "no_key" };
   }
+
+  const activity = ctx.mode === "activity";
 
   const marksText =
     ctx.marks.length > 0
@@ -85,15 +88,17 @@ ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
       content: t.content,
     });
   }
-  messages.push({
-    role: "user",
-    content: ctx.hintRequested
+
+  const finalUser = activity
+    ? `학생이 방금 지문에 표시하거나 관계를 연결했고, 아직 아무 말도 하지 않았습니다. 위의 '표시한 핵심정보'와 '연결한 관계'만 근거로, 정답이나 해석은 절대 주지 말고 딱 한 가지만 골라 짧게 반응하세요: (가) 인상적인 선택 하나를 구체적으로 짚어 "왜 그렇게 봤는지" 묻거나, (나) 어색해 보이는 연결·표시 하나를 다시 살펴보도록 단서를 주세요. 학생을 재촉하지 말고, 2문장 이내로 질문 하나로 끝맺으세요. 아직 표시가 거의 없으면 부담 주지 말고 가볍게 한 걸음만 권하세요.`
+    : ctx.hintRequested
       ? "지금 상황에서 정답을 주지 말고, 다음에 무엇을 살펴보면 좋을지 힌트 하나만 주세요."
-      : ctx.studentMessage,
-  });
+      : ctx.studentMessage;
+
+  messages.push({ role: "user", content: finalUser });
 
   const model = pickModel({
-    step: ctx.relations.length > 0 ? "S2" : "S1",
+    step: !activity && ctx.relations.length > 0 ? "S2" : "S1",
     attempt: ctx.attempt ?? 0,
   });
 
