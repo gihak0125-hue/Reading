@@ -354,6 +354,7 @@ export function ReadingWorkspace({
 }) {
   const [tool, setTool] = useState<ToolId | null>(null);
   const [showTools, setShowTools] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
   const [relFrom, setRelFrom] = useState<string | null>(null);
@@ -787,8 +788,10 @@ export function ReadingWorkspace({
   }
 
   const toolHint = () => {
-    if (tool === "underline" || tool === "circle")
-      return `'${TOOLS.find((t) => t.id === tool)?.label}' — 손가락/펜으로 글자 위를 그으면 표시돼요.`;
+    if (tool === "underline")
+      return "'밑줄' — 핵심문장(중요한 문장·구절)에 손으로 그으면 표시돼요.";
+    if (tool === "circle")
+      return "'동그라미' — 핵심어(중요한 낱말·개념)에 손으로 그으면 표시돼요.";
     if (tool === "listing")
       return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
     if (tool === "erase") return "'지우기' — 표시 위를 그으면 지워져요.";
@@ -796,7 +799,7 @@ export function ReadingWorkspace({
       return `'${TOOLS.find((t) => t.id === tool)?.label}' — 해당하는 표시(밑줄·동그라미) 하나를 탭하면 역할이 찍혀요.`;
     if (tool && REL_TOOL_TYPE[tool])
       return `'${TOOLS.find((t) => t.id === tool)?.label}' — 표시 두 개를(첫 표시 → 다음 표시) 이어 그으면 관계가 표시돼요. 먼저 밑줄·동그라미로 표시부터 하세요.`;
-    return "도구를 고르면 손으로 그려서 표시할 수 있어요. (도구를 끄면 읽기·스크롤)";
+    return "밑줄=핵심문장, 동그라미=핵심어. 도구를 고르면 손으로 표시해요. (도구를 끄면 읽기·스크롤)";
   };
 
   return (
@@ -883,6 +886,41 @@ export function ReadingWorkspace({
                   );
                 })}
               </div>
+              <button
+                type="button"
+                onClick={() => setShowGuide((v) => !v)}
+                className="mt-2 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                {showGuide ? "▾ 도구 안내 닫기" : "❔ 이 도구들 뭐예요?"}
+              </button>
+              {showGuide && (
+                <ul className="mt-2 flex flex-col gap-1 rounded-lg bg-white/70 p-3 text-xs leading-relaxed text-gray-600 dark:bg-gray-950/50 dark:text-gray-300">
+                  <li>
+                    <b>▁ 밑줄</b> — 핵심문장(중요한 문장·구절)에 긋기
+                  </li>
+                  <li>
+                    <b>◯ 동그라미</b> — 핵심어(중요한 낱말·개념)에 치기
+                  </li>
+                  <li>
+                    <b>→ 원인·결과 / ⇢ 과정</b> — 두 표시를 이어 관계 화살표
+                  </li>
+                  <li>
+                    <b>P 문제 / S 해결</b> — 표시 하나를 탭해 역할 찍기
+                  </li>
+                  <li>
+                    <b>Q 질문 / A 답</b> — 표시 하나를 탭해 역할 찍기
+                  </li>
+                  <li>
+                    <b>= 공통점 / ≠ 차이점</b> — 두 표시를 이어 견주기
+                  </li>
+                  <li>
+                    <b>① 나열</b> — 여러 표시를 순서대로 탭해 번호 매기기
+                  </li>
+                  <li>
+                    <b>⌫ 지우기</b> — 표시 위를 그어 지우기
+                  </li>
+                </ul>
+              )}
               <p className="mt-2 text-xs text-gray-500">{toolHint()}</p>
               {msg && <p className="mt-1 text-xs text-red-600">{msg}</p>}
             </div>
