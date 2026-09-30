@@ -718,6 +718,12 @@ export function ReadingWorkspace({
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
         <section className="relative flex-1 rounded-2xl border border-white/60 bg-white/90 p-5 shadow-xl shadow-blue-200/20 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/80 dark:shadow-black/30">
+          {pending && (
+            <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              표시하는 중…
+            </div>
+          )}
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">📖 본문</h2>
             <button
