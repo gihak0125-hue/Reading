@@ -246,30 +246,93 @@ function recognizeSpan(
   pts: Pt[],
   type: "underline" | "circle",
 ): { paraId: string; start: number; end: number } | null {
+  // 밑줄은 위(글자)를 살짝만 훑고, 동그라미는 위아래 조금씩 본다(줄 넘나듦 최소화)
   const yShifts =
-    type === "underline" ? [-4, -10, -16, -22, 0] : [0, -8, 8, -16];
-  const byPara = new Map<string, number[]>();
-  for (const pt of pts) {
+    type === "underline" ? [-4, -9, -14, -19] : [0, -7, 7, -14];
+
+  // 획을 촘촘히 보간해서 표본을 늘림(빠른 획도 정확히)
+  const dense: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    dense.push(pts[i]);
+    const b = pts[i + 1];
+    if (b) {
+      const a = pts[i];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.min(8, Math.floor(dist / 5));
+      for (let s = 1; s < steps; s++)
+        dense.push({
+          x: a.x + ((b.x - a.x) * s) / steps,
+          y: a.y + ((b.y - a.y) * s) / steps,
+        });
+    }
+  }
+
+  const hits: { off: number; y: number; para: string }[] = [];
+  for (const pt of dense) {
     for (const dy of yShifts) {
-      const hit = paraOffsetAtPoint(wrap, pt.x, pt.y + dy);
-      if (hit) {
-        const arr = byPara.get(hit.paraId) ?? [];
-        arr.push(hit.offset);
-        byPara.set(hit.paraId, arr);
+      const h = paraOffsetAtPoint(wrap, pt.x, pt.y + dy);
+      if (h) {
+        hits.push({ off: h.offset, y: pt.y, para: h.paraId });
         break;
       }
     }
   }
-  let bestPara: string | null = null;
-  let best: number[] = [];
-  for (const [pid, arr] of byPara)
-    if (arr.length > best.length) {
-      best = arr;
-      bestPara = pid;
+  if (hits.length < 2) return null;
+
+  // 표본이 가장 많은 문단 선택
+  const paraCount = new Map<string, number>();
+  for (const h of hits) paraCount.set(h.para, (paraCount.get(h.para) ?? 0) + 1);
+  let bestPara = "";
+  let bestN = 0;
+  for (const [p, n] of paraCount)
+    if (n > bestN) {
+      bestN = n;
+      bestPara = p;
     }
-  if (!bestPara || best.length < 1) return null;
-  const start = Math.min(...best);
-  const end = Math.max(...best);
+  const inPara = hits.filter((h) => h.para === bestPara);
+
+  // 획의 y로 '줄' 군집화(같은 줄=y가 가깝다). 줄 넘나듦으로 과하게 잡히는 것 방지
+  const sortedY = [...inPara].sort((a, b) => a.y - b.y);
+  const clusters: { off: number; y: number }[][] = [];
+  let cur: { off: number; y: number }[] = [];
+  for (const h of sortedY) {
+    if (cur.length && h.y - cur[cur.length - 1].y > 18) {
+      clusters.push(cur);
+      cur = [];
+    }
+    cur.push({ off: h.off, y: h.y });
+  }
+  if (cur.length) clusters.push(cur);
+
+  // 밑줄: 표본이 가장 많은 줄. 동그라미: 획의 세로 중심에 가장 가까운 줄(감싼 글자)
+  let chosen = clusters[0];
+  if (type === "underline") {
+    for (const c of clusters) if (c.length > chosen.length) chosen = c;
+  } else {
+    const cy = inPara.reduce((s, h) => s + h.y, 0) / inPara.length;
+    let bestD = Infinity;
+    for (const c of clusters) {
+      const my = c.reduce((s, h) => s + h.y, 0) / c.length;
+      const d = Math.abs(my - cy);
+      if (d < bestD) {
+        bestD = d;
+        chosen = c;
+      }
+    }
+  }
+
+  // 선택된 줄 안에서 '가장 촘촘한 연속 구간'만 사용(외곽치 제거)
+  const offs = chosen.map((h) => h.off).sort((a, b) => a - b);
+  let runStart = 0;
+  let bestRun: [number, number] = [0, 0];
+  for (let i = 1; i <= offs.length; i++) {
+    if (i === offs.length || offs[i] - offs[i - 1] > 5) {
+      if (i - 1 - runStart > bestRun[1] - bestRun[0]) bestRun = [runStart, i - 1];
+      runStart = i;
+    }
+  }
+  const start = offs[bestRun[0]];
+  const end = offs[bestRun[1]];
   if (end <= start) return null;
   return { paraId: bestPara, start, end };
 }
