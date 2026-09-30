@@ -367,10 +367,6 @@ export function ReadingWorkspace({
         n++;
         push(from, { text: `${n}=`, tone: "sky" });
         push(to, { text: `${n}=`, tone: "sky" });
-      } else if (rt === "contrast") {
-        n++;
-        push(from, { text: `${n}≠`, tone: "rose" });
-        push(to, { text: `${n}≠`, tone: "rose" });
       } else if (rt === "compare_contrast") {
         n++;
         push(from, { text: `${n}↔`, tone: "violet" });
@@ -1056,6 +1052,8 @@ const TONE_HEX: Record<ArrowTone, string> = {
   rose: "#e11d48",
 };
 
+type ArrowDir = "one" | "in" | "out";
+
 function RelationArrows({
   containerRef,
   relations,
@@ -1066,7 +1064,7 @@ function RelationArrows({
   depKey: string;
 }) {
   const [paths, setPaths] = useState<
-    { id: string; d: string; tone: ArrowTone; twoway: boolean }[]
+    { id: string; d: string; tone: ArrowTone; dir: ArrowDir }[]
   >([]);
 
   useEffect(() => {
@@ -1093,7 +1091,7 @@ function RelationArrows({
 
     const compute = () => {
       const wr = wrap.getBoundingClientRect();
-      const out: { id: string; d: string; tone: ArrowTone; twoway: boolean }[] =
+      const out: { id: string; d: string; tone: ArrowTone; dir: ArrowDir }[] =
         [];
       for (const r of relations) {
         const fr = rectOf(r.from_ref);
@@ -1119,15 +1117,13 @@ function RelationArrows({
         const cy = my + py * off;
         const d = `M ${fx.toFixed(1)} ${(fy - 3).toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${tx.toFixed(1)} ${(ty - 3).toFixed(1)}`;
         const rt = r.relation_type;
-        out.push({
-          id: r.id,
-          d,
-          tone: toneOf(rt),
-          twoway:
-            rt === "compare_contrast" ||
-            rt === "similarity" ||
-            rt === "contrast",
-        });
+        const dir: ArrowDir =
+          rt === "cause_effect" || rt === "process"
+            ? "one"
+            : rt === "similarity"
+              ? "in"
+              : "out";
+        out.push({ id: r.id, d, tone: toneOf(rt), dir });
       }
       setPaths(out);
     };
@@ -1153,9 +1149,9 @@ function RelationArrows({
         {tones.map((tn) => (
           <g key={tn}>
             <marker
-              id={`ah-${tn}`}
+              id={`ah-${tn}-fwd`}
               viewBox="0 0 10 10"
-              refX="8"
+              refX="9"
               refY="5"
               markerWidth="7"
               markerHeight="7"
@@ -1164,15 +1160,15 @@ function RelationArrows({
               <path d="M0,0 L10,5 L0,10 z" fill={TONE_HEX[tn]} />
             </marker>
             <marker
-              id={`ah-${tn}-start`}
+              id={`ah-${tn}-rev`}
               viewBox="0 0 10 10"
-              refX="8"
+              refX="1"
               refY="5"
               markerWidth="7"
               markerHeight="7"
-              orient="auto-start-reverse"
+              orient="auto"
             >
-              <path d="M0,0 L10,5 L0,10 z" fill={TONE_HEX[tn]} />
+              <path d="M10,0 L0,5 L10,10 z" fill={TONE_HEX[tn]} />
             </marker>
           </g>
         ))}
@@ -1185,8 +1181,14 @@ function RelationArrows({
           stroke={TONE_HEX[p.tone]}
           strokeWidth={2}
           strokeOpacity={0.85}
-          markerEnd={`url(#ah-${p.tone})`}
-          markerStart={p.twoway ? `url(#ah-${p.tone}-start)` : undefined}
+          markerEnd={`url(#ah-${p.tone}-${p.dir === "in" ? "rev" : "fwd"})`}
+          markerStart={
+            p.dir === "out"
+              ? `url(#ah-${p.tone}-rev)`
+              : p.dir === "in"
+                ? `url(#ah-${p.tone}-fwd)`
+                : undefined
+          }
         />
       ))}
     </svg>
