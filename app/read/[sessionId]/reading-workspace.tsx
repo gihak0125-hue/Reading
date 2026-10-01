@@ -1204,6 +1204,15 @@ export function ReadingWorkspace({
                   : (lastAgent ??
                     "읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 궁금한 점이나 내 생각을 아래에 적어줘요.")}
               </div>
+              {status === "completed" && (
+                <div className="mt-1 flex items-start gap-2 rounded-2xl rounded-tl-sm border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+                  <span className="mt-0.5 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500" />
+                  <span>
+                    🎉 읽기를 마쳤어요! 이제 아래 <b>📝 독해 확인</b>을 먼저
+                    누르고, 이어서 <b>🔍 관점 평가</b>를 눌러 마무리해요. 👇
+                  </span>
+                </div>
+              )}
               {coachNote && (
                 <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
               )}
