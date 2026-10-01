@@ -192,7 +192,7 @@ export async function sendCoachMessage(input: {
   sessionId: string;
   text: string;
   hint?: boolean;
-  mode?: "activity";
+  mode?: "activity" | "critique";
 }): Promise<CoachResult> {
   const { supabase } = await requireOwnedSession(input.sessionId);
   const text = input.text.trim();
@@ -291,7 +291,7 @@ export async function sendCoachMessage(input: {
     })),
     studentMessage: text,
     hintRequested: input.hint,
-    mode: input.mode === "activity" ? "activity" : "chat",
+    mode: input.mode ?? "chat",
   });
 
   if ("error" in result) {
