@@ -194,7 +194,7 @@ export async function sendCoachMessage(input: {
   sessionId: string;
   text: string;
   hint?: boolean;
-  mode?: "activity" | "critique" | "check";
+  mode?: "activity" | "critique" | "check" | "predict" | "hidden";
 }): Promise<CoachResult> {
   const { supabase } = await requireOwnedSession(input.sessionId);
   const text = input.text.trim();

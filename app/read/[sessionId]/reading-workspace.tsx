@@ -626,6 +626,15 @@ export function ReadingWorkspace({
     });
   }
 
+  function askSelfExplain(mode: "predict" | "hidden") {
+    setCoachNote(null);
+    startCoach(async () => {
+      const res = await sendCoachMessage({ sessionId, text: "", mode });
+      if (res.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
+      else if (res.error) setCoachNote(res.error);
+    });
+  }
+
   function annoText(a?: AnnotationData | null): string {
     if (!a) return "";
     return (paraById.get(a.paragraph_id)?.text ?? "").slice(
@@ -1318,6 +1327,26 @@ export function ReadingWorkspace({
                 >
                   🔎 내 표시 봐주기
                 </button>
+                {status !== "completed" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => askSelfExplain("predict")}
+                      disabled={coachPending}
+                      className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950 dark:text-indigo-300"
+                    >
+                      🔮 예측
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => askSelfExplain("hidden")}
+                      disabled={coachPending}
+                      className="rounded-md bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 disabled:opacity-50 dark:bg-teal-950 dark:text-teal-300"
+                    >
+                      🧩 숨은 뜻
+                    </button>
+                  </>
+                )}
                 {status === "completed" && (
                   <button
                     type="button"
