@@ -34,11 +34,12 @@ export type RelationType =
   | "question_answer"
   | "listing"
   | "similarity"
-  | "contrast";
+  | "contrast"
+  | "elaboration";
 export type AnnotationData = {
   id: string;
   paragraph_id: string;
-  type: "underline" | "circle" | "arrow";
+  type: "underline" | "circle" | "arrow" | "discourse";
   span_start: number;
   span_end: number;
   target_ref: string | null;
@@ -57,6 +58,8 @@ type ToolId =
   | "answer"
   | "similar"
   | "contrast"
+  | "elaborate"
+  | "discourse"
   | "listing"
   | "erase";
 
@@ -65,6 +68,7 @@ const REL_TOOL_TYPE: Partial<Record<ToolId, RelationType>> = {
   process: "process",
   similar: "similarity",
   contrast: "contrast",
+  elaborate: "elaboration",
 };
 
 // 단일 표시에 역할을 찍는 도구(문제/해결/질문/답)
@@ -91,6 +95,8 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "answer", label: "답", glyph: "A" },
   { id: "similar", label: "공통점", glyph: "=" },
   { id: "contrast", label: "차이점", glyph: "≠" },
+  { id: "elaborate", label: "상술", glyph: "▸" },
+  { id: "discourse", label: "담화표지", glyph: "〰" },
   { id: "listing", label: "나열", glyph: "①" },
   { id: "erase", label: "지우기", glyph: "⌫" },
 ];
@@ -104,6 +110,7 @@ const REL_LABEL: Record<RelationType, string> = {
   listing: "나열",
   similarity: "공통점",
   contrast: "차이점",
+  elaboration: "상술",
 };
 
 const BLUE =
@@ -131,6 +138,10 @@ const REL_COLOR: Record<RelationType, { box: string; accent: string }> = {
     box: "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100",
     accent: "text-rose-600 dark:text-rose-300",
   },
+  elaboration: {
+    box: "border-teal-300 bg-teal-50 text-teal-900 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-100",
+    accent: "text-teal-600 dark:text-teal-300",
+  },
   listing: {
     box: "border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100",
     accent: "text-gray-500 dark:text-gray-400",
@@ -146,6 +157,7 @@ const TONE: Record<string, string> = {
   violet: "bg-violet-200 text-violet-900",
   sky: "bg-sky-200 text-sky-900",
   rose: "bg-rose-200 text-rose-900",
+  teal: "bg-teal-200 text-teal-900",
   gray: "bg-gray-300 text-gray-800",
 };
 
@@ -408,6 +420,16 @@ export function ReadingWorkspace({
       annos.filter((a) => a.type === "underline" || a.type === "circle"),
     [annos],
   );
+  const renderMarks = useMemo(
+    () =>
+      annos.filter(
+        (a) =>
+          a.type === "underline" ||
+          a.type === "circle" ||
+          a.type === "discourse",
+      ),
+    [annos],
+  );
   const relations = useMemo(
     () => annos.filter((a) => a.type === "arrow"),
     [annos],
@@ -420,7 +442,8 @@ export function ReadingWorkspace({
           r.relation_type === "process" ||
           r.relation_type === "compare_contrast" ||
           r.relation_type === "similarity" ||
-          r.relation_type === "contrast",
+          r.relation_type === "contrast" ||
+          r.relation_type === "elaboration",
       ),
     [relations],
   );
@@ -481,6 +504,10 @@ export function ReadingWorkspace({
         n++;
         push(from, { text: `${n}↔`, tone: "violet" });
         push(to, { text: `${n}↔`, tone: "violet" });
+      } else if (rt === "elaboration") {
+        n++;
+        push(from, { text: `${n}▸`, tone: "teal" });
+        push(to, { text: `▸${n}`, tone: "teal" });
       }
     }
     const listing = relations.filter(
@@ -640,8 +667,12 @@ export function ReadingWorkspace({
     const wrap = articleRef.current;
     if (!wrap || pts.length === 0 || !tool) return;
 
-    if (tool === "underline" || tool === "circle") {
-      const span = recognizeSpan(wrap, pts, tool);
+    if (tool === "underline" || tool === "circle" || tool === "discourse") {
+      const span = recognizeSpan(
+        wrap,
+        pts,
+        tool === "circle" ? "circle" : "underline",
+      );
       if (!span) {
         setMsg("표시할 글자 위를 그어 주세요.");
         return;
@@ -818,6 +849,8 @@ export function ReadingWorkspace({
       return "'밑줄' — 핵심문장(중요한 문장·구절)에 손으로 그으면 표시돼요.";
     if (tool === "circle")
       return "'동그라미' — 핵심어(중요한 낱말·개념)에 손으로 그으면 표시돼요.";
+    if (tool === "discourse")
+      return "'담화표지' — 그러나·따라서·예를 들어 같은 이음말에 손으로 그으면 강조돼요.";
     if (tool === "listing")
       return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
     if (tool === "erase") return "'지우기' — 표시 위를 그으면 지워져요.";
@@ -928,7 +961,13 @@ export function ReadingWorkspace({
                     <b>◯ 동그라미</b> — 핵심어(중요한 낱말·개념)에 치기
                   </li>
                   <li>
+                    <b>〰 담화표지</b> — 그러나·따라서 같은 이음말에 긋기
+                  </li>
+                  <li>
                     <b>→ 원인·결과 / ⇢ 과정</b> — 두 표시를 이어 관계 화살표
+                  </li>
+                  <li>
+                    <b>▸ 상술</b> — 앞 내용을 자세히 푼 부분을 이어 표시
                   </li>
                   <li>
                     <b>P 문제 / S 해결</b> — 표시 하나를 탭해 역할 찍기
@@ -993,7 +1032,7 @@ export function ReadingWorkspace({
                   <AnnotatedParagraph
                     paragraphId={p.id}
                     text={p.text}
-                    annos={marks.filter((a) => a.paragraph_id === p.id)}
+                    annos={renderMarks.filter((a) => a.paragraph_id === p.id)}
                     badgesByMark={badgesByMark}
                   />
                 </div>
@@ -1310,6 +1349,7 @@ function AnnotatedParagraph({
       end: number;
       underline: boolean;
       circle: boolean;
+      discourse: boolean;
       ids: string[];
     }[] = [];
     for (let i = 0; i < points.length - 1; i++) {
@@ -1322,6 +1362,7 @@ function AnnotatedParagraph({
         end: e,
         underline: covering.some((a) => a.type === "underline"),
         circle: covering.some((a) => a.type === "circle"),
+        discourse: covering.some((a) => a.type === "discourse"),
         ids: covering.map((a) => a.id),
       });
     }
@@ -1341,6 +1382,9 @@ function AnnotatedParagraph({
             ? "underline decoration-blue-500 decoration-2 underline-offset-4"
             : "",
           r.circle ? "rounded-full border-2 border-rose-400 px-1 py-0.5" : "",
+          r.discourse
+            ? "rounded bg-yellow-200/70 px-0.5 dark:bg-yellow-500/30"
+            : "",
         ]
           .filter(Boolean)
           .join(" ");
@@ -1381,11 +1425,12 @@ function AnnotatedParagraph({
   );
 }
 
-type ArrowTone = "blue" | "violet" | "sky" | "rose";
+type ArrowTone = "blue" | "violet" | "sky" | "rose" | "teal";
 function toneOf(rt: RelationType | null): ArrowTone {
   if (rt === "similarity") return "sky";
   if (rt === "contrast") return "rose";
   if (rt === "compare_contrast") return "violet";
+  if (rt === "elaboration") return "teal";
   return "blue";
 }
 const TONE_HEX: Record<ArrowTone, string> = {
@@ -1393,6 +1438,7 @@ const TONE_HEX: Record<ArrowTone, string> = {
   violet: "#7c3aed",
   sky: "#0ea5e9",
   rose: "#e11d48",
+  teal: "#0d9488",
 };
 
 type ArrowDir = "one" | "in" | "out";
@@ -1482,7 +1528,7 @@ function RelationArrows({
     };
   }, [containerRef, relations, depKey]);
 
-  const tones: ArrowTone[] = ["blue", "violet", "sky", "rose"];
+  const tones: ArrowTone[] = ["blue", "violet", "sky", "rose", "teal"];
   return (
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"

@@ -14,6 +14,7 @@ const REL_KO: Record<string, string> = {
   listing: "나열",
   similarity: "공통점",
   contrast: "차이점",
+  elaboration: "상술",
 };
 
 /** 세션 소유자 확인 후 supabase 반환(없으면 리다이렉트) */
@@ -31,7 +32,7 @@ async function requireOwnedSession(sessionId: string) {
 export type AddAnnotationInput = {
   sessionId: string;
   paragraphId: string;
-  type: "underline" | "circle";
+  type: "underline" | "circle" | "discourse";
   spanStart: number;
   spanEnd: number;
 };
@@ -77,7 +78,8 @@ export type RelationType =
   | "question_answer"
   | "listing"
   | "similarity"
-  | "contrast";
+  | "contrast"
+  | "elaboration";
 
 /**
  * 두 표시(A→B)를 관계로 연결한다.
