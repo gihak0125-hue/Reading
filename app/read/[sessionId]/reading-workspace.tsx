@@ -572,6 +572,19 @@ export function ReadingWorkspace({
     });
   }
 
+  function askCheck() {
+    setCoachNote(null);
+    startCoach(async () => {
+      const res = await sendCoachMessage({
+        sessionId,
+        text: "",
+        mode: "check",
+      });
+      if (res.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
+      else if (res.error) setCoachNote(res.error);
+    });
+  }
+
   function annoText(a?: AnnotationData | null): string {
     if (!a) return "";
     return (paraById.get(a.paragraph_id)?.text ?? "").slice(
@@ -1211,6 +1224,16 @@ export function ReadingWorkspace({
                 >
                   🔎 내 표시 봐주기
                 </button>
+                {status === "completed" && (
+                  <button
+                    type="button"
+                    onClick={askCheck}
+                    disabled={coachPending}
+                    className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950 dark:text-emerald-300"
+                  >
+                    📝 독해 확인
+                  </button>
+                )}
                 {status === "completed" && (
                   <button
                     type="button"

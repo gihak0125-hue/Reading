@@ -23,6 +23,7 @@ const SYSTEM_PROMPT = `당신은 고등학교 3학년 학생의 '추론적 독�
 [시점 — 중요]
 - 학생이 '읽는 중'일 때(기본 대화·활동 피드백·힌트)에는 핵심정보 확인(사실적 독해)과 추론에 집중하고, 관점 평가(비판적 독해)는 먼저 꺼내지 마세요.
 - 관점 평가는 학생이 '읽기를 마친 뒤' 관점 평가 모드에서만 다룹니다.
+- 읽은 뒤에는 '독해 확인'(세부 → 중심 → 추론 문항)을 먼저 진행하고, 그다음에 관점 평가를 다룹니다.
 
 [관점 평가(비판적 독해) 모드 규칙 — 매우 중요]
 - 논쟁적 주제에 대해 당신(에이전트) 자신의 입장이나 어느 쪽이 옳은지 절대 말하지 마세요.
@@ -46,7 +47,7 @@ export type CoachContext = {
   history: Turn[];
   studentMessage: string;
   hintRequested?: boolean;
-  mode?: "chat" | "activity" | "critique";
+  mode?: "chat" | "activity" | "critique" | "check";
   attempt?: number;
 };
 
@@ -61,6 +62,7 @@ export async function runCoach(
 
   const activity = ctx.mode === "activity";
   const critique = ctx.mode === "critique";
+  const check = ctx.mode === "check";
 
   const marksText =
     ctx.marks.length > 0
@@ -103,7 +105,9 @@ ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
     });
   }
 
-  const finalUser = critique
+  const finalUser = check
+    ? `독해 확인(읽은 뒤 이해 점검)을 돕는 차례입니다. 지문을 근거로 '세부 내용 → 중심 내용 → 추론' 순서로 한 번에 한 문항씩 물어 학생이 답하게 하세요. 지금까지 대화를 보고: 아직 세부 문항을 안 물었으면 글에 명시된 구체적 사실을 묻는 세부 문항 하나를, 세부를 물었으면 문단·글 전체의 중심 내용을 묻는 문항을, 그다음엔 글에 직접 드러나지 않은 의미나 필자 의도를 묻는 추론 문항을 제시하세요. 학생이 답하면 맞았는지 간단히 확인하되, 틀렸으면 정답을 바로 주지 말고 어느 문장을 다시 보면 좋을지 단서를 주어 다시 답하게 하세요. 한 번에 한 문항, 2~3문장 이내.`
+    : critique
     ? `관점 평가(비판적 독해)를 돕는 차례입니다(학생은 읽기를 마쳤습니다). 지문에 서로 겨루는 관점이나 평가 대상이 되는 주장이 있는지 학생이 스스로 찾게 하세요. 정답이나 당신의 입장은 절대 제시하지 말고, 지금 대화 흐름에 맞춰 딱 한 걸음만 질문하세요: 아직 관점을 못 찾았으면 "이 글에서 서로 겨루는 관점(또는 평가 대상이 되는 주장)이 있다면 무엇일까요?"로 시작하고, 찾았으면 그 관점의 핵심 주장과 '그렇게 보는 전제·기준'을 묻고, 이어서 어떤 관점을 '기준'으로 삼아 다른 관점을 볼지 구분하게 하고, 그 기준을 적용하면 무엇이 문제인지 글의 근거 문장을 찾아 설명하게 하세요. 2문장 이내, 질문 하나로 끝맺기.`
     : activity
     ? `학생이 방금 지문에 표시하거나 관계를 연결했고, 아직 아무 말도 하지 않았습니다. 위의 '표시한 핵심정보'와 '연결한 관계'만 근거로, 정답이나 해석은 절대 주지 말고 딱 한 가지만 골라 짧게 반응하세요: (가) 인상적인 선택 하나를 구체적으로 짚어 "왜 그렇게 봤는지" 묻거나, (나) 어색해 보이는 연결·표시 하나를 다시 살펴보도록 단서를 주세요. 학생을 재촉하지 말고, 2문장 이내로 질문 하나로 끝맺으세요. 아직 표시가 거의 없으면 부담 주지 말고 가볍게 한 걸음만 권하세요.`
@@ -114,7 +118,7 @@ ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
   messages.push({ role: "user", content: finalUser });
 
   const model = pickModel({
-    step: critique || (!activity && ctx.relations.length > 0) ? "S2" : "S1",
+    step: check || critique || (!activity && ctx.relations.length > 0) ? "S2" : "S1",
     attempt: ctx.attempt ?? 0,
   });
 
