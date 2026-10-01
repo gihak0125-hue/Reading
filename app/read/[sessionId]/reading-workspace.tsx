@@ -58,8 +58,6 @@ type ToolId =
   | "answer"
   | "similar"
   | "contrast"
-  | "elaborate"
-  | "discourse"
   | "listing"
   | "erase";
 
@@ -68,7 +66,6 @@ const REL_TOOL_TYPE: Partial<Record<ToolId, RelationType>> = {
   process: "process",
   similar: "similarity",
   contrast: "contrast",
-  elaborate: "elaboration",
 };
 
 // 단일 표시에 역할을 찍는 도구(문제/해결/질문/답)
@@ -95,8 +92,6 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "answer", label: "답", glyph: "A" },
   { id: "similar", label: "공통점", glyph: "=" },
   { id: "contrast", label: "차이점", glyph: "≠" },
-  { id: "elaborate", label: "상술", glyph: "▸" },
-  { id: "discourse", label: "담화표지", glyph: "〰" },
   { id: "listing", label: "나열", glyph: "①" },
   { id: "erase", label: "지우기", glyph: "⌫" },
 ];
@@ -576,7 +571,8 @@ export function ReadingWorkspace({
       return;
     }
     const timer = setTimeout(() => {
-      if (coachPending || Date.now() - a.at < 12000) return;
+      if (coachPending || Date.now() - a.at < 45000 || total - a.count < 2)
+        return;
       a.count = total;
       a.at = Date.now();
       startCoach(async () => {
@@ -587,7 +583,7 @@ export function ReadingWorkspace({
         });
         if (res.needsKey) a.off = true;
       });
-    }, 3500);
+    }, 7000);
     return () => clearTimeout(timer);
   }, [marks.length, relations.length, status, sessionId, coachPending, startCoach]);
 
@@ -685,12 +681,8 @@ export function ReadingWorkspace({
     const wrap = articleRef.current;
     if (!wrap || pts.length === 0 || !tool) return;
 
-    if (tool === "underline" || tool === "circle" || tool === "discourse") {
-      const span = recognizeSpan(
-        wrap,
-        pts,
-        tool === "circle" ? "circle" : "underline",
-      );
+    if (tool === "underline" || tool === "circle") {
+      const span = recognizeSpan(wrap, pts, tool);
       if (!span) {
         setMsg("표시할 글자 위를 그어 주세요.");
         return;
@@ -867,8 +859,6 @@ export function ReadingWorkspace({
       return "'밑줄' — 핵심문장(중요한 문장·구절)에 손으로 그으면 표시돼요.";
     if (tool === "circle")
       return "'동그라미' — 핵심어(중요한 낱말·개념)에 손으로 그으면 표시돼요.";
-    if (tool === "discourse")
-      return "'담화표지' — 그러나·따라서·예를 들어 같은 이음말에 손으로 그으면 강조돼요.";
     if (tool === "listing")
       return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
     if (tool === "erase") return "'지우기' — 표시 위를 그으면 지워져요.";
@@ -979,13 +969,7 @@ export function ReadingWorkspace({
                     <b>◯ 동그라미</b> — 핵심어(중요한 낱말·개념)에 치기
                   </li>
                   <li>
-                    <b>〰 담화표지</b> — 그러나·따라서 같은 이음말에 긋기
-                  </li>
-                  <li>
                     <b>→ 원인·결과 / ⇢ 과정</b> — 두 표시를 이어 관계 화살표
-                  </li>
-                  <li>
-                    <b>▸ 상술</b> — 앞 내용을 자세히 푼 부분을 이어 표시
                   </li>
                   <li>
                     <b>P 문제 / S 해결</b> — 표시 하나를 탭해 역할 찍기
