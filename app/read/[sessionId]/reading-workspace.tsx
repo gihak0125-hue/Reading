@@ -472,6 +472,24 @@ export function ReadingWorkspace({
     return m;
   }, [paragraphs]);
 
+  // 문단 사이 관계를 모아 글 전체 구조도를 구성(설계지침4.4)
+  const structureEdges = useMemo(() => {
+    const seqOf = (annId: string | null) => {
+      const a = annId ? annoById.get(annId) : null;
+      return a ? (paraById.get(a.paragraph_id)?.seq ?? 0) : 0;
+    };
+    const map = new Map<string, { from: number; to: number; rt: RelationType }>();
+    for (const r of relations) {
+      if (!r.from_ref || !r.target_ref || !r.relation_type) continue;
+      const f = seqOf(r.from_ref);
+      const t = seqOf(r.target_ref);
+      if (!f || !t || f === t) continue;
+      const key = `${f}-${t}-${r.relation_type}`;
+      if (!map.has(key)) map.set(key, { from: f, to: t, rt: r.relation_type });
+    }
+    return [...map.values()].sort((a, b) => a.from - b.from || a.to - b.to);
+  }, [relations, annoById, paraById]);
+
   const badgesByMark = useMemo(() => {
     const map = new Map<string, Badge[]>();
     const push = (id: string | null, b: Badge) => {
@@ -1110,6 +1128,50 @@ export function ReadingWorkspace({
               <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 관계 구조도 {relations.length > 0 && `(${relations.length})`}
               </p>
+              {structureEdges.length > 0 && (
+                <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
+                  <p className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    📐 문단 구조도
+                  </p>
+                  <div className="mb-2 flex flex-wrap items-center gap-1">
+                    {paragraphs.map((p, i) => (
+                      <span key={p.id} className="flex items-center gap-1">
+                        <span className="rounded bg-white px-1.5 py-0.5 text-[11px] text-gray-600 shadow-sm dark:bg-gray-950 dark:text-gray-300">
+                          {p.seq}
+                        </span>
+                        {i < paragraphs.length - 1 && (
+                          <span className="text-gray-300">›</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                  <ul className="flex flex-col gap-1">
+                    {structureEdges.map((e, i) => {
+                      const c = REL_COLOR[e.rt];
+                      const two =
+                        e.rt === "compare_contrast" ||
+                        e.rt === "similarity" ||
+                        e.rt === "contrast";
+                      return (
+                        <li key={i} className="flex items-center gap-1.5 text-xs">
+                          <span className="rounded bg-white px-1.5 py-0.5 font-medium shadow-sm dark:bg-gray-950">
+                            {e.from}문단
+                          </span>
+                          <span className={`font-bold ${c.accent}`}>
+                            {two ? "↔" : "→"}
+                          </span>
+                          <span className="rounded bg-white px-1.5 py-0.5 font-medium shadow-sm dark:bg-gray-950">
+                            {e.to}문단
+                          </span>
+                          <span className={`rounded border px-1.5 py-0.5 text-[10px] ${c.box}`}>
+                            {REL_LABEL[e.rt]}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
               {relations.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
                   관계 도구로 표시를 이으면 여기에 정리돼요.
