@@ -8,7 +8,7 @@ export default function Home() {
           고등학교 3학년 · AI 읽기 코치
         </p>
         <h1 className="text-4xl font-bold leading-tight tracking-tight text-gray-800 drop-shadow-sm dark:text-gray-100 sm:text-5xl">
-          생각하며 읽는
+          읽고 생각하는 힘,
           <br />
           <span className="text-amber-700 dark:text-amber-400">
             문해력
