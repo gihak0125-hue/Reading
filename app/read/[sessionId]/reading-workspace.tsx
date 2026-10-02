@@ -929,7 +929,7 @@ export function ReadingWorkspace({
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
+      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-950">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             href="/read"
@@ -971,7 +971,7 @@ export function ReadingWorkspace({
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
-        <section className="relative flex-1 rounded-2xl border border-white/60 bg-white/90 p-5 shadow-xl shadow-blue-200/20 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/80 dark:shadow-black/30">
+        <section className="relative flex-1 rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           {pending && (
             <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -1104,7 +1104,7 @@ export function ReadingWorkspace({
           </div>
         </section>
 
-        <aside className="rounded-2xl border border-white/60 bg-white/85 p-5 shadow-xl shadow-blue-200/20 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/75 dark:shadow-black/30 lg:w-[340px] lg:shrink-0">
+        <aside className="rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:w-[340px] lg:shrink-0">
           <h2 className="mb-3 font-semibold">📝 사고 패드</h2>
           <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1 text-sm dark:bg-gray-800">
             {(
@@ -1337,7 +1337,7 @@ export function ReadingWorkspace({
         </aside>
       </div>
 
-      <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
+      <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-4 md:flex-row md:items-end">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-100 text-lg dark:bg-blue-950">
