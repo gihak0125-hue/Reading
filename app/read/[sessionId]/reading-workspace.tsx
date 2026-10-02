@@ -996,6 +996,13 @@ export function ReadingWorkspace({
           >
             ‹
           </Link>
+          <Link
+            href="/dashboard"
+            aria-label="홈으로"
+            className="rounded-md px-1.5 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            🏠
+          </Link>
           <span className="truncate font-semibold">📄 {title}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
