@@ -1028,7 +1028,7 @@ export function ReadingWorkspace({
           <button
             type="button"
             onClick={() => setShowTools((v) => !v)}
-            className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+            className="rounded-full bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
           >
             ✨ AI 읽기 코치
           </button>
@@ -1038,7 +1038,7 @@ export function ReadingWorkspace({
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
         <section className="relative flex-1 rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           {pending && (
-            <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
+            <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full bg-amber-600/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
               표시하는 중…
             </div>
@@ -1066,7 +1066,7 @@ export function ReadingWorkspace({
                       onClick={() => selectTool(t.id)}
                       className={`flex min-w-[60px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
                         active
-                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                          ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                           : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
                       }`}
                     >
@@ -1079,7 +1079,7 @@ export function ReadingWorkspace({
               <button
                 type="button"
                 onClick={() => setShowGuide((v) => !v)}
-                className="mt-2 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                className="mt-2 text-xs font-medium text-amber-700 hover:underline dark:text-amber-400"
               >
                 {showGuide ? "▾ 도구 안내 닫기" : "❔ 이 도구들 뭐예요?"}
               </button>
@@ -1185,7 +1185,7 @@ export function ReadingWorkspace({
                 onClick={() => setTab(id)}
                 className={`flex-1 rounded-md px-2 py-1.5 font-medium ${
                   tab === id
-                    ? "bg-white text-blue-700 shadow-sm dark:bg-gray-950 dark:text-blue-300"
+                    ? "bg-white text-amber-800 shadow-sm dark:bg-gray-950 dark:text-amber-300"
                     : "text-gray-500"
                 }`}
               >
@@ -1405,11 +1405,11 @@ export function ReadingWorkspace({
       <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-4 md:flex-row md:items-end">
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-100 text-lg dark:bg-blue-950">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-lg dark:bg-amber-950">
               🤖
             </div>
             <div className="min-w-0">
-              <div className="rounded-2xl rounded-tl-sm bg-blue-50 px-4 py-2.5 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
+              <div className="rounded-2xl rounded-tl-sm bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
                 {coachPending
                   ? "생각 중이에요…"
                   : (lastAgent ??
@@ -1432,7 +1432,7 @@ export function ReadingWorkspace({
                   type="button"
                   onClick={() => sendCoach(true)}
                   disabled={coachPending}
-                  className="rounded-md px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-950"
+                  className="rounded-md px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:hover:bg-amber-950"
                 >
                   💡 힌트
                 </button>
@@ -1512,7 +1512,7 @@ export function ReadingWorkspace({
               type="button"
               onClick={() => sendCoach(false)}
               disabled={coachPending || !draft.trim()}
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-xl bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
             >
               보내기
             </button>
