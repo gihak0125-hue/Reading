@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireTeacher } from "@/lib/auth";
 import { PassageForm } from "./passage-form";
-import { deletePassage } from "./actions";
+import { DeleteButton } from "./delete-button";
 
 export default async function TeacherPage() {
   const { supabase, user } = await requireTeacher();
@@ -68,15 +68,7 @@ export default async function TeacherPage() {
                   >
                     태깅
                   </Link>
-                  <form action={deletePassage}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <button
-                      type="submit"
-                      className="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                    >
-                      삭제
-                    </button>
-                  </form>
+                  <DeleteButton id={p.id} />
                 </div>
               </li>
             ))}
