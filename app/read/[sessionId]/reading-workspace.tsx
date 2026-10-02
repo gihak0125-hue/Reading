@@ -363,6 +363,7 @@ export function ReadingWorkspace({
 }) {
   const [tool, setTool] = useState<ToolId | null>(null);
   const [showTools, setShowTools] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
@@ -927,8 +928,65 @@ export function ReadingWorkspace({
     return "밑줄=핵심문장, 동그라미=핵심어. 도구를 고르면 손으로 표시해요. (도구를 끄면 읽기·스크롤)";
   };
 
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("reading_tutorial_v1")) setShowTutorial(true);
+    } catch {}
+  }, []);
+  function closeTutorial() {
+    setShowTutorial(false);
+    try {
+      localStorage.setItem("reading_tutorial_v1", "1");
+    } catch {}
+  }
+
   return (
     <div className="flex min-h-full flex-col">
+      {showTutorial && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeTutorial}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold">읽기 전에, 이렇게 해요 📖</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              정답을 먼저 알려주지 않아요. 스스로 표시하고 설명하면 코치가 곁에서 도와줘요.
+            </p>
+            <ul className="mt-4 flex flex-col gap-3">
+              {(
+                [
+                  ["✍️", "손으로 표시", "밑줄은 핵심문장, 동그라미는 핵심어에 그어요."],
+                  ["🔗", "관계 잇기", "표시를 화살표로 이어 인과·비교·대조 같은 관계를 나타내요."],
+                  ["💬", "자기설명", "정답 확인 전에 내 말로 먼저 설명해요."],
+                  ["🤖", "AI 읽기 코치", "막히면 정답 대신 질문과 힌트로 도와줘요."],
+                ] as const
+              ).map(([icon, title, desc]) => (
+                <li key={title} className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-xl dark:bg-amber-950">
+                    {icon}
+                  </span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {title}
+                    </span>{" "}
+                    — {desc}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={closeTutorial}
+              className="mt-5 w-full rounded-xl bg-amber-700 px-4 py-2.5 font-medium text-white hover:bg-amber-800"
+            >
+              시작하기
+            </button>
+          </div>
+        </div>
+      )}
       <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-950">
         <div className="flex min-w-0 items-center gap-2">
           <Link
@@ -960,6 +1018,13 @@ export function ReadingWorkspace({
               읽기 마치기
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setShowTutorial(true)}
+            className="rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            ❔ 튜토리얼
+          </button>
           <button
             type="button"
             onClick={() => setShowTools((v) => !v)}
