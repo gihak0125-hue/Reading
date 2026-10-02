@@ -101,7 +101,9 @@ export default async function DashboardPage() {
             안녕하세요, {name}님
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            오늘도 차분히 읽어볼까요?
+            {isTeacher
+              ? "학생들이 얼마나 성장했을까요?"
+              : "오늘도 즐겁게 읽어볼까요?"}
           </p>
         </div>
         <form action={signout}>
