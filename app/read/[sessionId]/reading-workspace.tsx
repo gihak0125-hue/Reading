@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import Link from "next/link";
+import { HomeIcon } from "@/app/home-button";
 import {
   addAnnotation,
   deleteAnnotation,
@@ -999,9 +1000,9 @@ export function ReadingWorkspace({
           <Link
             href="/dashboard"
             aria-label="홈으로"
-            className="rounded-md px-1.5 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="grid place-items-center rounded-md px-1.5 py-1 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950"
           >
-            🏠
+            <HomeIcon className="h-4 w-4" />
           </Link>
           <span className="truncate font-semibold">📄 {title}</span>
         </div>
