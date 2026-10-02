@@ -5,15 +5,14 @@ export default function Home() {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-10 px-6 py-12 sm:py-16">
       <header className="flex min-h-[60vh] max-w-xl flex-col justify-center gap-4">
         <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-medium text-sky-800 shadow-sm dark:bg-gray-950/70 dark:text-sky-300">
-          고등학교 3학년 · 추론적 독해
+          고등학교 3학년 · AI 읽기 코치
         </p>
         <h1 className="text-4xl font-bold leading-tight tracking-tight text-gray-800 drop-shadow-sm dark:text-gray-100 sm:text-5xl">
-          오늘도
+          생각하며 읽는
           <br />
           <span className="text-amber-700 dark:text-amber-400">
-            차분히 읽는
-          </span>{" "}
-          시간
+            문해력
+          </span>
         </h1>
         <p className="max-w-md text-base leading-relaxed text-gray-700 dark:text-gray-200">
           정답을 먼저 알려주지 않아요. 지문을 읽으며 스스로 핵심을 찾고, 정보를
