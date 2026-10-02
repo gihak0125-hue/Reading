@@ -63,7 +63,7 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="rounded-3xl border border-white/70 bg-white/95 p-6 shadow-xl shadow-sky-900/10 dark:border-white/10 dark:bg-gray-950/95 dark:shadow-black/30 sm:p-8">
+      <section className="rounded-3xl border border-white/70 bg-white/70 p-6 shadow-xl shadow-sky-900/10 dark:border-white/10 dark:bg-gray-950/65 dark:shadow-black/30 sm:p-8">
         <h2 className="mb-5 text-lg font-semibold">이렇게 읽어요</h2>
         <ul className="grid gap-4 sm:grid-cols-2">
           {STEPS.map((s) => (
