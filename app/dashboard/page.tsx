@@ -63,21 +63,25 @@ export default async function DashboardPage() {
             />
           </>
         ) : (
-          <>
-            <Card
-              href="/read"
-              title="읽기 시작"
-              desc="지문을 골라 읽기를 시작합니다."
-            />
-            <Card
-              href="/join"
-              title="학급 참여"
-              desc="선생님이 준 참여코드로 우리 반에 들어갑니다."
-            />
-          </>
+          <Card
+            href="/read"
+            title="읽기 시작"
+            desc="지문을 골라 읽기를 시작합니다."
+          />
         )}
       </section>
 
+      {role !== "teacher" && (
+        <p className="text-sm text-gray-400">
+          반을 바꾸거나 코드를 나중에 입력하려면{" "}
+          <Link
+            href="/join"
+            className="text-amber-700 hover:underline dark:text-amber-400"
+          >
+            학급 참여 →
+          </Link>
+        </p>
+      )}
     </main>
   );
 }

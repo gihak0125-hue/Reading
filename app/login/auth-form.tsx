@@ -7,6 +7,7 @@ const initial: AuthState = {};
 
 export function AuthForm({ next }: { next: string }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [role, setRole] = useState<"student" | "teacher">("student");
   const [state, formAction, pending] = useActionState(authenticate, initial);
 
   return (
@@ -82,15 +83,45 @@ export function AuthForm({ next }: { next: string }) {
             <span className="text-gray-700 dark:text-gray-300">역할</span>
             <div className="flex gap-4">
               <label className="flex items-center gap-2">
-                <input type="radio" name="role" value="student" defaultChecked />
+                <input
+                  type="radio"
+                  name="role"
+                  value="student"
+                  checked={role === "student"}
+                  onChange={() => setRole("student")}
+                />
                 학생
               </label>
               <label className="flex items-center gap-2">
-                <input type="radio" name="role" value="teacher" />
+                <input
+                  type="radio"
+                  name="role"
+                  value="teacher"
+                  checked={role === "teacher"}
+                  onChange={() => setRole("teacher")}
+                />
                 교사
               </label>
             </div>
           </fieldset>
+        )}
+
+        {mode === "signup" && role === "student" && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-gray-700 dark:text-gray-300">
+              참여 코드 <span className="text-gray-400">(선택)</span>
+            </span>
+            <input
+              name="join_code"
+              type="text"
+              autoComplete="off"
+              placeholder="선생님이 준 코드"
+              className="rounded-md border border-gray-300 px-3 py-2 uppercase dark:border-gray-700 dark:bg-gray-900"
+            />
+            <span className="text-xs text-gray-400">
+              우리 반에 들어가요. 나중에 입력해도 됩니다.
+            </span>
+          </label>
         )}
 
         {state.error && (

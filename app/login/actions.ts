@@ -51,6 +51,14 @@ export async function authenticate(
           "가입 완료! 이메일 확인이 켜져 있어요. 확인 링크를 누르거나, 설정에서 이메일 확인을 끄면 바로 로그인됩니다.",
       };
     }
+    if (role === "student") {
+      const code = String(formData.get("join_code") ?? "")
+        .trim()
+        .toUpperCase();
+      if (code) {
+        await supabase.rpc("join_class", { p_code: code });
+      }
+    }
     revalidatePath("/", "layout");
     redirect(next);
   }
