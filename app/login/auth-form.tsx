@@ -10,14 +10,14 @@ export function AuthForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState(authenticate, initial);
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-white/60 bg-white p-6 shadow-xl shadow-blue-200/30 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+    <div className="w-full max-w-sm rounded-2xl border border-white/70 bg-white/85 p-6 shadow-xl shadow-amber-900/10 dark:border-white/10 dark:bg-gray-950/90 dark:shadow-black/30">
       <div className="mb-6 flex gap-2 text-sm font-medium">
         <button
           type="button"
           onClick={() => setMode("login")}
           className={`flex-1 rounded-md px-3 py-2 ${
             mode === "login"
-              ? "bg-blue-600 text-white"
+              ? "bg-amber-700 text-white"
               : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
           }`}
         >
@@ -28,7 +28,7 @@ export function AuthForm({ next }: { next: string }) {
           onClick={() => setMode("signup")}
           className={`flex-1 rounded-md px-3 py-2 ${
             mode === "signup"
-              ? "bg-blue-600 text-white"
+              ? "bg-amber-700 text-white"
               : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
           }`}
         >
@@ -107,7 +107,7 @@ export function AuthForm({ next }: { next: string }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          className="rounded-md bg-amber-700 px-4 py-2 font-medium text-white hover:bg-amber-800 disabled:opacity-60"
         >
           {pending
             ? "처리 중..."

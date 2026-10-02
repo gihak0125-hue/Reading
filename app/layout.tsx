@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "추론적 독해 AI 에이전트",
-  description: "고등학교 3학년 추론적 독해를 돕는 AI 독서 에이전트",
+  title: "AI 문해력 코치",
+  description: "읽고 생각하는 힘을 기르는 AI 문해력 코치",
 };
 
 export default function RootLayout({
