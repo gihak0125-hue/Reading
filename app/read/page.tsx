@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSessionProfile } from "@/lib/auth";
 import { startSession } from "./actions";
+import { StartButton } from "./start-button";
 
 export default async function ReadListPage() {
   const { supabase, user } = await getSessionProfile("/read");
@@ -50,12 +51,7 @@ export default async function ReadListPage() {
               </div>
               <form action={startSession}>
                 <input type="hidden" name="passage_id" value={p.id} />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-3 text-base font-medium text-white hover:bg-blue-700"
-                >
-                  읽기 시작
-                </button>
+                <StartButton />
               </form>
             </li>
           ))}
@@ -70,7 +66,7 @@ export default async function ReadListPage() {
               <li key={s.id}>
                 <Link
                   href={`/read/${s.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 hover:border-blue-400 dark:border-gray-800"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 hover:border-amber-400 dark:border-gray-800"
                 >
                   <span className="min-w-0 truncate">
                     {titleOf.get(s.passage_id) ?? "지문"}
@@ -79,7 +75,7 @@ export default async function ReadListPage() {
                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
                       s.status === "completed"
                         ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
                     }`}
                   >
                     {s.status === "completed" ? "완료" : "이어 읽기"}
