@@ -402,6 +402,8 @@ export function ReadingWorkspace({
     at: 0,
     off: false,
   });
+  const [seCue, setSeCue] = useState(false);
+  const seRef = useRef({ predict: false, hidden: false, at: 0, off: false });
 
   const articleRef = useRef<HTMLDivElement>(null);
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({
@@ -586,6 +588,31 @@ export function ReadingWorkspace({
     }, 7000);
     return () => clearTimeout(timer);
   }, [marks.length, relations.length, status, sessionId, coachPending, startCoach]);
+
+  // 적절한 때 자기설명을 자동으로 띄워 학생이 쓰게 유도(읽는 중 2번: 예측·숨은 뜻)
+  useEffect(() => {
+    if (status === "completed") return;
+    const r = seRef.current;
+    if (r.off || studentTurns.length >= 2) return;
+    const m = marks.length;
+    let mode: "predict" | "hidden" | null = null;
+    if (!r.predict && studentTurns.length < 1 && m >= 3) mode = "predict";
+    else if (!r.hidden && m >= 7) mode = "hidden";
+    if (!mode) return;
+    const pick = mode;
+    const timer = setTimeout(() => {
+      if (coachPending || Date.now() - r.at < 20000) return;
+      if (pick === "predict") r.predict = true;
+      else r.hidden = true;
+      r.at = Date.now();
+      startCoach(async () => {
+        const res = await sendCoachMessage({ sessionId, text: "", mode: pick });
+        if (res.needsKey) r.off = true;
+        else if (!res.error) setSeCue(true);
+      });
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [marks.length, status, coachPending, studentTurns.length, sessionId, startCoach]);
 
   function askFeedback() {
     setCoachNote(null);
@@ -853,6 +880,7 @@ export function ReadingWorkspace({
   function sendCoach(hint: boolean) {
     const text = draft.trim();
     if (!hint && !text) return;
+    if (!hint && text) setSeCue(false);
     setCoachNote(null);
     startCoach(async () => {
       const res = await sendCoachMessage({ sessionId, text, hint });
@@ -1370,7 +1398,13 @@ export function ReadingWorkspace({
               </div>
             </div>
           </div>
-          <div className="flex items-end gap-2">
+          <div className="relative flex items-end gap-2">
+            {seCue && (
+              <div className="absolute -top-8 right-0 z-10 flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-lg">
+                <span className="animate-bounce">✍️</span>
+                여기에 네 생각을 적어 보내줘!
+              </div>
+            )}
             <textarea
               rows={2}
               maxLength={300}
@@ -1383,7 +1417,7 @@ export function ReadingWorkspace({
                 }
               }}
               placeholder="내 설명 입력 (예: … 때문에 … 라고 생각합니다.)"
-              className="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 md:w-72"
+              className={`w-full resize-none rounded-xl border px-3 py-2 text-sm dark:bg-gray-900 md:w-72 ${seCue ? "border-indigo-400 ring-2 ring-indigo-300 dark:border-indigo-500" : "border-gray-300 dark:border-gray-700"}`}
             />
             <button
               type="button"
