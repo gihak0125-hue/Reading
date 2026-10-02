@@ -365,6 +365,7 @@ export function ReadingWorkspace({
   const [tool, setTool] = useState<ToolId | null>(null);
   const [showTools, setShowTools] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [phase, setPhase] = useState<null | "check" | "critique">(null);
   const [showGuide, setShowGuide] = useState(false);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
@@ -891,6 +892,8 @@ export function ReadingWorkspace({
     startTransition(async () => {
       await completeSession(sessionId);
     });
+    setPhase("check");
+    askCheck();
   }
   function handleReopen() {
     startTransition(async () => {
@@ -943,6 +946,130 @@ export function ReadingWorkspace({
 
   return (
     <div className="flex min-h-full flex-col">
+      {phase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900">
+            <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3 dark:border-gray-800">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <span
+                    className={
+                      phase === "check"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-gray-400"
+                    }
+                  >
+                    ① 독해 확인
+                  </span>
+                  <span className="text-gray-300">›</span>
+                  <span
+                    className={
+                      phase === "critique"
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-gray-400"
+                    }
+                  >
+                    ② 관점 평가
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {phase === "check"
+                    ? "읽은 내용을 점검해요(세부·중심·추론)."
+                    : "글의 관점을 평가해요."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhase(null)}
+                aria-label="닫기"
+                className="rounded-md px-2 py-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                ✕
+              </button>
+            </header>
+
+            <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+              {messages.length === 0 && !coachPending && (
+                <p className="text-sm text-gray-400">
+                  코치가 곧 질문을 띄울 거예요…
+                </p>
+              )}
+              {messages.slice(-12).map((m) => (
+                <div
+                  key={m.id}
+                  className={m.role === "agent" ? "flex" : "flex flex-row-reverse"}
+                >
+                  <div
+                    className={`max-w-[82%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                      m.role === "agent"
+                        ? "rounded-tl-sm bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100"
+                        : "rounded-tr-sm bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+                    }`}
+                  >
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {coachPending && (
+                <p className="text-xs text-gray-400">생각 중이에요…</p>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 p-3 dark:border-gray-800">
+              <div className="flex items-end gap-2">
+                <textarea
+                  rows={2}
+                  maxLength={300}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendCoach(false);
+                    }
+                  }}
+                  placeholder="내 답을 적어요"
+                  className="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => sendCoach(false)}
+                  disabled={coachPending || !draft.trim()}
+                  className="rounded-xl bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                >
+                  보내기
+                </button>
+              </div>
+              {coachNote && (
+                <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
+              )}
+              <div className="mt-2 flex justify-end">
+                {phase === "check" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhase("critique");
+                      askCritique();
+                    }}
+                    disabled={coachPending}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    독해 확인 완료 → 관점 평가
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPhase(null)}
+                    className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
+                  >
+                    관점 평가 마치기
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showTutorial && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -1423,15 +1550,6 @@ export function ReadingWorkspace({
                   : (lastAgent ??
                     "읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 궁금한 점이나 내 생각을 아래에 적어줘요.")}
               </div>
-              {status === "completed" && (
-                <div className="mt-1 flex items-start gap-2 rounded-2xl rounded-tl-sm border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
-                  <span className="mt-0.5 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500" />
-                  <span>
-                    🎉 읽기를 마쳤어요! 이제 아래 <b>📝 독해 확인</b>을 먼저
-                    누르고, 이어서 <b>🔍 관점 평가</b>를 눌러 마무리해요. 👇
-                  </span>
-                </div>
-              )}
               {coachNote && (
                 <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
               )}
@@ -1475,21 +1593,14 @@ export function ReadingWorkspace({
                 {status === "completed" && (
                   <button
                     type="button"
-                    onClick={askCheck}
+                    onClick={() => {
+                      setPhase("check");
+                      askCheck();
+                    }}
                     disabled={coachPending}
-                    className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950 dark:text-emerald-300"
+                    className="rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-950 dark:text-amber-300"
                   >
-                    📝 독해 확인
-                  </button>
-                )}
-                {status === "completed" && (
-                  <button
-                    type="button"
-                    onClick={askCritique}
-                    disabled={coachPending}
-                    className="rounded-md bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50 dark:bg-rose-950 dark:text-rose-300"
-                  >
-                    🔍 관점 평가(비판적 독해)
+                    📝 마무리하기(독해 확인·관점 평가)
                   </button>
                 )}
               </div>
