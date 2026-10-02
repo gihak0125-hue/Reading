@@ -67,7 +67,7 @@ export default async function DashboardPage() {
             <Card
               href="/read"
               title="읽기 시작"
-              desc="지문을 골라 추론적 독해를 시작합니다."
+              desc="지문을 골라 읽기를 시작합니다."
             />
             <Card
               href="/join"
@@ -76,11 +76,6 @@ export default async function DashboardPage() {
             />
           </>
         )}
-        <Card
-          href="/"
-          title="소개"
-          desc="이 에이전트가 어떻게 돕는지 다시 봅니다."
-        />
       </section>
 
     </main>
