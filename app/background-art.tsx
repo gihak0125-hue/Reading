@@ -11,7 +11,7 @@ export function BackgroundArt() {
       {/* 배경 그림 (public/bg.jpg) */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/bg.jpg')" }}
+        style={{ backgroundImage: "url('/bg.webp')" }}
       />
       {/* 가독성 레이어: 그림을 살짝 눌러 글이 잘 보이게(연할수록 그림이 선명) */}
       <div className="absolute inset-0 bg-white/35 dark:bg-gray-950/55" />
