@@ -10,7 +10,7 @@ export function AuthForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState(authenticate, initial);
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-white/60 bg-white/70 p-6 shadow-xl shadow-blue-200/30 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+    <div className="w-full max-w-sm rounded-2xl border border-white/60 bg-white p-6 shadow-xl shadow-blue-200/30 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
       <div className="mb-6 flex gap-2 text-sm font-medium">
         <button
           type="button"

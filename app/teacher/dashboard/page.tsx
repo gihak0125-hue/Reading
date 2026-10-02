@@ -311,14 +311,14 @@ export default async function TeacherDashboard() {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-2xl border border-white/60 bg-white/70 p-4 text-center shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+          <div key={s.label} className="rounded-2xl border border-white/60 bg-white p-4 text-center shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
             <div className={`text-3xl font-bold tabular-nums ${s.tone}`}>{s.value}</div>
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
           </div>
         ))}
       </section>
 
-      <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
         <h2 className="mb-1 font-semibold">학생이 어려워한 과정(진단)</h2>
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           코치가 학생의 표시·설명을 보고 판단한 영역 집계입니다.
@@ -355,7 +355,7 @@ export default async function TeacherDashboard() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-semibold">많은 학생이 어려워한 부분</h2>
           <span className="text-xs text-gray-400">표시율 낮을수록 어려움</span>
@@ -386,7 +386,7 @@ export default async function TeacherDashboard() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">학급별 진행</h2>
           <Link href="/teacher/classes" className="text-xs text-blue-600 hover:underline dark:text-blue-400">학급 관리 →</Link>
@@ -415,7 +415,7 @@ export default async function TeacherDashboard() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">최근 활동</h2>
           <Link href="/teacher/activity" className="text-xs text-blue-600 hover:underline dark:text-blue-400">전체 보기 →</Link>
