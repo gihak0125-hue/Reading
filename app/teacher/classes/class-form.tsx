@@ -27,7 +27,7 @@ export function ClassForm() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          className="rounded-md bg-amber-700 px-5 py-2 font-medium text-white hover:bg-amber-800 disabled:opacity-60"
         >
           {pending ? "생성 중..." : "만들기"}
         </button>

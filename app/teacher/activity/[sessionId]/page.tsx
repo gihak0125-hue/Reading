@@ -166,7 +166,7 @@ export default async function ActivityDetailPage({
                 <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
                   {markText(a.from_ref)}
                 </span>
-                <span className="font-medium text-blue-600">
+                <span className="font-medium text-amber-700">
                   {a.relation_type === "compare_contrast" ? "↔" : "→"}{" "}
                   {REL_KO[a.relation_type ?? "listing"] ?? "관계"}
                 </span>
@@ -191,7 +191,7 @@ export default async function ActivityDetailPage({
                 key={m.id}
                 className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                   m.role === "student"
-                    ? "ml-auto bg-blue-600 text-white"
+                    ? "ml-auto bg-amber-700 text-white"
                     : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
                 }`}
               >

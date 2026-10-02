@@ -30,7 +30,7 @@ export default async function TeacherPage() {
           </Link>
           <Link
             href="/teacher/activity"
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="rounded-md bg-amber-700 px-3 py-2 text-sm font-medium text-white hover:bg-amber-800"
           >
             학생 활동
           </Link>
@@ -64,7 +64,7 @@ export default async function TeacherPage() {
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/teacher/${p.id}`}
-                    className="rounded-md bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+                    className="rounded-md bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
                   >
                     태깅
                   </Link>

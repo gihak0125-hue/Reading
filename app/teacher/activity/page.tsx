@@ -15,7 +15,7 @@ function FilterChip({
       href={href}
       className={`rounded-full px-3 py-1.5 text-sm font-medium ${
         active
-          ? "bg-blue-600 text-white"
+          ? "bg-amber-700 text-white"
           : "border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
       }`}
     >
@@ -191,7 +191,7 @@ export default async function ActivityPage({
                   <td className="px-4 py-2.5 text-right">
                     <Link
                       href={`/teacher/activity/${s.id}`}
-                      className="rounded-md bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+                      className="rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
                     >
                       자세히
                     </Link>

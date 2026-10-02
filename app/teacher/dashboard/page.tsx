@@ -287,7 +287,7 @@ export default async function TeacherDashboard() {
   const kindLabel = { sentence: "핵심문장", keyword: "핵심어", relation: "관계" };
 
   const stats: { label: string; value: number; tone: string }[] = [
-    { label: "학급", value: classList.length, tone: "text-blue-600 dark:text-blue-300" },
+    { label: "학급", value: classList.length, tone: "text-amber-700 dark:text-amber-300" },
     { label: "학생", value: studentList.length, tone: "text-violet-600 dark:text-violet-300" },
     { label: "지문", value: passageList.length, tone: "text-emerald-600 dark:text-emerald-300" },
     { label: "진행 중", value: inProgress, tone: "text-amber-600 dark:text-amber-300" },
@@ -331,7 +331,7 @@ export default async function TeacherDashboard() {
           <ul className="flex flex-col gap-2">
             {(
               [
-                ["key_info", "핵심정보 확인", "bg-blue-500"],
+                ["key_info", "핵심정보 확인", "bg-amber-500"],
                 ["inference", "추론", "bg-violet-500"],
                 ["viewpoint", "관점 평가", "bg-rose-500"],
                 ["relation", "관계 연결", "bg-emerald-500"],
@@ -363,7 +363,7 @@ export default async function TeacherDashboard() {
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">교사가 저장한 핵심정보·관계를 학생들이 얼마나 찾았는지 보여줍니다.</p>
         {hardTop.length === 0 ? (
           <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">
-            아직 분석할 자료가 없어요. 지문에서 <Link href="/teacher" className="text-blue-600 hover:underline dark:text-blue-400">핵심정보·관계를 저장</Link>하고 학생들이 읽으면 여기에 나타나요.
+            아직 분석할 자료가 없어요. 지문에서 <Link href="/teacher" className="text-amber-700 hover:underline dark:text-amber-400">핵심정보·관계를 저장</Link>하고 학생들이 읽으면 여기에 나타나요.
           </p>
         ) : (
           <ul className="flex flex-col gap-1.5">
@@ -372,11 +372,11 @@ export default async function TeacherDashboard() {
               const low = pct < 50;
               return (
                 <li key={h.key} className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-sm dark:border-gray-800">
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${h.kind === "relation" ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" : h.kind === "keyword" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"}`}>{kindLabel[h.kind]}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${h.kind === "relation" ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" : h.kind === "keyword" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"}`}>{kindLabel[h.kind]}</span>
                   <span className="min-w-0 flex-1 truncate" title={h.text}>{h.text}</span>
                   <span className="hidden max-w-[8rem] shrink-0 truncate text-xs text-gray-400 sm:block">{h.passage}</span>
                   <div className="hidden h-2 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800 sm:block">
-                    <div className={`h-full ${low ? "bg-rose-500" : "bg-blue-500"}`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full ${low ? "bg-rose-500" : "bg-amber-500"}`} style={{ width: `${pct}%` }} />
                   </div>
                   <span className={`w-24 shrink-0 text-right text-xs tabular-nums ${low ? "font-semibold text-rose-600 dark:text-rose-400" : "text-gray-500 dark:text-gray-400"}`}>{h.covered}/{h.total} ({pct}%)</span>
                 </li>
@@ -389,11 +389,11 @@ export default async function TeacherDashboard() {
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">학급별 진행</h2>
-          <Link href="/teacher/classes" className="text-xs text-blue-600 hover:underline dark:text-blue-400">학급 관리 →</Link>
+          <Link href="/teacher/classes" className="text-xs text-amber-700 hover:underline dark:text-amber-400">학급 관리 →</Link>
         </div>
         {perClass.length === 0 ? (
           <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">
-            아직 학급이 없어요. <Link href="/teacher/classes" className="text-blue-600 hover:underline dark:text-blue-400">학급을 만들고</Link> 참여코드를 학생에게 나눠 주세요.
+            아직 학급이 없어요. <Link href="/teacher/classes" className="text-amber-700 hover:underline dark:text-amber-400">학급을 만들고</Link> 참여코드를 학생에게 나눠 주세요.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -404,10 +404,10 @@ export default async function TeacherDashboard() {
                   <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
                   <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">학생 {c.students}</span>
                   <div className="hidden h-2 w-28 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800 sm:block">
-                    <div className="h-full bg-blue-500" style={{ width: `${pct}%` }} />
+                    <div className="h-full bg-amber-500" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="w-24 shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">완료 {c.done}/{c.sessions}</span>
-                  <Link href={`/teacher/activity?class=${c.id}`} className="shrink-0 rounded-md bg-blue-50 px-2.5 py-1 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300">보기</Link>
+                  <Link href={`/teacher/activity?class=${c.id}`} className="shrink-0 rounded-md bg-amber-50 px-2.5 py-1 text-xs text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300">보기</Link>
                 </li>
               );
             })}
@@ -418,7 +418,7 @@ export default async function TeacherDashboard() {
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">최근 활동</h2>
-          <Link href="/teacher/activity" className="text-xs text-blue-600 hover:underline dark:text-blue-400">전체 보기 →</Link>
+          <Link href="/teacher/activity" className="text-xs text-amber-700 hover:underline dark:text-amber-400">전체 보기 →</Link>
         </div>
         {recent.length === 0 ? (
           <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">아직 학생 읽기 기록이 없어요.</p>
@@ -426,7 +426,7 @@ export default async function TeacherDashboard() {
           <ul className="flex flex-col gap-1.5">
             {recent.map((s) => (
               <li key={s.id}>
-                <Link href={`/teacher/activity/${s.id}`} className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-sm hover:border-blue-300 hover:bg-blue-50/40 dark:border-gray-800 dark:hover:border-blue-800 dark:hover:bg-blue-950/30">
+                <Link href={`/teacher/activity/${s.id}`} className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-sm hover:border-blue-300 hover:bg-amber-50/40 dark:border-gray-800 dark:hover:border-blue-800 dark:hover:bg-amber-950/30">
                   <span className="w-20 shrink-0 truncate font-medium">{nameOf.get(s.student_id) ?? "학생"}</span>
                   <span className="min-w-0 flex-1 truncate text-gray-600 dark:text-gray-300">{titleOf.get(s.passage_id) ?? "(지문)"}</span>
                   <span className="shrink-0 text-xs text-gray-400 tabular-nums">표시 {marksCount.get(s.id) ?? 0}</span>

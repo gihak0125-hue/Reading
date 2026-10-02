@@ -11,7 +11,6 @@ export default async function LoginPage({
   return (
     <main className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-6 px-6 py-16">
       <div className="text-center">
-        <div className="mb-2 text-3xl">📖</div>
         <h1 className="text-2xl font-bold text-gray-800 drop-shadow-sm dark:text-gray-100">
           AI 문해력 코치
         </h1>

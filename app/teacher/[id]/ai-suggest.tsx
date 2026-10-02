@@ -162,7 +162,7 @@ export function AiSuggest({ passageId }: { passageId: string }) {
             type="button"
             onClick={save}
             disabled={saving}
-            className="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className="self-start rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-60"
           >
             {saving ? "저장 중…" : "선택 항목 저장"}
           </button>
