@@ -26,12 +26,6 @@ export default function Home() {
           >
             로그인 / 시작하기
           </Link>
-          <Link
-            href="/join"
-            className="inline-block rounded-xl border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-          >
-            참여 코드로 시작
-          </Link>
         </div>
       </header>
 
