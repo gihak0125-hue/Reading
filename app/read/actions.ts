@@ -32,7 +32,7 @@ async function requireOwnedSession(sessionId: string) {
 export type AddAnnotationInput = {
   sessionId: string;
   paragraphId: string;
-  type: "underline" | "circle" | "discourse";
+  type: "underline" | "circle" | "discourse" | "predict_cue";
   spanStart: number;
   spanEnd: number;
 };

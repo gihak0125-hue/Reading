@@ -39,7 +39,7 @@ export type RelationType =
 export type AnnotationData = {
   id: string;
   paragraph_id: string;
-  type: "underline" | "circle" | "arrow" | "discourse";
+  type: "underline" | "circle" | "arrow" | "discourse" | "predict_cue";
   span_start: number;
   span_end: number;
   target_ref: string | null;
@@ -50,6 +50,7 @@ export type AnnotationData = {
 type ToolId =
   | "underline"
   | "circle"
+  | "predictcue"
   | "cause"
   | "process"
   | "problem"
@@ -84,6 +85,7 @@ const ROLE_TOOL: Partial<
 const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "underline", label: "밑줄", glyph: "▁" },
   { id: "circle", label: "동그라미", glyph: "◯" },
+  { id: "predictcue", label: "예측단서", glyph: "🔮" },
   { id: "cause", label: "원인·결과", glyph: "→" },
   { id: "process", label: "과정", glyph: "⇢" },
   { id: "problem", label: "문제", glyph: "P" },
@@ -423,7 +425,8 @@ export function ReadingWorkspace({
         (a) =>
           a.type === "underline" ||
           a.type === "circle" ||
-          a.type === "discourse",
+          a.type === "discourse" ||
+          a.type === "predict_cue",
       ),
     [annos],
   );
@@ -468,6 +471,17 @@ export function ReadingWorkspace({
     for (const p of paragraphs) m.set(p.id, p);
     return m;
   }, [paragraphs]);
+
+  // 1~2문단에 예측 단서를 표시했는가 → 예측 자기설명 유도 트리거
+  const earlyPredictCue = useMemo(
+    () =>
+      annos.some(
+        (a) =>
+          a.type === "predict_cue" &&
+          (paraById.get(a.paragraph_id)?.seq ?? 99) <= 2,
+      ),
+    [annos, paraById],
+  );
 
   // 문단 사이 관계를 모아 글 전체 구조도를 구성(설계지침4.4)
   const structureEdges = useMemo(() => {
@@ -596,7 +610,7 @@ export function ReadingWorkspace({
     if (r.off || studentTurns.length >= 2) return;
     const m = marks.length;
     let mode: "predict" | "hidden" | null = null;
-    if (!r.predict && studentTurns.length < 1 && m >= 3) mode = "predict";
+    if (!r.predict && studentTurns.length < 1 && earlyPredictCue) mode = "predict";
     else if (!r.hidden && m >= 7) mode = "hidden";
     if (!mode) return;
     const pick = mode;
@@ -612,7 +626,7 @@ export function ReadingWorkspace({
       });
     }, 5000);
     return () => clearTimeout(timer);
-  }, [marks.length, status, coachPending, studentTurns.length, sessionId, startCoach]);
+  }, [marks.length, status, coachPending, studentTurns.length, earlyPredictCue, sessionId, startCoach]);
 
   function askFeedback() {
     setCoachNote(null);
@@ -717,15 +731,20 @@ export function ReadingWorkspace({
     const wrap = articleRef.current;
     if (!wrap || pts.length === 0 || !tool) return;
 
-    if (tool === "underline" || tool === "circle") {
-      const span = recognizeSpan(wrap, pts, tool);
+    if (tool === "underline" || tool === "circle" || tool === "predictcue") {
+      const span = recognizeSpan(
+        wrap,
+        pts,
+        tool === "circle" ? "circle" : "underline",
+      );
       if (!span) {
         setMsg("표시할 글자 위를 그어 주세요.");
         return;
       }
+      const markType = tool === "predictcue" ? "predict_cue" : tool;
       const temp = tempAnno({
         paragraph_id: span.paraId,
-        type: tool,
+        type: markType,
         span_start: span.start,
         span_end: span.end,
         target_ref: null,
@@ -736,7 +755,7 @@ export function ReadingWorkspace({
         addAnnotation({
           sessionId,
           paragraphId: span.paraId,
-          type: tool,
+          type: markType,
           spanStart: span.start,
           spanEnd: span.end,
         }),
@@ -896,6 +915,8 @@ export function ReadingWorkspace({
       return "'밑줄' — 핵심문장(중요한 문장·구절)에 손으로 그으면 표시돼요.";
     if (tool === "circle")
       return "'동그라미' — 핵심어(중요한 낱말·개념)에 손으로 그으면 표시돼요.";
+    if (tool === "predictcue")
+      return "'예측단서' — 1~2문단에서 다음 내용을 짐작하게 하는 단서(담화표지·구조 등)에 표시하면 코치가 예측을 물어봐요.";
     if (tool === "listing")
       return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
     if (tool === "erase") return "'지우기' — 표시 위를 그으면 지워져요.";
@@ -1004,6 +1025,9 @@ export function ReadingWorkspace({
                   </li>
                   <li>
                     <b>◯ 동그라미</b> — 핵심어(중요한 낱말·개념)에 치기
+                  </li>
+                  <li>
+                    <b>🔮 예측단서</b> — 1~2문단에서 다음을 짐작하게 하는 단서에 표시
                   </li>
                   <li>
                     <b>→ 원인·결과 / ⇢ 과정</b> — 두 표시를 이어 관계 화살표
@@ -1459,6 +1483,7 @@ function AnnotatedParagraph({
       underline: boolean;
       circle: boolean;
       discourse: boolean;
+      predictCue: boolean;
       ids: string[];
     }[] = [];
     for (let i = 0; i < points.length - 1; i++) {
@@ -1472,6 +1497,7 @@ function AnnotatedParagraph({
         underline: covering.some((a) => a.type === "underline"),
         circle: covering.some((a) => a.type === "circle"),
         discourse: covering.some((a) => a.type === "discourse"),
+        predictCue: covering.some((a) => a.type === "predict_cue"),
         ids: covering.map((a) => a.id),
       });
     }
@@ -1493,6 +1519,9 @@ function AnnotatedParagraph({
           r.circle ? "rounded-full border-2 border-rose-400 px-1 py-0.5" : "",
           r.discourse
             ? "rounded bg-yellow-200/70 px-0.5 dark:bg-yellow-500/30"
+            : "",
+          r.predictCue
+            ? "underline decoration-dotted decoration-indigo-500 decoration-2 underline-offset-4"
             : "",
         ]
           .filter(Boolean)
