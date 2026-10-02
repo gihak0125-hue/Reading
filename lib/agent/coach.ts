@@ -33,7 +33,15 @@ const SYSTEM_PROMPT = `당신은 고등학교 3학년 학생의 '추론적 독�
 [응답 방식]
 - 한국어로, 따뜻하고 존중하는 말투. 2~3문장 이내로 짧게.
 - 한 번에 한 가지에 집중. 질문이나 단서 하나로 끝맺기.
-- 칭찬은 구체적으로(무엇을 잘했는지). 정답을 흘리지 않기.`;
+- 칭찬은 구체적으로(무엇을 잘했는지). 정답을 흘리지 않기.
+
+[진단 — 내부 판단]
+- 학생의 표시·자기설명·대화를 근거로, 지금 가장 어려움이 큰 과정 하나를 고르세요: key_info(핵심정보 확인)·inference(추론)·viewpoint(관점 평가)·relation(관계 연결). 뚜렷한 어려움이 없으면 none.
+- 추론(inference)이나 관점(viewpoint)에서 틀린 듯 보여도 그 뿌리가 핵심정보를 놓친 데 있으면 key_info로 판단하세요(선행 과정부터 점검).
+
+[출력 형식 — 반드시 지킬 것]
+- 오직 아래 JSON 하나만 출력하세요(다른 말·코드블록 없이):
+{"message": "<학생에게 보일 2~3문장. 위의 모든 규칙을 지킨 말>", "area": "key_info|inference|viewpoint|relation|none"}`;
 
 type Mark = { type: string; text: string };
 type Relation = { from: string; to: string; relation: string };
@@ -54,7 +62,8 @@ export type CoachContext = {
 export async function runCoach(
   ctx: CoachContext,
 ): Promise<
-  { message: string; model: string; tokens: number } | { error: string }
+  | { message: string; area: string | null; model: string; tokens: number }
+  | { error: string }
 > {
   if (!process.env.OPENAI_API_KEY) {
     return { error: "no_key" };
@@ -133,12 +142,23 @@ ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
       model,
       messages,
       temperature: 0.6,
-      max_tokens: 300,
+      max_tokens: 400,
+      response_format: { type: "json_object" },
     });
-    const message =
-      res.choices[0]?.message?.content?.trim() ??
-      "조금 더 자세히 설명해 줄 수 있나요?";
-    return { message, model, tokens: res.usage?.total_tokens ?? 0 };
+    const raw = res.choices[0]?.message?.content ?? "";
+    let message = "조금 더 자세히 설명해 줄 수 있나요?";
+    let area: string | null = null;
+    try {
+      const p = JSON.parse(raw);
+      if (typeof p.message === "string" && p.message.trim())
+        message = p.message.trim();
+      const a = String(p.area ?? "").trim();
+      if (["key_info", "inference", "viewpoint", "relation"].includes(a))
+        area = a;
+    } catch {
+      if (raw.trim()) message = raw.trim();
+    }
+    return { message, area, model, tokens: res.usage?.total_tokens ?? 0 };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "coach_failed" };
   }

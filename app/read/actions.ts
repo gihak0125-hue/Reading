@@ -314,6 +314,15 @@ export async function sendCoachMessage(input: {
     tokens: result.tokens,
   });
 
+  // 진단 저장(실제 진단 모멘트: 학생 제출/활동 피드백) — 영역이 있을 때만
+  if (result.area && (!input.mode || input.mode === "activity")) {
+    await supabase.from("diagnoses").insert({
+      session_id: input.sessionId,
+      difficulty_area: result.area,
+      evidence: text || null,
+    });
+  }
+
   revalidatePath(`/read/${input.sessionId}`);
   return { reply: result.message };
 }

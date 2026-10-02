@@ -146,6 +146,23 @@ export default async function TeacherDashboard() {
     ]);
   const annoList = (annos ?? []) as Anno[];
 
+  const { data: diags } = sessionIds.length
+    ? await supabase
+        .from("diagnoses")
+        .select("difficulty_area")
+        .in("session_id", sessionIds)
+    : { data: [] as { difficulty_area: string | null }[] };
+  const areaCount = { key_info: 0, inference: 0, viewpoint: 0, relation: 0 };
+  for (const d of diags ?? []) {
+    const a = (d.difficulty_area ?? "") as keyof typeof areaCount;
+    if (a in areaCount) areaCount[a] += 1;
+  }
+  const diagTotal =
+    areaCount.key_info +
+    areaCount.inference +
+    areaCount.viewpoint +
+    areaCount.relation;
+
   // 세션별 표시(마크)와 화살표, 전역 마크 위치 맵
   const marksBySession = new Map<
     string,
@@ -299,6 +316,43 @@ export default async function TeacherDashboard() {
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
           </div>
         ))}
+      </section>
+
+      <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
+        <h2 className="mb-1 font-semibold">학생이 어려워한 과정(진단)</h2>
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+          코치가 학생의 표시·설명을 보고 판단한 영역 집계입니다.
+        </p>
+        {diagTotal === 0 ? (
+          <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">
+            아직 진단 자료가 없어요. 학생이 읽고 코치와 대화하면 쌓여요.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {(
+              [
+                ["key_info", "핵심정보 확인", "bg-blue-500"],
+                ["inference", "추론", "bg-violet-500"],
+                ["viewpoint", "관점 평가", "bg-rose-500"],
+                ["relation", "관계 연결", "bg-emerald-500"],
+              ] as const
+            ).map(([k, label, bar]) => {
+              const v = areaCount[k];
+              const pct = diagTotal ? Math.round((v / diagTotal) * 100) : 0;
+              return (
+                <li key={k} className="flex items-center gap-3 text-sm">
+                  <span className="w-24 shrink-0 font-medium">{label}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div className={`h-full ${bar}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="w-16 shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                    {v}건 ({pct}%)
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-lg shadow-blue-200/20 backdrop-blur-md dark:border-white/10 dark:bg-gray-950/60 dark:shadow-black/30">
