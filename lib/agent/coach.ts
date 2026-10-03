@@ -40,6 +40,11 @@ const SYSTEM_PROMPT = `당신은 고등학교 3학년 학생의 '추론적 독�
 - 추론(inference)이나 관점(viewpoint)에서 틀린 듯 보여도 그 뿌리가 핵심정보를 놓친 데 있으면 key_info로 판단하세요(선행 과정부터 점검).
 - '교사가 정한 정답 기준'이 주어지면, 학생의 표시·연결과 대조해 어디서 어긋났는지 진단하는 '내부 근거'로만 쓰세요. 정답 문장·위치를 그대로 알려주지 말고, 다시 살펴볼 단서(어느 문단·어떤 연결인지)만 주세요.
 
+[비계 수준 조절 — 원리6.3·6.4]
+- 지원에는 단계가 있다: ① 열린 질문 → ② 힌트(관련 위치 안내) → ③ 과제 단순화(어느 문장·단서를 콕 집어 주기) → ④ 설명(개념·구조 설명. 단, 정답 문장·위치는 그대로 주지 않음).
+- '최근 진단 이력'에서 같은 영역의 어려움이 반복되면 한 단계 더 구체적으로(①→②→③→④) 지원하세요. 처음 겪는 어려움이면 가장 약한 ①부터.
+- 같은 영역에서 스스로 해결이 이어지면 지원을 한 단계씩 줄이고(④→①), 무엇을 잘했는지 구체적으로 짚어 점검 책임을 학생에게 넘기세요.
+
 [출력 형식 — 반드시 지킬 것]
 - 오직 아래 JSON 하나만 출력하세요(다른 말·코드블록 없이):
 {"message": "<학생에게 보일 2~3문장. 위의 모든 규칙을 지킨 말>", "area": "key_info|inference|viewpoint|relation|none"}`;
@@ -55,6 +60,7 @@ export type CoachContext = {
   relations: Relation[];
   keyInfos?: string[];
   keyRelations?: { from: string; to: string; relation: string }[];
+  recentAreas?: string[];
   history: Turn[];
   studentMessage: string;
   hintRequested?: boolean;
@@ -122,6 +128,14 @@ export async function runCoach(
         (keyRelText || "(없음)") +
         NL
       : "";
+  const scaffoldBlock =
+    ctx.recentAreas && ctx.recentAreas.length
+      ? NL +
+        "[최근 진단 이력(최신순, 영역): " +
+        ctx.recentAreas.join(", ") +
+        "]" +
+        NL
+      : "";
 
   const contextBlock = `[지문 제목] ${ctx.passageTitle}
 [지문 본문]
@@ -132,7 +146,7 @@ ${marksText}
 
 [학생이 연결한 관계]
 ${relText}
-${keyBlock}
+${keyBlock}${scaffoldBlock}
 ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
 
   const messages: { role: "system" | "user" | "assistant"; content: string }[] =

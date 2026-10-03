@@ -285,6 +285,17 @@ export async function sendCoachMessage(input: {
       .filter((r) => r.from && r.to);
   }
 
+  // 최근 진단 이력(이번 세션) — 비계 수준 조절용(원리6.3·6.4)
+  const { data: diagRows } = await supabase
+    .from("diagnoses")
+    .select("difficulty_area, created_at")
+    .eq("session_id", input.sessionId)
+    .order("created_at", { ascending: false })
+    .limit(6);
+  const recentAreas = (diagRows ?? [])
+    .map((d) => d.difficulty_area)
+    .filter((a): a is string => !!a);
+
   const marks = (annos ?? [])
     .filter((a) => a.type === "underline" || a.type === "circle")
     .map((a) => ({
@@ -336,6 +347,7 @@ export async function sendCoachMessage(input: {
     mode: input.mode ?? "chat",
     keyInfos,
     keyRelations,
+    recentAreas,
   });
 
   if ("error" in result) {
