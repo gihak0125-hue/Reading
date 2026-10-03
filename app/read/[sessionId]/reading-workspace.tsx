@@ -504,6 +504,61 @@ export function ReadingWorkspace({
     return [...map.values()].sort((a, b) => a.from - b.from || a.to - b.to);
   }, [relations, annoById, paraById]);
 
+  // 문단 구조도 2.0: 연쇄/분기/수렴 패턴 + 가장 많이 쓴 관계를 읽어 자기설명 유도(원리4.4·5)
+  const structureSummary = useMemo(() => {
+    if (structureEdges.length === 0) return null;
+    const two = (rt: RelationType) =>
+      rt === "compare_contrast" || rt === "similarity" || rt === "contrast";
+    const deg = new Map<number, number>();
+    const inDeg = new Map<number, number>();
+    const outDeg = new Map<number, number>();
+    const oneWayOut = new Map<number, number[]>();
+    const relCount = new Map<RelationType, number>();
+    const bump = (m: Map<number, number>, k: number) => m.set(k, (m.get(k) ?? 0) + 1);
+    for (const e of structureEdges) {
+      bump(deg, e.from);
+      bump(deg, e.to);
+      relCount.set(e.rt, (relCount.get(e.rt) ?? 0) + 1);
+      if (!two(e.rt)) {
+        bump(outDeg, e.from);
+        bump(inDeg, e.to);
+        if (!oneWayOut.has(e.from)) oneWayOut.set(e.from, []);
+        oneWayOut.get(e.from)!.push(e.to);
+      }
+    }
+    let domRt: RelationType | null = null;
+    let domN = 0;
+    for (const [rt, n] of relCount) if (n > domN) { domN = n; domRt = rt; }
+    let hub = 0;
+    let hubDeg = 0;
+    for (const [p, d] of deg) if (d > hubDeg) { hubDeg = d; hub = p; }
+    const merges = [...inDeg].filter(([, d]) => d >= 2).map(([p]) => p).sort((a, b) => a - b);
+    const branches = [...outDeg].filter(([, d]) => d >= 2).map(([p]) => p).sort((a, b) => a - b);
+    const longest = (n: number, seen: Set<number>): number[] => {
+      let best: number[] = [n];
+      for (const nx of oneWayOut.get(n) ?? []) {
+        if (seen.has(nx)) continue;
+        const path = [n, ...longest(nx, new Set([...seen, nx]))];
+        if (path.length > best.length) best = path;
+      }
+      return best;
+    };
+    let chain: number[] = [];
+    for (const n of deg.keys()) {
+      const p = longest(n, new Set([n]));
+      if (p.length > chain.length) chain = p;
+    }
+    let shape: string;
+    if (merges.length)
+      shape = `${merges.join("·")}문단으로 여러 흐름이 모이는 ‘수렴’ 구조`;
+    else if (branches.length)
+      shape = `${branches.join("·")}문단에서 여러 갈래로 나뉘는 ‘분기’ 구조`;
+    else if (chain.length >= 3)
+      shape = `${chain.join("→")}문단으로 이어지는 ‘연쇄’ 구조`;
+    else shape = "문단들이 짝으로 이어진 구조";
+    return { shape, domRt, hub: hubDeg >= 2 ? hub : 0 };
+  }, [structureEdges]);
+
   const badgesByMark = useMemo(() => {
     const map = new Map<string, Badge[]>();
     const push = (id: string | null, b: Badge) => {
@@ -1378,10 +1433,32 @@ export function ReadingWorkspace({
                   <p className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
                     📐 문단 구조도
                   </p>
+                  {structureSummary && (
+                    <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-2 dark:border-amber-900 dark:bg-amber-950/40">
+                      <p className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">
+                        🔎 지금 <b>{structureSummary.shape}</b>
+                        {structureSummary.domRt && (
+                          <>
+                            {" · 가장 많이 쓴 관계는 "}
+                            <b>{REL_LABEL[structureSummary.domRt]}</b>
+                          </>
+                        )}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-amber-700/80 dark:text-amber-300/70">
+                        이 구조가 글의 실제 흐름과 맞는지 스스로 설명해 볼까요?
+                      </p>
+                    </div>
+                  )}
                   <div className="mb-2 flex flex-wrap items-center gap-1">
                     {paragraphs.map((p, i) => (
                       <span key={p.id} className="flex items-center gap-1">
-                        <span className="rounded bg-white px-1.5 py-0.5 text-[11px] text-gray-600 shadow-sm dark:bg-gray-950 dark:text-gray-300">
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[11px] shadow-sm ${
+                            structureSummary?.hub === p.seq
+                              ? "bg-amber-500 font-bold text-white"
+                              : "bg-white text-gray-600 dark:bg-gray-950 dark:text-gray-300"
+                          }`}
+                        >
                           {p.seq}
                         </span>
                         {i < paragraphs.length - 1 && (
