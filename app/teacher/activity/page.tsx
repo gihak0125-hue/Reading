@@ -53,13 +53,14 @@ export default async function ActivityPage({
       studentIds.length
         ? supabase
             .from("profiles")
-            .select("id, display_name, class_id")
+            .select("id, display_name, class_id, student_no")
             .in("id", studentIds)
         : Promise.resolve({
             data: [] as {
               id: string;
               display_name: string | null;
               class_id: string | null;
+              student_no: number | null;
             }[],
           }),
       passageIds.length
@@ -73,7 +74,14 @@ export default async function ActivityPage({
         : Promise.resolve({ data: [] as { session_id: string; role: string }[] }),
     ]);
 
-  const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const nameOf = new Map(
+    (profiles ?? []).map((p) => [
+      p.id,
+      p.student_no
+        ? `${p.student_no} ${p.display_name ?? "학생"}`
+        : p.display_name ?? "학생",
+    ]),
+  );
   const classIdOf = new Map((profiles ?? []).map((p) => [p.id, p.class_id]));
   const classIds = [
     ...new Set((profiles ?? []).map((p) => p.class_id).filter(Boolean)),

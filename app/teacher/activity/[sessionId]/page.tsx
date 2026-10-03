@@ -74,7 +74,7 @@ export default async function ActivityDetailPage({
   const [{ data: student }, { data: passage }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name")
+      .select("display_name, student_no")
       .eq("id", session.student_id)
       .single(),
     supabase
@@ -121,6 +121,7 @@ export default async function ActivityDetailPage({
       <header className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl">
+            {student?.student_no ? `${student.student_no} ` : ""}
             {student?.display_name ?? "학생"} · {passage?.title ?? "지문"}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">

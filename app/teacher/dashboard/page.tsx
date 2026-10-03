@@ -58,13 +58,14 @@ export default async function TeacherDashboard() {
       classIds.length
         ? supabase
             .from("profiles")
-            .select("id, display_name, class_id")
+            .select("id, display_name, class_id, student_no")
             .in("class_id", classIds)
         : Promise.resolve({
             data: [] as {
               id: string;
               display_name: string | null;
               class_id: string | null;
+              student_no: number | null;
             }[],
           }),
       myPassageIds.length
@@ -205,7 +206,12 @@ export default async function TeacherDashboard() {
   for (const m of msgs ?? []) if (m.role === "student") explainTotal++;
 
   const titleOf = new Map((sessPassages ?? []).map((p) => [p.id, p.title]));
-  const nameOf = new Map(studentList.map((s) => [s.id, s.display_name]));
+  const nameOf = new Map(
+    studentList.map((s) => [
+      s.id,
+      s.student_no ? `${s.student_no} ${s.display_name ?? "학생"}` : s.display_name ?? "학생",
+    ]),
+  );
   const completed = sessionList.filter((s) => s.status === "completed").length;
   const inProgress = sessionList.length - completed;
 
