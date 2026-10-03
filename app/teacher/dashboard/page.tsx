@@ -149,9 +149,11 @@ export default async function TeacherDashboard() {
   const { data: diags } = sessionIds.length
     ? await supabase
         .from("diagnoses")
-        .select("difficulty_area")
+        .select("difficulty_area, created_at")
         .in("session_id", sessionIds)
-    : { data: [] as { difficulty_area: string | null }[] };
+    : {
+        data: [] as { difficulty_area: string | null; created_at: string }[],
+      };
   const areaCount = { key_info: 0, inference: 0, viewpoint: 0, relation: 0 };
   for (const d of diags ?? []) {
     const a = (d.difficulty_area ?? "") as keyof typeof areaCount;
@@ -162,6 +164,25 @@ export default async function TeacherDashboard() {
     areaCount.inference +
     areaCount.viewpoint +
     areaCount.relation;
+
+  // 주별 추이(최근 6주): 완료 읽기 수 + 어려움 진단 수
+  const WK = 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const weekOf = (iso: string | null) =>
+    iso ? Math.floor((now - new Date(iso).getTime()) / WK) : -1;
+  const doneByWeek = [0, 0, 0, 0, 0, 0];
+  for (const s of sessionList) {
+    if (s.status !== "completed") continue;
+    const w = weekOf(s.started_at);
+    if (w >= 0 && w < 6) doneByWeek[5 - w] += 1;
+  }
+  const diagByWeek = [0, 0, 0, 0, 0, 0];
+  for (const d of diags ?? []) {
+    const w = weekOf(d.created_at);
+    if (w >= 0 && w < 6) diagByWeek[5 - w] += 1;
+  }
+  const maxDone = Math.max(1, ...doneByWeek);
+  const weekLabel = (i: number) => (i === 5 ? "이번 주" : `${5 - i}주 전`);
 
   // 세션별 표시(마크)와 화살표, 전역 마크 위치 맵
   const marksBySession = new Map<
@@ -316,6 +337,34 @@ export default async function TeacherDashboard() {
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
           </div>
         ))}
+      </section>
+
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+        <h2 className="mb-1 font-semibold">주별 추이 (최근 6주)</h2>
+        <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+          막대 = 완료한 읽기 수. 꾸준히 읽을수록 문해력이 자라요. (빨강 = 그 주의 어려움 진단 건수 — 줄수록 성장)
+        </p>
+        <div className="flex items-end gap-2">
+          {doneByWeek.map((v, i) => (
+            <div key={i} className="flex flex-1 flex-col items-center">
+              <span className="mb-1 text-xs font-medium tabular-nums text-amber-700 dark:text-amber-300">
+                {v}
+              </span>
+              <div className="flex h-24 w-full items-end">
+                <div
+                  className="w-full rounded-t bg-amber-500"
+                  style={{ height: `${Math.round((v / maxDone) * 100)}%` }}
+                />
+              </div>
+              <span className="mt-1 text-[10px] text-gray-400">
+                {weekLabel(i)}
+              </span>
+              <span className="text-[10px] text-rose-500">
+                {diagByWeek[i] ? `어려움 ${diagByWeek[i]}` : " "}
+              </span>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
