@@ -38,26 +38,43 @@ export async function authenticate(
       String(formData.get("role") ?? "student") === "teacher"
         ? "teacher"
         : "student";
+    const school = String(formData.get("school") ?? "").trim();
+    const studentNo = String(formData.get("student_no") ?? "").trim();
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName || email, role } },
+      options: {
+        data: {
+          display_name: displayName || email,
+          requested_role: role,
+          school,
+          student_no: studentNo,
+        },
+      },
     });
     if (error) return { error: `가입 실패: ${error.message}` };
+
+    // 교사는 승인 전까지 로그인하지 않도록 바로 로그아웃하고 안내만 보여준다.
+    if (role === "teacher") {
+      await supabase.auth.signOut();
+      return {
+        message:
+          "교사 가입 신청이 접수됐어요. 관리자 승인 후 로그인하면 교사 기능을 사용할 수 있어요.",
+      };
+    }
+
     if (!data.session) {
       return {
         message:
           "가입 완료! 이메일 확인이 켜져 있어요. 확인 링크를 누르거나, 설정에서 이메일 확인을 끄면 바로 로그인됩니다.",
       };
     }
-    if (role === "student") {
-      const code = String(formData.get("join_code") ?? "")
-        .trim()
-        .toUpperCase();
-      if (code) {
-        await supabase.rpc("join_class", { p_code: code });
-      }
+    const code = String(formData.get("join_code") ?? "")
+      .trim()
+      .toUpperCase();
+    if (code) {
+      await supabase.rpc("join_class", { p_code: code });
     }
     revalidatePath("/", "layout");
     redirect(next);

@@ -106,6 +106,37 @@ export function AuthForm({ next }: { next: string }) {
           </fieldset>
         )}
 
+        {mode === "signup" && role === "teacher" && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-gray-700 dark:text-gray-300">소속 학교</span>
+            <input
+              name="school"
+              type="text"
+              autoComplete="organization"
+              placeholder="예: OO고등학교"
+              className="rounded-md border border-gray-300 px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
+            />
+            <span className="text-xs text-gray-400">
+              교사 가입은 관리자 승인 후 사용할 수 있어요.
+            </span>
+          </label>
+        )}
+
+        {mode === "signup" && role === "student" && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-gray-700 dark:text-gray-300">출석번호</span>
+            <input
+              name="student_no"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              autoComplete="off"
+              placeholder="예: 15"
+              className="rounded-md border border-gray-300 px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
+            />
+          </label>
+        )}
+
         {mode === "signup" && role === "student" && (
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-gray-700 dark:text-gray-300">

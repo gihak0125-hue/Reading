@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signout } from "@/app/login/actions";
+import { ADMIN_EMAIL } from "@/lib/admin";
 
 function Svg({ children }: { children: ReactNode }) {
   return (
@@ -71,13 +72,16 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, display_name")
+    .select("role, display_name, teacher_status")
     .eq("id", user.id)
     .single();
 
   const role = profile?.role ?? "student";
   const name = profile?.display_name ?? user.email;
   const isTeacher = role === "teacher";
+  const isAdmin = (user.email ?? "").toLowerCase() === ADMIN_EMAIL;
+  const isPendingTeacher =
+    !isTeacher && profile?.teacher_status === "pending";
 
   const cards: CardDef[] = isTeacher
     ? [
@@ -85,6 +89,9 @@ export default async function DashboardPage() {
         { href: "/teacher", title: "지문 관리", desc: "지문을 등록하고 핵심정보를 태깅합니다.", icon: IconDoc },
         { href: "/teacher/activity", title: "학생 활동", desc: "학생의 표시·연결·자기설명을 확인합니다.", icon: IconActivity },
         { href: "/teacher/classes", title: "학급 관리", desc: "학급을 만들고 참여코드를 나눠줍니다.", icon: IconClass },
+        ...(isAdmin
+          ? [{ href: "/admin/teachers", title: "교사 승인", desc: "교사 가입 신청을 검토하고 승인합니다.", icon: IconClass }]
+          : []),
       ]
     : [
         { href: "/read", title: "읽기 시작", desc: "지문을 골라 읽기를 시작해요.", icon: IconRead, primary: true },
@@ -115,6 +122,15 @@ export default async function DashboardPage() {
           </button>
         </form>
       </header>
+
+      {isPendingTeacher && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+          <p className="font-semibold">교사 승인 대기 중이에요</p>
+          <p className="mt-1 text-amber-800/90 dark:text-amber-300/80">
+            관리자가 승인하면 교사 기능을 쓸 수 있어요. 승인 전까지는 학생 화면으로 보입니다.
+          </p>
+        </div>
+      )}
 
       <section className={isTeacher ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"}>
         {cards.map((c) => (
