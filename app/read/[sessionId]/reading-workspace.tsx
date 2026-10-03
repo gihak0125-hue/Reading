@@ -318,7 +318,28 @@ function recognizeSpan(
   // 밑줄: 표본이 가장 많은 줄. 동그라미: 획의 세로 중심에 가장 가까운 줄(감싼 글자)
   let chosen = clusters[0];
   if (type === "underline") {
-    for (const c of clusters) if (c.length > chosen.length) chosen = c;
+    // 줄바꿈으로 이어진 밑줄을 하나로 인식한다. 화면상 줄이 바뀌어도 글자
+    // 오프셋은 연속이므로, '줄' 군집을 오프셋이 거의 붙어 있으면 이어 붙인다.
+    const ranges = clusters
+      .map((c) => {
+        const os = c.map((h) => h.off).sort((a, b) => a - b);
+        return { c, lo: os[0], hi: os[os.length - 1] };
+      })
+      .sort((a, b) => a.lo - b.lo);
+    const comps: { hits: { off: number; y: number }[]; hi: number }[] = [];
+    for (const r of ranges) {
+      const last = comps[comps.length - 1];
+      if (last && r.lo - last.hi <= 3) {
+        last.hits.push(...r.c);
+        last.hi = Math.max(last.hi, r.hi);
+      } else {
+        comps.push({ hits: [...r.c], hi: r.hi });
+      }
+    }
+    // 표본이 가장 많은(실제로 그은) 연속 구간 선택
+    chosen = comps.reduce((best, c) =>
+      c.hits.length > best.hits.length ? c : best,
+    ).hits;
   } else {
     const cy = inPara.reduce((s, h) => s + h.y, 0) / inPara.length;
     let bestD = Infinity;
