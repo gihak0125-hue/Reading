@@ -366,6 +366,7 @@ export function ReadingWorkspace({
   const [showTools, setShowTools] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
   const [phase, setPhase] = useState<null | "check" | "critique">(null);
+  const [showBody, setShowBody] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
@@ -1003,7 +1004,7 @@ export function ReadingWorkspace({
     <div className="flex min-h-full flex-col">
       {phase && (
         <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-gray-950">
-          <div className="mx-auto flex h-full w-full max-w-2xl flex-col">
+          <div className={`mx-auto flex h-full w-full flex-col ${showBody ? "max-w-6xl" : "max-w-2xl"}`}>
             <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3 dark:border-gray-800">
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold">
@@ -1033,16 +1034,44 @@ export function ReadingWorkspace({
                     : "글의 관점을 평가해요."}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setPhase(null)}
-                className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-              >
-                ← 읽기로
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBody((v) => !v)}
+                  className={`rounded-md border px-3 py-1.5 text-xs ${
+                    showBody
+                      ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                      : "border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {showBody ? "본문 숨기기" : "본문 보기"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhase(null)}
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  ← 읽기로
+                </button>
+              </div>
             </header>
 
-            <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+            <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+              {showBody && (
+                <div className="min-h-0 flex-1 overflow-y-auto border-b border-gray-200 px-5 py-4 md:border-b-0 md:border-r dark:border-gray-800">
+                  <p className="mb-2 text-xs font-semibold text-gray-400">본문</p>
+                  <div className="space-y-3 text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">
+                    {paragraphs.map((p) => (
+                      <p key={p.id} className="whitespace-pre-wrap">
+                        {p.text}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
               {messages.length === 0 && !coachPending && (
                 <p className="text-sm text-gray-400">
                   코치가 곧 질문을 띄울 거예요…
@@ -1119,6 +1148,8 @@ export function ReadingWorkspace({
                     관점 평가 마치기
                   </button>
                 )}
+              </div>
+            </div>
               </div>
             </div>
           </div>
