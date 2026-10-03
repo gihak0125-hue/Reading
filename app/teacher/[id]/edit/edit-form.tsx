@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { updatePassage, type PassageState } from "../../actions";
+import { CATEGORIES } from "@/lib/categories";
 
 const initial: PassageState = {};
 
@@ -12,12 +13,14 @@ export function EditForm({
   body,
   difficulty,
   source,
+  category,
 }: {
   id: string;
   title: string;
   body: string;
   difficulty: number | null;
   source: string | null;
+  category: string | null;
 }) {
   const [state, formAction, pending] = useActionState(updatePassage, initial);
 
@@ -59,6 +62,22 @@ export function EditForm({
       </label>
 
       <div className="flex flex-wrap gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-gray-700 dark:text-gray-300">분야(선택)</span>
+          <select
+            name="category"
+            defaultValue={category ?? ""}
+            className="rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+          >
+            <option value="">미분류</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-gray-700 dark:text-gray-300">난이도(선택)</span>
           <select

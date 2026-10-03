@@ -13,7 +13,7 @@ export default async function EditPassagePage({
 
   const { data: passage } = await supabase
     .from("passages")
-    .select("id, title, body, difficulty, source, created_by")
+    .select("id, title, body, difficulty, source, category, created_by")
     .eq("id", id)
     .single();
 
@@ -37,6 +37,7 @@ export default async function EditPassagePage({
         body={passage.body}
         difficulty={passage.difficulty}
         source={passage.source}
+        category={passage.category}
       />
     </main>
   );

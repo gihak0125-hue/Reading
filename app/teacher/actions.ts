@@ -78,6 +78,10 @@ export async function createPassage(
   const source = String(formData.get("source") ?? "").trim() || null;
   const difficultyRaw = String(formData.get("difficulty") ?? "");
   const difficulty = difficultyRaw ? Number(difficultyRaw) : null;
+  const categoryRaw = String(formData.get("category") ?? "");
+  const category = ["humanities", "social", "science"].includes(categoryRaw)
+    ? categoryRaw
+    : null;
 
   if (!title) return { error: "제목을 입력하세요." };
   if (!body) return { error: "본문을 입력하세요." };
@@ -87,7 +91,7 @@ export async function createPassage(
 
   const { data: passage, error: pErr } = await supabase
     .from("passages")
-    .insert({ title, body, source, difficulty, created_by: user.id })
+    .insert({ title, body, source, difficulty, category, created_by: user.id })
     .select("id")
     .single();
   if (pErr || !passage) return { error: `지문 저장 실패: ${pErr?.message}` };
@@ -121,6 +125,10 @@ export async function updatePassage(
   const source = String(formData.get("source") ?? "").trim() || null;
   const difficultyRaw = String(formData.get("difficulty") ?? "");
   const difficulty = difficultyRaw ? Number(difficultyRaw) : null;
+  const categoryRaw = String(formData.get("category") ?? "");
+  const category = ["humanities", "social", "science"].includes(categoryRaw)
+    ? categoryRaw
+    : null;
 
   if (!id) return { error: "잘못된 요청입니다." };
   if (!title) return { error: "제목을 입력하세요." };
@@ -136,7 +144,7 @@ export async function updatePassage(
 
   const { error: uErr } = await supabase
     .from("passages")
-    .update({ title, source, difficulty, body })
+    .update({ title, source, difficulty, category, body })
     .eq("id", id);
   if (uErr) return { error: `수정 실패: ${uErr.message}` };
 
