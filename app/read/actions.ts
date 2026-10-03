@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSessionProfile } from "@/lib/auth";
 import { runCoach } from "@/lib/agent/coach";
+import { createServiceClient } from "@/lib/supabase/service";
 
 const REL_KO: Record<string, string> = {
   cause_effect: "인과",
@@ -245,6 +246,45 @@ export async function sendCoachMessage(input: {
     return (paraText.get(a.paragraph_id) ?? "").slice(a.span_start, a.span_end);
   };
 
+  // 교사 정답 기준(핵심정보·관계) — RLS 우회 서버 전용 클라이언트로 읽어 진단에만 사용(학생 노출 X)
+  const svc = createServiceClient();
+  let keyInfos: string[] = [];
+  let keyRelations: { from: string; to: string; relation: string }[] = [];
+  const paraIds = (paragraphs ?? []).map((p) => p.id);
+  if (svc && session?.passage_id && paraIds.length) {
+    const [{ data: ki }, { data: kr }] = await Promise.all([
+      svc
+        .from("passage_key_info")
+        .select("paragraph_id, span_start, span_end, kind")
+        .in("paragraph_id", paraIds),
+      svc
+        .from("passage_key_relations")
+        .select(
+          "from_paragraph_id, from_start, from_end, to_paragraph_id, to_start, to_end, relation_type",
+        )
+        .eq("passage_id", session.passage_id),
+    ]);
+    keyInfos = (ki ?? [])
+      .map((k) => {
+        const t = (paraText.get(k.paragraph_id) ?? "").slice(
+          k.span_start,
+          k.span_end,
+        );
+        return `(${k.kind === "keyword" ? "핵심어" : "핵심문장"}) ${t}`;
+      })
+      .filter((x) => x.length > 5);
+    keyRelations = (kr ?? [])
+      .map((r) => ({
+        from: (paraText.get(r.from_paragraph_id) ?? "").slice(
+          r.from_start,
+          r.from_end,
+        ),
+        to: (paraText.get(r.to_paragraph_id) ?? "").slice(r.to_start, r.to_end),
+        relation: REL_KO[r.relation_type] ?? "관계",
+      }))
+      .filter((r) => r.from && r.to);
+  }
+
   const marks = (annos ?? [])
     .filter((a) => a.type === "underline" || a.type === "circle")
     .map((a) => ({
@@ -294,6 +334,8 @@ export async function sendCoachMessage(input: {
     studentMessage: text,
     hintRequested: input.hint,
     mode: input.mode ?? "chat",
+    keyInfos,
+    keyRelations,
   });
 
   if ("error" in result) {

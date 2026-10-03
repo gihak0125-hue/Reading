@@ -38,6 +38,7 @@ const SYSTEM_PROMPT = `당신은 고등학교 3학년 학생의 '추론적 독�
 [진단 — 내부 판단]
 - 학생의 표시·자기설명·대화를 근거로, 지금 가장 어려움이 큰 과정 하나를 고르세요: key_info(핵심정보 확인)·inference(추론)·viewpoint(관점 평가)·relation(관계 연결). 뚜렷한 어려움이 없으면 none.
 - 추론(inference)이나 관점(viewpoint)에서 틀린 듯 보여도 그 뿌리가 핵심정보를 놓친 데 있으면 key_info로 판단하세요(선행 과정부터 점검).
+- '교사가 정한 정답 기준'이 주어지면, 학생의 표시·연결과 대조해 어디서 어긋났는지 진단하는 '내부 근거'로만 쓰세요. 정답 문장·위치를 그대로 알려주지 말고, 다시 살펴볼 단서(어느 문단·어떤 연결인지)만 주세요.
 
 [출력 형식 — 반드시 지킬 것]
 - 오직 아래 JSON 하나만 출력하세요(다른 말·코드블록 없이):
@@ -52,6 +53,8 @@ export type CoachContext = {
   passageText: string;
   marks: Mark[];
   relations: Relation[];
+  keyInfos?: string[];
+  keyRelations?: { from: string; to: string; relation: string }[];
   history: Turn[];
   studentMessage: string;
   hintRequested?: boolean;
@@ -92,6 +95,34 @@ export async function runCoach(
           .join("\n")
       : "(아직 없음)";
 
+  const NL = String.fromCharCode(10);
+  const keyInfoText =
+    ctx.keyInfos && ctx.keyInfos.length
+      ? ctx.keyInfos.map((k) => "- " + k).join(NL)
+      : "";
+  const keyRelText =
+    ctx.keyRelations && ctx.keyRelations.length
+      ? ctx.keyRelations
+          .map(
+            (r) => '- "' + r.from + '" —[' + r.relation + ']→ "' + r.to + '"',
+          )
+          .join(NL)
+      : "";
+  const keyBlock =
+    keyInfoText || keyRelText
+      ? NL +
+        "[교사가 정한 정답 기준 — 내부 진단용. 학생에게 문장·위치를 그대로 알려주지 말 것]" +
+        NL +
+        "핵심정보:" +
+        NL +
+        (keyInfoText || "(없음)") +
+        NL +
+        "핵심 관계:" +
+        NL +
+        (keyRelText || "(없음)") +
+        NL
+      : "";
+
   const contextBlock = `[지문 제목] ${ctx.passageTitle}
 [지문 본문]
 ${ctx.passageText}
@@ -101,7 +132,7 @@ ${marksText}
 
 [학생이 연결한 관계]
 ${relText}
-
+${keyBlock}
 ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
 
   const messages: { role: "system" | "user" | "assistant"; content: string }[] =
