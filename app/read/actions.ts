@@ -250,9 +250,10 @@ export async function sendCoachMessage(input: {
   const svc = createServiceClient();
   let keyInfos: string[] = [];
   let keyRelations: { from: string; to: string; relation: string }[] = [];
+  let critiqueNote = "";
   const paraIds = (paragraphs ?? []).map((p) => p.id);
   if (svc && session?.passage_id && paraIds.length) {
-    const [{ data: ki }, { data: kr }] = await Promise.all([
+    const [{ data: ki }, { data: kr }, { data: cn }] = await Promise.all([
       svc
         .from("passage_key_info")
         .select("paragraph_id, span_start, span_end, kind")
@@ -263,6 +264,11 @@ export async function sendCoachMessage(input: {
           "from_paragraph_id, from_start, from_end, to_paragraph_id, to_start, to_end, relation_type",
         )
         .eq("passage_id", session.passage_id),
+      svc
+        .from("passage_critique")
+        .select("note")
+        .eq("passage_id", session.passage_id)
+        .maybeSingle(),
     ]);
     keyInfos = (ki ?? [])
       .map((k) => {
@@ -283,6 +289,7 @@ export async function sendCoachMessage(input: {
         relation: REL_KO[r.relation_type] ?? "관계",
       }))
       .filter((r) => r.from && r.to);
+    critiqueNote = ((cn as { note?: string } | null)?.note ?? "").trim();
   }
 
   // 최근 진단 이력(이번 세션) — 비계 수준 조절용(원리6.3·6.4)
@@ -348,6 +355,7 @@ export async function sendCoachMessage(input: {
     keyInfos,
     keyRelations,
     recentAreas,
+    critiqueNote,
   });
 
   if ("error" in result) {

@@ -347,3 +347,28 @@ export async function saveSuggestions(input: {
   revalidatePath(`/teacher/${input.passageId}`);
   return { ok: true };
 }
+
+/** 지문의 '관점 평가 가이드'(교사 작성, 학생 비노출) 저장 */
+export async function saveCritiqueNote(
+  passageId: string,
+  note: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("created_by")
+    .eq("id", passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+
+  const { error } = await supabase.from("passage_critique").upsert({
+    passage_id: passageId,
+    note: note.trim() || null,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { error: `저장 실패: ${error.message}` };
+
+  revalidatePath(`/teacher/${passageId}`);
+  return { ok: true };
+}

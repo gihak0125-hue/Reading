@@ -61,6 +61,7 @@ export type CoachContext = {
   keyInfos?: string[];
   keyRelations?: { from: string; to: string; relation: string }[];
   recentAreas?: string[];
+  critiqueNote?: string;
   history: Turn[];
   studentMessage: string;
   hintRequested?: boolean;
@@ -115,7 +116,7 @@ export async function runCoach(
           .join(NL)
       : "";
   const keyBlock =
-    keyInfoText || keyRelText
+    keyInfoText || keyRelText || ctx.critiqueNote
       ? NL +
         "[교사가 정한 정답 기준 — 내부 진단용. 학생에게 문장·위치를 그대로 알려주지 말 것]" +
         NL +
@@ -126,6 +127,9 @@ export async function runCoach(
         "핵심 관계:" +
         NL +
         (keyRelText || "(없음)") +
+        (ctx.critiqueNote
+          ? NL + "관점 평가 가이드:" + NL + ctx.critiqueNote
+          : "") +
         NL
       : "";
   const scaffoldBlock =

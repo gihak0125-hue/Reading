@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
 import { ParagraphTagger } from "./paragraph-tagger";
 import { AiSuggest } from "./ai-suggest";
+import { CritiqueNote } from "./critique-note";
 
 export default async function PassageDetailPage({
   params,
@@ -33,6 +34,12 @@ export default async function PassageDetailPage({
         .select("id, paragraph_id, span_start, span_end, kind")
         .in("paragraph_id", paraIds)
     : { data: [] };
+
+  const { data: critique } = await supabase
+    .from("passage_critique")
+    .select("note")
+    .eq("passage_id", id)
+    .maybeSingle();
 
   const byParagraph = new Map<string, typeof keyInfos>();
   for (const k of keyInfos ?? []) {
@@ -68,6 +75,8 @@ export default async function PassageDetailPage({
       </header>
 
       <AiSuggest passageId={passage.id} />
+
+      <CritiqueNote passageId={passage.id} initial={critique?.note ?? ""} />
 
       <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
         각 문단에서 <b>핵심어</b>·<b>핵심문장</b>을 드래그로 선택하고 버튼을
