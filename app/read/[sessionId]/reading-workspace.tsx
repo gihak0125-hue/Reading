@@ -1029,7 +1029,7 @@ export function ReadingWorkspace({
                     }
                   }}
                   placeholder="내 답을 적어요"
-                  className="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  className="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
                 />
                 <button
                   type="button"
@@ -1120,14 +1120,14 @@ export function ReadingWorkspace({
           <Link
             href="/read"
             aria-label="목록으로"
-            className="rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="grid h-9 w-9 place-items-center rounded-md text-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             ‹
           </Link>
           <Link
             href="/dashboard"
             aria-label="홈으로"
-            className="grid place-items-center rounded-md px-1.5 py-1 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950"
+            className="grid h-9 w-9 place-items-center rounded-md text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950"
           >
             <HomeIcon className="h-4 w-4" />
           </Link>
@@ -1357,7 +1357,7 @@ export function ReadingWorkspace({
                         type="button"
                         onClick={() => handleErase(a.id)}
                         disabled={pending}
-                        className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-sm text-gray-400 hover:bg-gray-100 hover:text-red-500 disabled:opacity-50 dark:hover:bg-gray-800"
                         aria-label="삭제"
                       >
                         ✕
@@ -1447,7 +1447,7 @@ export function ReadingWorkspace({
                             type="button"
                             onClick={() => handleErase(a.id)}
                             disabled={pending}
-                            className="absolute right-1.5 top-1.5 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                            className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-md text-sm text-gray-400 hover:bg-gray-100 hover:text-red-500 disabled:opacity-50 dark:hover:bg-gray-800"
                             aria-label="표시 삭제"
                           >
                             ✕
@@ -1478,7 +1478,7 @@ export function ReadingWorkspace({
                           type="button"
                           onClick={() => handleErase(a.id)}
                           disabled={pending}
-                          className="absolute right-1.5 top-1.5 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+                          className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-md text-sm text-gray-400 hover:bg-gray-100 hover:text-red-500 disabled:opacity-50 dark:hover:bg-gray-800"
                           aria-label="관계 삭제"
                         >
                           ✕
@@ -1625,7 +1625,7 @@ export function ReadingWorkspace({
                 }
               }}
               placeholder="내 설명 입력 (예: … 때문에 … 라고 생각합니다.)"
-              className={`w-full resize-none rounded-xl border px-3 py-2 text-sm dark:bg-gray-900 md:w-72 ${seCue ? "border-indigo-400 ring-2 ring-indigo-300 dark:border-indigo-500" : "border-gray-300 dark:border-gray-700"}`}
+              className={`w-full resize-none rounded-xl border px-3 py-2 text-base dark:bg-gray-900 md:w-72 ${seCue ? "border-indigo-400 ring-2 ring-indigo-300 dark:border-indigo-500" : "border-gray-300 dark:border-gray-700"}`}
             />
             <button
               type="button"

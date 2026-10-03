@@ -49,7 +49,7 @@ export function AuthForm({ next }: { next: string }) {
               type="text"
               autoComplete="name"
               placeholder="홍길동"
-              className="rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+              className="rounded-md border border-gray-300 px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
             />
           </label>
         )}
@@ -62,7 +62,7 @@ export function AuthForm({ next }: { next: string }) {
             required
             autoComplete="email"
             placeholder="you@example.com"
-            className="rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+            className="rounded-md border border-gray-300 px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
           />
         </label>
 
@@ -74,7 +74,7 @@ export function AuthForm({ next }: { next: string }) {
             required
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             placeholder="6자 이상"
-            className="rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+            className="rounded-md border border-gray-300 px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
           />
         </label>
 
@@ -116,7 +116,7 @@ export function AuthForm({ next }: { next: string }) {
               type="text"
               autoComplete="off"
               placeholder="선생님이 준 코드"
-              className="rounded-md border border-gray-300 px-3 py-2 uppercase dark:border-gray-700 dark:bg-gray-900"
+              className="rounded-md border border-gray-300 px-3 py-2 text-base uppercase dark:border-gray-700 dark:bg-gray-900"
             />
             <span className="text-xs text-gray-400">
               우리 반에 들어가요. 나중에 입력해도 됩니다.
