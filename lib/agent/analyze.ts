@@ -64,17 +64,29 @@ JSON 형식으로만:
 export async function analyzePassage(
   title: string,
   paragraphs: { seq: number; text: string }[],
+  teacherNote?: string,
 ): Promise<AnalyzeResult> {
   if (!process.env.OPENAI_API_KEY) return { error: "no_key" };
 
   const body = paragraphs.map((p) => `[${p.seq}문단] ${p.text}`).join("\n\n");
+  const messages: { role: "system" | "user"; content: string }[] = [
+    { role: "system", content: SYSTEM },
+  ];
+  const note = (teacherNote ?? "").trim();
+  if (note) {
+    messages.push({
+      role: "system",
+      content:
+        "교사의 추가 지시입니다. 아래 지침을 최우선으로 반영해 분석하세요: " +
+        note +
+        " — 단, 위의 '원문 글자 그대로 복사' 규칙과 JSON 출력 형식은 반드시 지키세요.",
+    });
+  }
+  messages.push({ role: "user", content: `제목: ${title}\n\n${body}` });
   try {
     const res = await getOpenAI().chat.completions.create({
       model: MODEL_ESCALATION(), // 분석은 상위 모델
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: `제목: ${title}\n\n${body}` },
-      ],
+      messages,
       temperature: 0.2,
       response_format: { type: "json_object" },
       max_tokens: 1500,

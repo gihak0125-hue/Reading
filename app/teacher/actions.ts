@@ -233,6 +233,7 @@ export type AnalyzeState =
 /** AI로 지문을 분석해 추천 목록을 반환(저장은 하지 않음) */
 export async function analyzePassageAction(
   passageId: string,
+  teacherNote?: string,
 ): Promise<AnalyzeState> {
   const { supabase, user } = await requireTeacher();
   const { data: passage } = await supabase
@@ -254,6 +255,7 @@ export async function analyzePassageAction(
   const result = await analyzePassage(
     passage.title,
     paras.map((p) => ({ seq: p.seq, text: p.text })),
+    teacherNote,
   );
   if ("error" in result)
     return {

@@ -29,11 +29,12 @@ export function AiSuggest({ passageId }: { passageId: string }) {
   const [keyChecked, setKeyChecked] = useState<boolean[]>([]);
   const [relChecked, setRelChecked] = useState<boolean[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
+  const [note, setNote] = useState("");
 
   function analyze() {
     setMsg(null);
     start(async () => {
-      const res = await analyzePassageAction(passageId);
+      const res = await analyzePassageAction(passageId, note);
       if ("error" in res && res.error) {
         setMsg(res.error);
         setData(null);
@@ -90,6 +91,24 @@ export function AiSuggest({ passageId }: { passageId: string }) {
         >
           {pending ? "분석 중…" : data ? "다시 분석" : "AI 분석"}
         </button>
+      </div>
+
+      <div className="mt-3">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-gray-600 dark:text-gray-300">
+            AI에게 줄 지시·조언 <span className="text-gray-400">(선택)</span>
+          </span>
+          <textarea
+            rows={2}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="예: 공리주의와 의무론의 대조에 집중해줘. 2문단 '그러나' 뒤를 핵심으로 봐줘."
+            className="w-full resize-none rounded-md border border-violet-200 bg-white px-3 py-2 text-base dark:border-violet-900 dark:bg-gray-900"
+          />
+          <span className="text-xs text-gray-400">
+            지침을 주면 그 방향으로 다시 분석해요. 비워 두면 기본 분석.
+          </span>
+        </label>
       </div>
 
       {msg && <p className="mt-2 text-sm text-violet-800 dark:text-violet-200">{msg}</p>}
