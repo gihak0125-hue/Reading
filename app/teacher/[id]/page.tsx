@@ -4,6 +4,7 @@ import { requireTeacher } from "@/lib/auth";
 import { ParagraphTagger } from "./paragraph-tagger";
 import { AiSuggest } from "./ai-suggest";
 import { CritiqueNote } from "./critique-note";
+import { CheckQuestions } from "./check-questions";
 
 export default async function PassageDetailPage({
   params,
@@ -38,6 +39,12 @@ export default async function PassageDetailPage({
   const { data: critique } = await supabase
     .from("passage_critique")
     .select("note")
+    .eq("passage_id", id)
+    .maybeSingle();
+
+  const { data: checks } = await supabase
+    .from("passage_checks")
+    .select("detail_q, detail_a, main_q, main_a, inference_q, inference_a")
     .eq("passage_id", id)
     .maybeSingle();
 
@@ -77,6 +84,18 @@ export default async function PassageDetailPage({
       <AiSuggest passageId={passage.id} />
 
       <CritiqueNote passageId={passage.id} initial={critique?.note ?? ""} />
+
+      <CheckQuestions
+        passageId={passage.id}
+        initial={{
+          detail_q: checks?.detail_q ?? "",
+          detail_a: checks?.detail_a ?? "",
+          main_q: checks?.main_q ?? "",
+          main_a: checks?.main_a ?? "",
+          inference_q: checks?.inference_q ?? "",
+          inference_a: checks?.inference_a ?? "",
+        }}
+      />
 
       <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
         각 문단에서 <b>핵심어</b>·<b>핵심문장</b>을 드래그로 선택하고 버튼을

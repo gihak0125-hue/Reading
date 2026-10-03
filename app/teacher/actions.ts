@@ -372,3 +372,43 @@ export async function saveCritiqueNote(
   revalidatePath(`/teacher/${passageId}`);
   return { ok: true };
 }
+
+export type CheckQuestionsInput = {
+  detail_q: string;
+  detail_a: string;
+  main_q: string;
+  main_a: string;
+  inference_q: string;
+  inference_a: string;
+};
+
+/** 지문의 '독해 확인 문항'(세부·중심·추론) 저장 */
+export async function saveCheckQuestions(
+  passageId: string,
+  data: CheckQuestionsInput,
+): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("created_by")
+    .eq("id", passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+
+  const clean = (v: string) => (v.trim() ? v.trim() : null);
+  const { error } = await supabase.from("passage_checks").upsert({
+    passage_id: passageId,
+    detail_q: clean(data.detail_q),
+    detail_a: clean(data.detail_a),
+    main_q: clean(data.main_q),
+    main_a: clean(data.main_a),
+    inference_q: clean(data.inference_q),
+    inference_a: clean(data.inference_a),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { error: `저장 실패: ${error.message}` };
+
+  revalidatePath(`/teacher/${passageId}`);
+  return { ok: true };
+}

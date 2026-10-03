@@ -251,9 +251,11 @@ export async function sendCoachMessage(input: {
   let keyInfos: string[] = [];
   let keyRelations: { from: string; to: string; relation: string }[] = [];
   let critiqueNote = "";
+  let checkItems: { kind: string; q: string; a: string }[] = [];
   const paraIds = (paragraphs ?? []).map((p) => p.id);
   if (svc && session?.passage_id && paraIds.length) {
-    const [{ data: ki }, { data: kr }, { data: cn }] = await Promise.all([
+    const [{ data: ki }, { data: kr }, { data: cn }, { data: pc }] =
+      await Promise.all([
       svc
         .from("passage_key_info")
         .select("paragraph_id, span_start, span_end, kind")
@@ -267,6 +269,13 @@ export async function sendCoachMessage(input: {
       svc
         .from("passage_critique")
         .select("note")
+        .eq("passage_id", session.passage_id)
+        .maybeSingle(),
+      svc
+        .from("passage_checks")
+        .select(
+          "detail_q, detail_a, main_q, main_a, inference_q, inference_a",
+        )
         .eq("passage_id", session.passage_id)
         .maybeSingle(),
     ]);
@@ -290,6 +299,16 @@ export async function sendCoachMessage(input: {
       }))
       .filter((r) => r.from && r.to);
     critiqueNote = ((cn as { note?: string } | null)?.note ?? "").trim();
+    const pcr = pc as Record<string, string | null> | null;
+    if (pcr) {
+      const add = (kind: string, q?: string | null, a?: string | null) => {
+        if (q && q.trim())
+          checkItems.push({ kind, q: q.trim(), a: (a ?? "").trim() });
+      };
+      add("세부", pcr.detail_q, pcr.detail_a);
+      add("중심", pcr.main_q, pcr.main_a);
+      add("추론", pcr.inference_q, pcr.inference_a);
+    }
   }
 
   // 최근 진단 이력(이번 세션) — 비계 수준 조절용(원리6.3·6.4)
@@ -356,6 +375,7 @@ export async function sendCoachMessage(input: {
     keyRelations,
     recentAreas,
     critiqueNote,
+    checkItems,
   });
 
   if ("error" in result) {
