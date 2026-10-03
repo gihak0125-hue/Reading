@@ -1002,8 +1002,8 @@ export function ReadingWorkspace({
   return (
     <div className="flex min-h-full flex-col">
       {phase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900">
+        <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-gray-950">
+          <div className="mx-auto flex h-full w-full max-w-2xl flex-col">
             <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3 dark:border-gray-800">
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold">
@@ -1036,10 +1036,9 @@ export function ReadingWorkspace({
               <button
                 type="button"
                 onClick={() => setPhase(null)}
-                aria-label="닫기"
-                className="rounded-md px-2 py-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               >
-                ✕
+                ← 읽기로
               </button>
             </header>
 
