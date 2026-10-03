@@ -18,6 +18,68 @@ const REL_KO: Record<string, string> = {
   elaboration: "상술",
 };
 
+/**
+ * 관계 그래프 구조 분석(원리3 — 연쇄/분기/수렴).
+ * 화살표(from·to 모두 있는 완전 연결)들을 모아 사슬·갈래·수렴을 설명한다.
+ * 코치가 학생의 인과 사슬이 어디서 끊기거나 비었는지 진단하도록 돕는 '구조 요약'.
+ */
+function describeRelationGraph(
+  edges: { from: string; to: string; relation: string }[],
+): string {
+  const clip = (s: string) => (s.length > 24 ? s.slice(0, 24) + "…" : s);
+  const q = (s: string) => `"${clip(s)}"`;
+  const out = new Map<string, Map<string, string>>(); // from -> (to -> relation)
+  const inc = new Map<string, Set<string>>(); // to -> set(from)
+  const nodes = new Set<string>();
+  for (const e of edges) {
+    const f = e.from?.trim();
+    const t = e.to?.trim();
+    if (!f || !t || f === t) continue;
+    nodes.add(f);
+    nodes.add(t);
+    if (!out.has(f)) out.set(f, new Map());
+    out.get(f)!.set(t, e.relation);
+    if (!inc.has(t)) inc.set(t, new Set());
+    inc.get(t)!.add(f);
+  }
+  if (nodes.size === 0) return "";
+
+  const lines: string[] = [];
+  // 연쇄: 출발점(들어오는 화살표 없는 노드)에서 외길로 이어지는 사슬(3노드 이상)
+  const sources = [...nodes].filter((n) => !inc.has(n));
+  const starts = sources.length ? sources : [...nodes];
+  const seenChain = new Set<string>();
+  for (const s of starts) {
+    const path = [s];
+    let cur = s;
+    while (out.has(cur) && out.get(cur)!.size === 1) {
+      const nxt = [...out.get(cur)!.keys()][0];
+      if (path.includes(nxt)) break;
+      path.push(nxt);
+      cur = nxt;
+      if ((inc.get(nxt)?.size ?? 0) > 1) break;
+    }
+    if (path.length >= 3) {
+      const sig = path.join("→");
+      if (!seenChain.has(sig)) {
+        seenChain.add(sig);
+        lines.push("연쇄: " + path.map(q).join(" → "));
+      }
+    }
+  }
+  // 분기: 한 노드에서 여러 갈래로 나감
+  for (const [n, tos] of out) {
+    if (tos.size >= 2)
+      lines.push("분기: " + q(n) + " → " + [...tos.keys()].map(q).join(", "));
+  }
+  // 수렴: 여러 노드가 한 노드로 모임
+  for (const [n, froms] of inc) {
+    if (froms.size >= 2)
+      lines.push("수렴: " + [...froms].map(q).join(", ") + " → " + q(n));
+  }
+  return lines.slice(0, 8).join("\n");
+}
+
 /** 세션 소유자 확인 후 supabase 반환(없으면 리다이렉트) */
 async function requireOwnedSession(sessionId: string) {
   const { supabase, user } = await getSessionProfile(`/read/${sessionId}`);
@@ -351,6 +413,10 @@ export async function sendCoachMessage(input: {
       };
     });
 
+  const relationGraph = describeRelationGraph(
+    relations.filter((r) => r.from && r.to),
+  );
+
   const passageText = (paragraphs ?? []).map((p) => p.text).join("\n\n");
 
   // 활동 기반 피드백인데 표시·관계가 하나도 없으면 조용히 넘어간다
@@ -376,6 +442,7 @@ export async function sendCoachMessage(input: {
     recentAreas,
     critiqueNote,
     checkItems,
+    relationGraph,
   });
 
   if ("error" in result) {

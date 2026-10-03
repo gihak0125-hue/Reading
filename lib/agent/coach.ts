@@ -19,6 +19,7 @@ const SYSTEM_PROMPT = `당신은 고등학교 3학년 학생의 '추론적 독�
 
 [읽기 과정의 렌즈(순서 강제 아님)]
 - 핵심정보 확인(사실) / 비명시적 의미 추론 / 정보 관계 연결(상술·나열·비교대조·인과·문제해결) / 자기설명 / 독해 확인
+- 관계는 한 줄이 아니라 그래프로 이어질 수 있습니다(연쇄: 원인→문제→해결, 분기·수렴: 원인1·원인2→문제→해결1·해결2). '연결 구조 분석'이 주어지면 학생의 사슬이 어디서 끊기거나 비었는지 그 구조로 짚되, 빠진 연결을 직접 채워 주지 말고 다시 살펴볼 지점만 단서로 주세요.
 
 [시점 — 중요]
 - 학생이 '읽는 중'일 때(기본 대화·활동 피드백·힌트)에는 핵심정보 확인(사실적 독해)과 추론에 집중하고, 관점 평가(비판적 독해)는 먼저 꺼내지 마세요.
@@ -58,6 +59,7 @@ export type CoachContext = {
   passageText: string;
   marks: Mark[];
   relations: Relation[];
+  relationGraph?: string;
   keyInfos?: string[];
   keyRelations?: { from: string; to: string; relation: string }[];
   recentAreas?: string[];
@@ -155,6 +157,14 @@ export async function runCoach(
         NL
       : "";
 
+  const graphBlock = ctx.relationGraph
+    ? NL +
+      "[연결 구조 분석(연쇄·분기·수렴) — 내부 참고. 정답 연결을 그대로 주지 말 것]" +
+      NL +
+      ctx.relationGraph +
+      NL
+    : "";
+
   const contextBlock = `[지문 제목] ${ctx.passageTitle}
 [지문 본문]
 ${ctx.passageText}
@@ -163,7 +173,7 @@ ${ctx.passageText}
 ${marksText}
 
 [학생이 연결한 관계]
-${relText}
+${relText}${graphBlock}
 ${keyBlock}${scaffoldBlock}
 ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
 
