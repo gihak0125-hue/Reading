@@ -18,6 +18,7 @@ import {
   sendCoachMessage,
   completeSession,
   reopenSession,
+  scoreSessionAction,
 } from "../actions";
 
 export type ParagraphData = { id: string; seq: number; text: string };
@@ -365,8 +366,24 @@ export function ReadingWorkspace({
   const [tool, setTool] = useState<ToolId | null>(null);
   const [showTools, setShowTools] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [phase, setPhase] = useState<null | "check" | "critique">(null);
+  const [phase, setPhase] = useState<
+    null | "read_score" | "check" | "critique" | "result"
+  >(null);
   const [showBody, setShowBody] = useState(false);
+  const [scores, setScores] = useState<{
+    fact: number;
+    inference: number;
+    critique?: number;
+    comment: string;
+  } | null>(null);
+  const [scoring, startScoring] = useTransition();
+  function fetchScore(stage: "reading" | "review") {
+    setScores(null);
+    startScoring(async () => {
+      const r = await scoreSessionAction(sessionId, stage);
+      setScores("error" in r ? null : r);
+    });
+  }
   const [showGuide, setShowGuide] = useState(false);
   const [tab, setTab] = useState<PadTab>("key");
   const [msg, setMsg] = useState<string | null>(null);
@@ -948,8 +965,8 @@ export function ReadingWorkspace({
     startTransition(async () => {
       await completeSession(sessionId);
     });
-    setPhase("check");
-    askCheck();
+    setPhase("read_score");
+    fetchScore("reading");
   }
   function handleReopen() {
     startTransition(async () => {
@@ -1004,6 +1021,89 @@ export function ReadingWorkspace({
     <div className="flex min-h-full flex-col">
       {phase && (
         <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-gray-950">
+          {(phase === "read_score" || phase === "result") && (
+            <div className="mx-auto flex h-full w-full max-w-md flex-col justify-center gap-6 px-6 py-10">
+              <div className="text-center">
+                <h2 className="text-xl font-bold">
+                  {phase === "read_score" ? "표시 결과" : "최종 결과"}
+                </h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {phase === "read_score"
+                    ? "밑줄·동그라미로 핵심을 얼마나 잘 짚었는지 보여줘요."
+                    : "읽고 답한 전 과정을 종합한 점수예요."}
+                </p>
+              </div>
+              {scoring ? (
+                <p className="text-center text-sm text-gray-400">채점 중이에요…</p>
+              ) : scores ? (
+                <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 dark:border-gray-800">
+                  {[
+                    { label: "사실적 독해", value: scores.fact, color: "bg-emerald-500" },
+                    { label: "추론적 독해", value: scores.inference, color: "bg-sky-500" },
+                    ...(phase === "result" && scores.critique != null
+                      ? [{ label: "비판적 독해", value: scores.critique, color: "bg-rose-500" }]
+                      : []),
+                  ].map((b) => (
+                    <div key={b.label}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-gray-700 dark:text-gray-200">
+                          {b.label}
+                        </span>
+                        <span className="font-bold">{b.value}점</span>
+                      </div>
+                      <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div
+                          className={`h-full rounded-full ${b.color}`}
+                          style={{ width: `${b.value}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {scores.comment && (
+                    <p className="mt-1 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                      {scores.comment}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center text-sm text-gray-400">
+                  점수를 불러오지 못했어요. (AI 키 설정 확인)
+                </p>
+              )}
+              <div className="flex justify-center gap-2">
+                {phase === "read_score" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScores(null);
+                      setPhase("check");
+                      askCheck();
+                    }}
+                    className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+                  >
+                    독해 확인 시작 →
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPhase(null)}
+                      className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                      ← 읽기로
+                    </button>
+                    <Link
+                      href="/read"
+                      className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+                    >
+                      목록으로
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {(phase === "check" || phase === "critique") && (
           <div className={`mx-auto flex h-full w-full flex-col ${showBody ? "max-w-6xl" : "max-w-2xl"}`}>
             <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3 dark:border-gray-800">
               <div>
@@ -1142,7 +1242,10 @@ export function ReadingWorkspace({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setPhase(null)}
+                    onClick={() => {
+                      setPhase("result");
+                      fetchScore("review");
+                    }}
                     className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
                   >
                     관점 평가 마치기
@@ -1153,6 +1256,7 @@ export function ReadingWorkspace({
               </div>
             </div>
           </div>
+          )}
         </div>
       )}
       {showTutorial && (

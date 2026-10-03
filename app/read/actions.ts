@@ -497,3 +497,121 @@ export async function reopenSession(sessionId: string): Promise<void> {
   revalidatePath(`/read/${sessionId}`);
   revalidatePath("/read");
 }
+
+/** 읽기 결과 수치화(형성 평가). stage: "reading"=표시 기반(사실·추론), "review"=대화 기반(사실·추론·비판) */
+export async function scoreSessionAction(
+  sessionId: string,
+  stage: "reading" | "review",
+): Promise<
+  | { fact: number; inference: number; critique?: number; comment: string }
+  | { error: string }
+> {
+  const { supabase } = await requireOwnedSession(sessionId);
+
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("id, passage_id")
+    .eq("id", sessionId)
+    .single();
+  if (!session) return { error: "세션을 찾을 수 없습니다." };
+
+  const { data: paragraphs } = await supabase
+    .from("passage_paragraphs")
+    .select("id, seq, text")
+    .eq("passage_id", session.passage_id)
+    .order("seq", { ascending: true });
+  const { data: annos } = await supabase
+    .from("annotations")
+    .select("id, paragraph_id, type, span_start, span_end, target_ref, from_ref, relation_type")
+    .eq("session_id", sessionId);
+  const { data: history } = await supabase
+    .from("agent_messages")
+    .select("role, content, created_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+
+  const paraText = new Map<string, string>();
+  for (const p of paragraphs ?? []) paraText.set(p.id, p.text);
+  const annoById = new Map<string, NonNullable<typeof annos>[number]>();
+  for (const a of annos ?? []) annoById.set(a.id, a);
+  const markText = (id: string | null) => {
+    const a = id ? annoById.get(id) : null;
+    if (!a) return "";
+    return (paraText.get(a.paragraph_id) ?? "").slice(a.span_start, a.span_end);
+  };
+
+  const marks = (annos ?? [])
+    .filter((a) => a.type === "underline" || a.type === "circle")
+    .map((a) => ({
+      type: a.type,
+      text: (paraText.get(a.paragraph_id) ?? "").slice(a.span_start, a.span_end),
+    }));
+  const relations = (annos ?? [])
+    .filter((a) => a.type === "arrow")
+    .map((a) => ({
+      from: markText(a.from_ref),
+      to: markText(a.target_ref),
+      relation: REL_KO[a.relation_type ?? "listing"] ?? "관계",
+    }));
+
+  const svc = createServiceClient();
+  let keyInfos: string[] = [];
+  let keyRelations: { from: string; to: string; relation: string }[] = [];
+  let critiqueNote = "";
+  const paraIds = (paragraphs ?? []).map((p) => p.id);
+  if (svc && session.passage_id && paraIds.length) {
+    const [{ data: ki }, { data: kr }, { data: cn }] = await Promise.all([
+      svc
+        .from("passage_key_info")
+        .select("paragraph_id, span_start, span_end, kind")
+        .in("paragraph_id", paraIds),
+      svc
+        .from("passage_key_relations")
+        .select(
+          "from_paragraph_id, from_start, from_end, to_paragraph_id, to_start, to_end, relation_type",
+        )
+        .eq("passage_id", session.passage_id),
+      svc
+        .from("passage_critique")
+        .select("note")
+        .eq("passage_id", session.passage_id)
+        .maybeSingle(),
+    ]);
+    keyInfos = (ki ?? [])
+      .map((k) => {
+        const t = (paraText.get(k.paragraph_id) ?? "").slice(k.span_start, k.span_end);
+        return `(${k.kind === "keyword" ? "핵심어" : "핵심문장"}) ${t}`;
+      })
+      .filter((x) => x.length > 5);
+    keyRelations = (kr ?? [])
+      .map((r) => ({
+        from: (paraText.get(r.from_paragraph_id) ?? "").slice(r.from_start, r.from_end),
+        to: (paraText.get(r.to_paragraph_id) ?? "").slice(r.to_start, r.to_end),
+        relation: REL_KO[r.relation_type] ?? "관계",
+      }))
+      .filter((r) => r.from && r.to);
+    critiqueNote = ((cn as { note?: string } | null)?.note ?? "").trim();
+  }
+
+  const passageText = (paragraphs ?? []).map((p) => p.text).join("\n\n");
+
+  const { scoreSession } = await import("@/lib/agent/score");
+  const result = await scoreSession({
+    stage,
+    passageText,
+    marks,
+    relations,
+    keyInfos,
+    keyRelations,
+    critiqueNote,
+    history: (history ?? []).map((h) => ({
+      role: h.role === "agent" ? "agent" : "student",
+      content: h.content,
+    })),
+  });
+  if ("error" in result)
+    return {
+      error: result.error === "no_key" ? "AI 키가 필요해요." : "채점에 실패했어요.",
+    };
+  return { ...result.scores, comment: result.comment };
+}
