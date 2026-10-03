@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveCritiqueNote } from "../actions";
+import { saveCritiqueNote, suggestCritiqueAction } from "../actions";
 
 export function CritiqueNote({
   passageId,
@@ -12,20 +12,46 @@ export function CritiqueNote({
 }) {
   const [note, setNote] = useState(initial);
   const [pending, start] = useTransition();
+  const [suggesting, startSuggest] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+
+  function suggest() {
+    setMsg(null);
+    startSuggest(async () => {
+      const r = await suggestCritiqueAction(passageId);
+      if (r.error) setMsg(r.error);
+      else if (r.note) {
+        setNote(r.note);
+        setMsg("AI 추천을 넣었어요. 확인·수정 후 저장하세요.");
+      } else setMsg("추천 결과가 비었어요.");
+    });
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
-      <h2 className="font-semibold">
-        관점 평가 가이드{" "}
-        <span className="text-xs font-normal text-gray-400">
-          (선택 · 학생에게 노출 안 됨)
-        </span>
-      </h2>
-      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        글에 담긴 관점·핵심 주장·전제와 평가 기준을 적어두면, 읽은 뒤 &lsquo;관점
-        평가&rsquo; 대화에서 코치가 이를 근거로 돕습니다. (정답을 그대로 말하진
-        않고 학생이 스스로 적용하게 유도)
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">
+            관점 평가 가이드{" "}
+            <span className="text-xs font-normal text-gray-400">
+              (선택 · 학생에게 노출 안 됨)
+            </span>
+          </h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            글에 담긴 관점·핵심 주장·전제와 평가 기준을 적어두면, 읽은 뒤
+            &lsquo;관점 평가&rsquo; 대화에서 코치가 이를 근거로 돕습니다. (정답을
+            그대로 말하진 않고 학생이 스스로 적용하게 유도)
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={suggest}
+          disabled={suggesting}
+          className="shrink-0 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+        >
+          {suggesting ? "AI 추천 중…" : "✨ AI 추천"}
+        </button>
+      </div>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}

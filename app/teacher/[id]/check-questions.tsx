@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveCheckQuestions, type CheckQuestionsInput } from "../actions";
+import {
+  saveCheckQuestions,
+  suggestChecksAction,
+  type CheckQuestionsInput,
+} from "../actions";
 
 const ROWS: { q: keyof CheckQuestionsInput; a: keyof CheckQuestionsInput; label: string; hint: string }[] = [
   { q: "detail_q", a: "detail_a", label: "세부", hint: "글에 명시된 구체적 사실" },
@@ -18,23 +22,48 @@ export function CheckQuestions({
 }) {
   const [v, setV] = useState<CheckQuestionsInput>(initial);
   const [pending, start] = useTransition();
+  const [suggesting, startSuggest] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const set = (k: keyof CheckQuestionsInput, val: string) =>
     setV((p) => ({ ...p, [k]: val }));
 
+  function suggest() {
+    setMsg(null);
+    startSuggest(async () => {
+      const r = await suggestChecksAction(passageId);
+      if (r.error) setMsg(r.error);
+      else if (r.checks) {
+        setV(r.checks);
+        setMsg("AI 추천을 넣었어요. 확인·수정 후 저장하세요.");
+      } else setMsg("추천 결과가 비었어요.");
+    });
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
-      <h2 className="font-semibold">
-        독해 확인 문항{" "}
-        <span className="text-xs font-normal text-gray-400">
-          (선택 · 읽은 뒤 코치가 사용)
-        </span>
-      </h2>
-      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        세부·중심·추론 문항을 적어두면 학생이 읽은 뒤 코치가 순서대로 물어봐요.
-        모범답안 가이드는 채점 근거로만 쓰이고 학생에게 노출되지 않습니다. (비워
-        두면 코치가 알아서 만듭니다)
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">
+            독해 확인 문항{" "}
+            <span className="text-xs font-normal text-gray-400">
+              (선택 · 읽은 뒤 코치가 사용)
+            </span>
+          </h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            세부·중심·추론 문항을 적어두면 학생이 읽은 뒤 코치가 순서대로
+            물어봐요. 모범답안 가이드는 채점 근거로만 쓰이고 학생에게 노출되지
+            않습니다. (비워 두면 코치가 알아서 만듭니다)
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={suggest}
+          disabled={suggesting}
+          className="shrink-0 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+        >
+          {suggesting ? "AI 추천 중…" : "✨ AI 추천"}
+        </button>
+      </div>
       <div className="mt-3 flex flex-col gap-4">
         {ROWS.map((r) => (
           <div key={r.q} className="flex flex-col gap-1.5">

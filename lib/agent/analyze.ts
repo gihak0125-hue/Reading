@@ -104,3 +104,91 @@ export async function analyzePassage(
     return { error: e instanceof Error ? e.message : "analyze_failed" };
   }
 }
+
+// ===== 관점 평가 가이드 / 독해 확인 문항 추천 (교사 보조) =====
+
+export type CheckSix = {
+  detail_q: string;
+  detail_a: string;
+  main_q: string;
+  main_a: string;
+  inference_q: string;
+  inference_a: string;
+};
+
+const CRITIQUE_SYSTEM = `당신은 고등학교 '비판적 독해(관점 평가)' 수업을 돕는 교사 보조입니다.
+지문을 읽고 교사가 '관점 평가 가이드'로 쓸 내용을 제안하세요. 이 가이드는 교사·코치 내부용이며 학생에게 그대로 노출되지 않습니다.
+다음을 간결한 개조식으로 정리하세요(한국어, 5~10줄):
+- 글에 담긴 서로 겨루는 관점(또는 평가 대상이 되는 주장)과 각자의 핵심 주장·전제.
+- 어떤 관점을 '기준'으로 삼아 다른 관점을 평가할 수 있는지.
+- 그 기준을 적용할 때 드러나는 문제를 뒷받침하는 글의 근거(문장 요지).
+- 통계·사례·인용 등 근거 자료의 신뢰성 점검 포인트.
+논쟁적 주제에 '어느 쪽이 옳다'고 단정하지 말고 평가의 틀과 근거만 정리하세요(중립성).
+겨루는 관점이 뚜렷하지 않으면 그 점을 한 줄로 밝히고, 비판적으로 따져볼 지점(가정·일반화·근거의 한계)을 제안하세요.
+JSON으로만 출력: {"note":"..."}`;
+
+const CHECK_SYSTEM = `당신은 고등학교 추론적 독해의 '독해 확인 문항'을 만드는 교사 보조입니다.
+지문을 읽고 세 문항과 각 모범답안 가이드를 만드세요(한국어):
+- 세부(detail): 글에 명시된 구체적 사실을 묻는 문항.
+- 중심(main): 문단·글 전체의 요지·주제를 묻는 문항.
+- 추론(inference): 글에 직접 드러나지 않은 의미·함축·필자 의도를 묻는 문항.
+각 문항은 한 문장이며 학생이 '글을 근거로' 답할 수 있어야 합니다.
+모범답안 가이드(_a)는 교사 채점용(학생 비노출)이며 2~3문장, 근거가 되는 문단/내용을 함께 적으세요.
+JSON으로만 출력: {"detail_q":"","detail_a":"","main_q":"","main_a":"","inference_q":"","inference_a":""}`;
+
+async function runJsonAnalysis(
+  system: string,
+  title: string,
+  paragraphs: { seq: number; text: string }[],
+  maxTokens: number,
+): Promise<Record<string, unknown> | { error: string }> {
+  if (!process.env.OPENAI_API_KEY) return { error: "no_key" };
+  const body = paragraphs.map((p) => `[${p.seq}문단] ${p.text}`).join("\n\n");
+  try {
+    const res = await getOpenAI().chat.completions.create({
+      model: MODEL_ESCALATION(),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: `제목: ${title}\n\n${body}` },
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+      max_tokens: maxTokens,
+    });
+    return JSON.parse(res.choices[0]?.message?.content ?? "{}") as Record<
+      string,
+      unknown
+    >;
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "analyze_failed" };
+  }
+}
+
+export async function suggestCritiqueGuide(
+  title: string,
+  paragraphs: { seq: number; text: string }[],
+): Promise<{ note: string } | { error: string }> {
+  const r = await runJsonAnalysis(CRITIQUE_SYSTEM, title, paragraphs, 900);
+  if ("error" in r) return r as { error: string };
+  const note = typeof r.note === "string" ? r.note.trim() : "";
+  return { note };
+}
+
+export async function suggestCheckQuestions(
+  title: string,
+  paragraphs: { seq: number; text: string }[],
+): Promise<{ checks: CheckSix } | { error: string }> {
+  const r = await runJsonAnalysis(CHECK_SYSTEM, title, paragraphs, 1000);
+  if ("error" in r) return r as { error: string };
+  const g = (k: string) => (typeof r[k] === "string" ? (r[k] as string).trim() : "");
+  return {
+    checks: {
+      detail_q: g("detail_q"),
+      detail_a: g("detail_a"),
+      main_q: g("main_q"),
+      main_a: g("main_a"),
+      inference_q: g("inference_q"),
+      inference_a: g("inference_a"),
+    },
+  };
+}

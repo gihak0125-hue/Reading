@@ -414,3 +414,65 @@ export async function saveCheckQuestions(
   revalidatePath(`/teacher/${passageId}`);
   return { ok: true };
 }
+
+/** 관점 평가 가이드 AI 추천 (교사 보조) */
+export async function suggestCritiqueAction(
+  passageId: string,
+): Promise<{ note?: string; error?: string }> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("title, created_by")
+    .eq("id", passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+  const { data: paras } = await supabase
+    .from("passage_paragraphs")
+    .select("seq, text")
+    .eq("passage_id", passageId)
+    .order("seq", { ascending: true });
+  if (!paras || paras.length === 0) return { error: "문단이 없습니다." };
+
+  const { suggestCritiqueGuide } = await import("@/lib/agent/analyze");
+  const r = await suggestCritiqueGuide(
+    passage.title,
+    paras.map((p) => ({ seq: p.seq, text: p.text })),
+  );
+  if ("error" in r)
+    return {
+      error: r.error === "no_key" ? "AI 키가 필요해요." : "추천에 실패했어요.",
+    };
+  return { note: r.note };
+}
+
+/** 독해 확인 문항 AI 추천 (교사 보조) */
+export async function suggestChecksAction(
+  passageId: string,
+): Promise<{ checks?: CheckQuestionsInput; error?: string }> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("title, created_by")
+    .eq("id", passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+  const { data: paras } = await supabase
+    .from("passage_paragraphs")
+    .select("seq, text")
+    .eq("passage_id", passageId)
+    .order("seq", { ascending: true });
+  if (!paras || paras.length === 0) return { error: "문단이 없습니다." };
+
+  const { suggestCheckQuestions } = await import("@/lib/agent/analyze");
+  const r = await suggestCheckQuestions(
+    passage.title,
+    paras.map((p) => ({ seq: p.seq, text: p.text })),
+  );
+  if ("error" in r)
+    return {
+      error: r.error === "no_key" ? "AI 키가 필요해요." : "추천에 실패했어요.",
+    };
+  return { checks: r.checks };
+}
