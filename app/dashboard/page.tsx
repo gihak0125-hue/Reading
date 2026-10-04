@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signout } from "@/app/login/actions";
+import { SubmitButton } from "@/app/submit-button";
 import { ADMIN_EMAIL } from "@/lib/admin";
 
 function Svg({ children }: { children: ReactNode }) {
@@ -114,12 +115,12 @@ export default async function DashboardPage() {
           </p>
         </div>
         <form action={signout}>
-          <button
-            type="submit"
-            className="rounded-full border border-gray-300 bg-white/80 px-3 py-1.5 text-sm text-gray-600 transition hover:bg-white dark:border-gray-700 dark:bg-gray-950/70 dark:text-gray-300 dark:hover:bg-gray-950"
+          <SubmitButton
+            pendingText="로그아웃 중…"
+            className="rounded-full border border-gray-300 bg-white/80 px-3 py-1.5 text-sm text-gray-600 transition hover:bg-white disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950/70 dark:text-gray-300 dark:hover:bg-gray-950"
           >
             로그아웃
-          </button>
+          </SubmitButton>
         </form>
       </header>
 

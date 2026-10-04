@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireTeacher } from "@/lib/auth";
 import { ClassForm } from "./class-form";
 import { deleteClass } from "./actions";
+import { SubmitButton } from "@/app/submit-button";
 
 type Member = {
   id: string;
@@ -93,12 +94,12 @@ export default async function ClassesPage() {
                       </div>
                       <form action={deleteClass}>
                         <input type="hidden" name="id" value={c.id} />
-                        <button
-                          type="submit"
-                          className="rounded-md px-2 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                        <SubmitButton
+                          pendingText="삭제 중…"
+                          className="rounded-md px-2 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 dark:hover:bg-red-950"
                         >
                           삭제
-                        </button>
+                        </SubmitButton>
                       </form>
                     </div>
                   </div>

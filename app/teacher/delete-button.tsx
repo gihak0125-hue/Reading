@@ -1,6 +1,20 @@
 "use client";
 
+import { useFormStatus } from "react-dom";
 import { deletePassage } from "./actions";
+
+function SubmitBtn() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 dark:hover:bg-red-950"
+    >
+      {pending ? "삭제 중…" : "삭제"}
+    </button>
+  );
+}
 
 export function DeleteButton({ id }: { id: string }) {
   return (
@@ -16,12 +30,7 @@ export function DeleteButton({ id }: { id: string }) {
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        className="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-      >
-        삭제
-      </button>
+      <SubmitBtn />
     </form>
   );
 }
