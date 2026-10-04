@@ -502,9 +502,9 @@ export async function reopenSession(sessionId: string): Promise<void> {
 /** 읽기 결과 수치화(형성 평가). stage: "reading"=표시 기반(사실·추론), "review"=대화 기반(사실·추론·비판) */
 export async function scoreSessionAction(
   sessionId: string,
-  stage: "reading" | "review",
+  stage: "reading" | "check" | "critique",
 ): Promise<
-  | { fact: number; inference: number; critique?: number; comment: string }
+  | { fact?: number; inference?: number; critique?: number; comment: string }
   | { error: string }
 > {
   const { supabase } = await requireOwnedSession(sessionId);
@@ -618,8 +618,8 @@ export async function scoreSessionAction(
   await supabase.from("session_scores").upsert({
     session_id: sessionId,
     stage,
-    fact: result.scores.fact,
-    inference: result.scores.inference,
+    fact: result.scores.fact ?? null,
+    inference: result.scores.inference ?? null,
     critique: result.scores.critique ?? null,
     comment: result.comment || null,
     updated_at: new Date().toISOString(),

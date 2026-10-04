@@ -185,13 +185,36 @@ export default async function TeacherDashboard() {
     const v = arr.filter((x): x is number => typeof x === "number");
     return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
   };
-  const reviewScores = (scoreRows ?? []).filter((r) => r.stage === "review");
-  const scoreAvg = {
-    count: reviewScores.length,
-    fact: avgOf(reviewScores.map((r) => r.fact)),
-    inference: avgOf(reviewScores.map((r) => r.inference)),
-    critique: avgOf(reviewScores.map((r) => r.critique)),
-  };
+  const sc = scoreRows ?? [];
+  const byStage = (st: string) => sc.filter((r) => r.stage === st);
+  const stageStats = [
+    {
+      key: "reading",
+      label: "읽기(표시)",
+      n: byStage("reading").length,
+      bars: [
+        { label: "사실", value: avgOf(byStage("reading").map((r) => r.fact)), color: "bg-emerald-500" },
+        { label: "추론", value: avgOf(byStage("reading").map((r) => r.inference)), color: "bg-sky-500" },
+      ],
+    },
+    {
+      key: "check",
+      label: "독해 확인",
+      n: byStage("check").length,
+      bars: [
+        { label: "사실", value: avgOf(byStage("check").map((r) => r.fact)), color: "bg-emerald-500" },
+        { label: "추론", value: avgOf(byStage("check").map((r) => r.inference)), color: "bg-sky-500" },
+      ],
+    },
+    {
+      key: "critique",
+      label: "관점 평가",
+      n: byStage("critique").length,
+      bars: [
+        { label: "비판", value: avgOf(byStage("critique").map((r) => r.critique)), color: "bg-rose-500" },
+      ],
+    },
+  ];
 
   // 주별 추이(최근 6주): 완료 읽기 수 + 어려움 진단 수
   const WK = 7 * 24 * 60 * 60 * 1000;
@@ -401,40 +424,51 @@ export default async function TeacherDashboard() {
       </section>
 
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
-        <h2 className="mb-1 font-semibold">독해 점수 (평균)</h2>
+        <h2 className="mb-1 font-semibold">단계별 진행 현황 &amp; 점수</h2>
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-          읽은 뒤 ‘독해 확인·관점 평가’를 마친 학생들의 평균이에요. ({scoreAvg.count}명)
+          학생이 각 단계를 마칠 때마다 집계돼요. (완료 = 마친 횟수, 점수 = 평균)
         </p>
-        {scoreAvg.count === 0 ? (
-          <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-400 dark:border-gray-700">
-            아직 완료한 평가가 없어요.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {[
-              { label: "사실", value: scoreAvg.fact, color: "bg-emerald-500" },
-              { label: "추론", value: scoreAvg.inference, color: "bg-sky-500" },
-              { label: "비판", value: scoreAvg.critique, color: "bg-rose-500" },
-            ].map((b) => (
-              <div key={b.label}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-gray-700 dark:text-gray-200">
-                    {b.label}
-                  </span>
-                  <span className="font-bold">
-                    {b.value == null ? "–" : `${b.value}점`}
-                  </span>
-                </div>
-                <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                  <div
-                    className={`h-full rounded-full ${b.color}`}
-                    style={{ width: `${b.value ?? 0}%` }}
-                  />
-                </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {stageStats.map((st) => (
+            <div
+              key={st.key}
+              className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {st.label}
+                </span>
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  완료 {st.n}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
+              {st.n === 0 ? (
+                <p className="text-xs text-gray-400">아직 없음</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {st.bars.map((b) => (
+                    <div key={b.label}>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {b.label}
+                        </span>
+                        <span className="font-bold">
+                          {b.value == null ? "–" : `${b.value}점`}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div
+                          className={`h-full rounded-full ${b.color}`}
+                          style={{ width: `${b.value ?? 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
