@@ -595,6 +595,18 @@ export function ReadingWorkspace({
   const [fhStrokes, setFhStrokes] = useState<FreehandStroke[]>(freehand);
   const [artW, setArtW] = useState(0);
   const [penColor, setPenColor] = useState(PEN_COLORS[0]);
+  const ptrRef = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      ptrRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onMove);
+    };
+  }, []);
   useEffect(() => {
     const el = articleRef.current;
     if (!el) return;
@@ -1340,8 +1352,18 @@ export function ReadingWorkspace({
     } catch {}
   }
 
+  const busy = pending || coachPending || scoring;
+
   return (
     <div className="flex min-h-full flex-col">
+      {busy && (
+        <div
+          className="pointer-events-none fixed z-[60]"
+          style={{ left: ptrRef.current.x + 16, top: ptrRef.current.y + 16 }}
+        >
+          <span className="block h-5 w-5 animate-spin rounded-full border-2 border-amber-500/40 border-t-amber-600 bg-white/70 shadow" />
+        </div>
+      )}
       {phase && (
         <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-gray-950">
           {(phase === "read_score" || phase === "result") && (
