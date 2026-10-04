@@ -131,6 +131,7 @@ const REL_IDS: ToolId[] = [
   "contrast",
   "listing",
 ];
+const PEN_COLORS = ["#1d4ed8", "#dc2626", "#111827", "#059669"];
 
 const REL_LABEL: Record<RelationType, string> = {
   cause_effect: "인과",
@@ -577,6 +578,17 @@ export function ReadingWorkspace({
   const [eraser, setEraser] = useState<{ x: number; y: number } | null>(null);
   const [showRel, setShowRel] = useState(false);
   const [fhStrokes, setFhStrokes] = useState<FreehandStroke[]>(freehand);
+  const [artW, setArtW] = useState(0);
+  const [penColor, setPenColor] = useState(PEN_COLORS[0]);
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el) return;
+    const update = () => setArtW(el.getBoundingClientRect().width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const marks = useMemo(
     () =>
@@ -961,16 +973,17 @@ export function ReadingWorkspace({
     if (tool === "freehand") {
       if (pts.length < 2) return;
       const rect = wrap.getBoundingClientRect();
+      const W = rect.width || 1;
       const d = pts
         .map(
           (p, i) =>
-            `${i ? "L" : "M"} ${(p.x - rect.left).toFixed(1)} ${(p.y - rect.top).toFixed(1)}`,
+            `${i ? "L" : "M"} ${((p.x - rect.left) / W).toFixed(4)} ${((p.y - rect.top) / W).toFixed(4)}`,
         )
         .join(" ");
       const tempId = `fh-${++optIdRef.current}`;
-      setFhStrokes((prev) => [...prev, { id: tempId, d, color: "#1d4ed8" }]);
+      setFhStrokes((prev) => [...prev, { id: tempId, d, color: penColor }]);
       startTransition(async () => {
-        const res = await addFreehand({ sessionId, d });
+        const res = await addFreehand({ sessionId, d, color: penColor });
         if (res.error) {
           setFhStrokes((prev) => prev.filter((x) => x.id !== tempId));
           setMsg(res.error);
@@ -1115,7 +1128,10 @@ export function ReadingWorkspace({
         let hit = false;
         for (let i = 0; i + 1 < nums.length && !hit; i += 2) {
           for (const e of epts) {
-            if (Math.hypot(nums[i] - e.x, nums[i + 1] - e.y) <= ERASER_R + 6) {
+            if (
+              Math.hypot(nums[i] * artW - e.x, nums[i + 1] * artW - e.y) <=
+              ERASER_R + 6
+            ) {
               hit = true;
               break;
             }
@@ -1217,6 +1233,14 @@ export function ReadingWorkspace({
   function handleReopen() {
     startTransition(async () => {
       await reopenSession(sessionId);
+    });
+  }
+  function clearFreehand() {
+    const ids = fhStrokes.map((f) => f.id);
+    if (ids.length === 0) return;
+    setFhStrokes([]);
+    startTransition(async () => {
+      for (const id of ids) await deleteFreehand(id, sessionId);
     });
   }
 
@@ -1682,6 +1706,34 @@ export function ReadingWorkspace({
                   })}
                 </div>
               )}
+              {tool === "freehand" && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-gray-200 pt-2 dark:border-gray-700">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    펜 색
+                  </span>
+                  {PEN_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setPenColor(c)}
+                      aria-label="펜 색 선택"
+                      className={`h-7 w-7 rounded-full border-2 ${
+                        penColor === c
+                          ? "border-gray-800 dark:border-white"
+                          : "border-transparent"
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={clearFreehand}
+                    className="ml-auto rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    필기 전체 지우기
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setShowGuide((v) => !v)}
@@ -1774,19 +1826,22 @@ export function ReadingWorkspace({
                 }}
               />
             )}
-            {fhStrokes.length > 0 && (
+            {fhStrokes.length > 0 && artW > 0 && (
               <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
-                {fhStrokes.map((f) => (
-                  <path
-                    key={f.id}
-                    d={f.d}
-                    fill="none"
-                    stroke={f.color}
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                ))}
+                <g transform={`scale(${artW})`}>
+                  {fhStrokes.map((f) => (
+                    <path
+                      key={f.id}
+                      d={f.d}
+                      fill="none"
+                      stroke={f.color}
+                      strokeWidth={2.5}
+                      vectorEffect="non-scaling-stroke"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                </g>
               </svg>
             )}
             <article className="flex flex-col gap-5">
