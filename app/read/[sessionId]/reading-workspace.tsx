@@ -1008,6 +1008,42 @@ export function ReadingWorkspace({
         return;
       }
       const markType = tool === "predictcue" ? "predict_cue" : tool;
+      // 같은 문단의 인접한 기존 밑줄과 붙어 있으면 하나로 합친다
+      // (앞 문장 끝까지 긋고 다음 줄 처음부터 따로 그어도 한 덩어리로 인식)
+      if (markType === "underline") {
+        const GAP = 2;
+        const adj = annos.filter(
+          (a) =>
+            a.type === "underline" &&
+            a.paragraph_id === span.paraId &&
+            a.span_start != null &&
+            a.span_end != null &&
+            a.span_start <= span.end + GAP &&
+            a.span_end >= span.start - GAP,
+        );
+        if (adj.length) {
+          let ns = span.start;
+          let ne = span.end;
+          for (const a of adj) {
+            ns = Math.min(ns, a.span_start!);
+            ne = Math.max(ne, a.span_end!);
+          }
+          const keep = adj[0];
+          const drop = adj.slice(1).map((a) => a.id);
+          setAnnos((prev) =>
+            prev
+              .filter((a) => !drop.includes(a.id))
+              .map((a) =>
+                a.id === keep.id ? { ...a, span_start: ns, span_end: ne } : a,
+              ),
+          );
+          startTransition(async () => {
+            await updateAnnotationSpan(keep.id, sessionId, ns, ne);
+            for (const id of drop) await deleteAnnotation(id, sessionId);
+          });
+          return;
+        }
+      }
       const temp = tempAnno({
         paragraph_id: span.paraId,
         type: markType,
