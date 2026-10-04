@@ -189,7 +189,7 @@ export async function addRelation(input: {
 export async function addMarkTag(input: {
   sessionId: string;
   annotationId: string;
-  relationType: "problem_solution" | "question_answer";
+  relationType: "problem_solution" | "question_answer" | "cause_effect";
   role: "from" | "to";
 }): Promise<{ error?: string; id?: string }> {
   const { supabase } = await requireOwnedSession(input.sessionId);
@@ -400,6 +400,7 @@ export async function sendCoachMessage(input: {
         let role = REL_KO[rt] ?? "관계";
         if (rt === "problem_solution") role = hasFrom ? "문제" : "해결";
         else if (rt === "question_answer") role = hasFrom ? "질문" : "답";
+        else if (rt === "cause_effect") role = hasFrom ? "원인" : "결과";
         return {
           from: markText(hasFrom ? a.from_ref : a.target_ref),
           to: "",

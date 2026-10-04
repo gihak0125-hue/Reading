@@ -55,6 +55,7 @@ type ToolId =
   | "circle"
   | "predictcue"
   | "cause"
+  | "effect"
   | "process"
   | "problem"
   | "solution"
@@ -66,7 +67,6 @@ type ToolId =
   | "erase";
 
 const REL_TOOL_TYPE: Partial<Record<ToolId, RelationType>> = {
-  cause: "cause_effect",
   process: "process",
   similar: "similarity",
   contrast: "contrast",
@@ -76,9 +76,14 @@ const REL_TOOL_TYPE: Partial<Record<ToolId, RelationType>> = {
 const ROLE_TOOL: Partial<
   Record<
     ToolId,
-    { type: "problem_solution" | "question_answer"; role: "from" | "to" }
+    {
+      type: "problem_solution" | "question_answer" | "cause_effect";
+      role: "from" | "to";
+    }
   >
 > = {
+  cause: { type: "cause_effect", role: "from" },
+  effect: { type: "cause_effect", role: "to" },
   problem: { type: "problem_solution", role: "from" },
   solution: { type: "problem_solution", role: "to" },
   question: { type: "question_answer", role: "from" },
@@ -89,7 +94,8 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "underline", label: "밑줄", glyph: "▁" },
   { id: "circle", label: "동그라미", glyph: "◯" },
   { id: "predictcue", label: "예측단서", glyph: "🔮" },
-  { id: "cause", label: "원인·결과", glyph: "→" },
+  { id: "cause", label: "원인", glyph: "c" },
+  { id: "effect", label: "결과", glyph: "e" },
   { id: "process", label: "과정", glyph: "⇢" },
   { id: "problem", label: "문제", glyph: "P" },
   { id: "solution", label: "해결", glyph: "S" },
@@ -705,7 +711,10 @@ export function ReadingWorkspace({
       } else if (rt === "question_answer") {
         push(from, { text: "Q", tone: "green" });
         push(to, { text: "A", tone: "green" });
-      } else if (rt === "cause_effect" || rt === "process") {
+      } else if (rt === "cause_effect") {
+        push(from, { text: "c", tone: "blue" });
+        push(to, { text: "e", tone: "blue" });
+      } else if (rt === "process") {
         n++;
         push(from, { text: `${n}→`, tone: "blue" });
         push(to, { text: `→${n}`, tone: "blue" });
@@ -1579,7 +1588,10 @@ export function ReadingWorkspace({
                     <b>🔮 예측단서</b> — 1~2문단에서 다음을 짐작하게 하는 단서에 표시
                   </li>
                   <li>
-                    <b>→ 원인·결과 / ⇢ 과정</b> — 두 표시를 이어 관계 화살표
+                    <b>⇢ 과정</b> — 두 표시를 이어 관계 화살표
+                  </li>
+                  <li>
+                    <b>c 원인 / e 결과</b> — 표시 하나를 탭해 역할 찍기
                   </li>
                   <li>
                     <b>P 문제 / S 해결</b> — 표시 하나를 탭해 역할 찍기
@@ -1819,7 +1831,11 @@ export function ReadingWorkspace({
                             ? a.from_ref
                               ? "질문 (Q)"
                               : "답 (A)"
-                            : REL_LABEL[rt];
+                            : rt === "cause_effect"
+                              ? a.from_ref
+                                ? "원인 (c)"
+                                : "결과 (e)"
+                              : REL_LABEL[rt];
                       return (
                         <li
                           key={a.id}
