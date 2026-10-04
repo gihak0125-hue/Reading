@@ -14,6 +14,8 @@ import {
   addAnnotation,
   deleteAnnotation,
   updateAnnotationSpan,
+  addFreehand,
+  deleteFreehand,
   addRelation,
   addMarkTag,
   sendCoachMessage,
@@ -29,6 +31,7 @@ export type CoachTurn = {
   content: string;
   created_at: string;
 };
+export type FreehandStroke = { id: string; d: string; color: string };
 export type RelationType =
   | "compare_contrast"
   | "cause_effect"
@@ -54,6 +57,7 @@ type ToolId =
   | "underline"
   | "circle"
   | "predictcue"
+  | "freehand"
   | "cause"
   | "effect"
   | "process"
@@ -94,6 +98,7 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "underline", label: "밑줄", glyph: "▁" },
   { id: "circle", label: "동그라미", glyph: "◯" },
   { id: "predictcue", label: "예측단서", glyph: "🔮" },
+  { id: "freehand", label: "자유 필기", glyph: "✎" },
   { id: "cause", label: "원인", glyph: "c" },
   { id: "effect", label: "결과", glyph: "e" },
   { id: "process", label: "과정", glyph: "⇢" },
@@ -105,6 +110,26 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "contrast", label: "차이점", glyph: "≠" },
   { id: "listing", label: "나열", glyph: "①" },
   { id: "erase", label: "지우기", glyph: "⌫" },
+];
+
+const TOP_IDS: ToolId[] = [
+  "underline",
+  "circle",
+  "predictcue",
+  "freehand",
+  "erase",
+];
+const REL_IDS: ToolId[] = [
+  "cause",
+  "effect",
+  "process",
+  "problem",
+  "solution",
+  "question",
+  "answer",
+  "similar",
+  "contrast",
+  "listing",
 ];
 
 const REL_LABEL: Record<RelationType, string> = {
@@ -468,6 +493,7 @@ export function ReadingWorkspace({
   paragraphs,
   annotations,
   messages,
+  freehand,
 }: {
   sessionId: string;
   title: string;
@@ -475,6 +501,7 @@ export function ReadingWorkspace({
   paragraphs: ParagraphData[];
   annotations: AnnotationData[];
   messages: CoachTurn[];
+  freehand: FreehandStroke[];
 }) {
   const [tool, setTool] = useState<ToolId | null>(null);
   const [showTools, setShowTools] = useState(true);
@@ -548,6 +575,8 @@ export function ReadingWorkspace({
   });
   const [tempPath, setTempPath] = useState("");
   const [eraser, setEraser] = useState<{ x: number; y: number } | null>(null);
+  const [showRel, setShowRel] = useState(false);
+  const [fhStrokes, setFhStrokes] = useState<FreehandStroke[]>(freehand);
 
   const marks = useMemo(
     () =>
@@ -929,6 +958,32 @@ export function ReadingWorkspace({
     const wrap = articleRef.current;
     if (!wrap || pts.length === 0 || !tool) return;
 
+    if (tool === "freehand") {
+      if (pts.length < 2) return;
+      const rect = wrap.getBoundingClientRect();
+      const d = pts
+        .map(
+          (p, i) =>
+            `${i ? "L" : "M"} ${(p.x - rect.left).toFixed(1)} ${(p.y - rect.top).toFixed(1)}`,
+        )
+        .join(" ");
+      const tempId = `fh-${++optIdRef.current}`;
+      setFhStrokes((prev) => [...prev, { id: tempId, d, color: "#1d4ed8" }]);
+      startTransition(async () => {
+        const res = await addFreehand({ sessionId, d });
+        if (res.error) {
+          setFhStrokes((prev) => prev.filter((x) => x.id !== tempId));
+          setMsg(res.error);
+        } else if (res.id) {
+          const realId = res.id;
+          setFhStrokes((prev) =>
+            prev.map((x) => (x.id === tempId ? { ...x, id: realId } : x)),
+          );
+        }
+      });
+      return;
+    }
+
     if (tool === "underline" || tool === "circle" || tool === "predictcue") {
       const span = recognizeSpan(
         wrap,
@@ -1053,6 +1108,28 @@ export function ReadingWorkspace({
           );
         }
       }
+      const erect = wrap.getBoundingClientRect();
+      const epts = pts.map((p) => ({ x: p.x - erect.left, y: p.y - erect.top }));
+      for (const fh of fhStrokes) {
+        const nums = (fh.d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+        let hit = false;
+        for (let i = 0; i + 1 < nums.length && !hit; i += 2) {
+          for (const e of epts) {
+            if (Math.hypot(nums[i] - e.x, nums[i + 1] - e.y) <= ERASER_R + 6) {
+              hit = true;
+              break;
+            }
+          }
+        }
+        if (hit) {
+          changed = true;
+          const fid = fh.id;
+          setFhStrokes((prev) => prev.filter((x) => x.id !== fid));
+          startTransition(async () => {
+            await deleteFreehand(fid, sessionId);
+          });
+        }
+      }
       if (!changed) setMsg("지울 표시 위를 그어 주세요.");
       return;
     }
@@ -1166,7 +1243,9 @@ export function ReadingWorkspace({
       return "'예측단서' — 1~2문단에서 다음 내용을 짐작하게 하는 단서(담화표지·구조 등)에 표시하면 코치가 예측을 물어봐요.";
     if (tool === "listing")
       return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
-    if (tool === "erase") return "'지우기' — 표시 위를 그으면 지워져요.";
+    if (tool === "erase") return "'지우기' — 표시나 필기 위를 그으면 지워져요.";
+    if (tool === "freehand")
+      return "'자유 필기' — 본문 위에 손으로 자유롭게 쓰면 그대로 남아요.";
     if (tool && ROLE_TOOL[tool])
       return `'${TOOLS.find((t) => t.id === tool)?.label}' — 해당하는 표시(밑줄·동그라미) 하나를 탭하면 역할이 찍혀요.`;
     if (tool && REL_TOOL_TYPE[tool])
@@ -1550,7 +1629,7 @@ export function ReadingWorkspace({
           {showTools && (
             <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
               <div className="flex flex-wrap gap-2">
-                {TOOLS.map((t) => {
+                {TOOLS.filter((t) => TOP_IDS.includes(t.id)).map((t) => {
                   const active = tool === t.id;
                   return (
                     <button
@@ -1568,7 +1647,41 @@ export function ReadingWorkspace({
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => setShowRel((v) => !v)}
+                  className={`flex min-w-[60px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
+                    showRel || (!!tool && REL_IDS.includes(tool))
+                      ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <span className="text-base leading-none">🔗</span>
+                  관계
+                </button>
               </div>
+              {showRel && (
+                <div className="mt-2 flex flex-wrap gap-2 border-t border-gray-200 pt-2 dark:border-gray-700">
+                  {TOOLS.filter((t) => REL_IDS.includes(t.id)).map((t) => {
+                    const active = tool === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => selectTool(t.id)}
+                        className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
+                          active
+                            ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        <span className="text-base leading-none">{t.glyph}</span>
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setShowGuide((v) => !v)}
@@ -1586,6 +1699,9 @@ export function ReadingWorkspace({
                   </li>
                   <li>
                     <b>🔮 예측단서</b> — 1~2문단에서 다음을 짐작하게 하는 단서에 표시
+                  </li>
+                  <li>
+                    <b>✎ 자유 필기</b> — 본문 위에 손으로 자유롭게 쓰면 그대로 남아요
                   </li>
                   <li>
                     <b>⇢ 과정</b> — 두 표시를 이어 관계 화살표
@@ -1657,6 +1773,21 @@ export function ReadingWorkspace({
                   height: ERASER_R * 2,
                 }}
               />
+            )}
+            {fhStrokes.length > 0 && (
+              <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
+                {fhStrokes.map((f) => (
+                  <path
+                    key={f.id}
+                    d={f.d}
+                    fill="none"
+                    stroke={f.color}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+              </svg>
             )}
             <article className="flex flex-col gap-5">
               {paragraphs.map((p) => (

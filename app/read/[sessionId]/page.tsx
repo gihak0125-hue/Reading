@@ -5,6 +5,7 @@ import {
   type ParagraphData,
   type AnnotationData,
   type CoachTurn,
+  type FreehandStroke,
 } from "./reading-workspace";
 
 export default async function ReadingPage({
@@ -27,6 +28,7 @@ export default async function ReadingPage({
     { data: paragraphs },
     { data: annotations },
     { data: messages },
+    { data: freehand },
   ] = await Promise.all([
     supabase.from("passages").select("id, title").eq("id", session.passage_id).single(),
     supabase
@@ -45,6 +47,10 @@ export default async function ReadingPage({
       .select("id, role, content, created_at")
       .eq("session_id", session.id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("freehand_strokes")
+      .select("id, d, color")
+      .eq("session_id", session.id),
   ]);
   if (!passage) notFound();
 
@@ -56,6 +62,7 @@ export default async function ReadingPage({
       paragraphs={(paragraphs ?? []) as ParagraphData[]}
       annotations={(annotations ?? []) as AnnotationData[]}
       messages={(messages ?? []) as CoachTurn[]}
+      freehand={(freehand ?? []) as FreehandStroke[]}
     />
   );
 }

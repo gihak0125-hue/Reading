@@ -633,3 +633,30 @@ export async function updateAnnotationSpan(
   if (error) return { error: error.message };
   return {};
 }
+
+/** 자유 필기(손그림) 한 획 저장. 본문 컨테이너 기준 SVG path를 그대로 보존. */
+export async function addFreehand(input: {
+  sessionId: string;
+  d: string;
+  color?: string;
+}): Promise<{ error?: string; id?: string }> {
+  const { supabase } = await requireOwnedSession(input.sessionId);
+  const d = input.d.slice(0, 20000);
+  if (!d) return { error: "빈 획" };
+  const { data, error } = await supabase
+    .from("freehand_strokes")
+    .insert({ session_id: input.sessionId, d, color: input.color ?? "#1d4ed8" })
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+  return { id: data.id };
+}
+
+/** 자유 필기 한 획 삭제 */
+export async function deleteFreehand(
+  id: string,
+  sessionId: string,
+): Promise<void> {
+  const { supabase } = await requireOwnedSession(sessionId);
+  await supabase.from("freehand_strokes").delete().eq("id", id);
+}
