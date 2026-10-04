@@ -614,6 +614,17 @@ export async function scoreSessionAction(
     return {
       error: result.error === "no_key" ? "AI 키가 필요해요." : "채점에 실패했어요.",
     };
+
+  await supabase.from("session_scores").upsert({
+    session_id: sessionId,
+    stage,
+    fact: result.scores.fact,
+    inference: result.scores.inference,
+    critique: result.scores.critique ?? null,
+    comment: result.comment || null,
+    updated_at: new Date().toISOString(),
+  });
+
   return { ...result.scores, comment: result.comment };
 }
 
