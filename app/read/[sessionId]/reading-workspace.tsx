@@ -404,6 +404,21 @@ function recognizeSpan(
 
 const ERASER_R = 16;
 
+const PENCIL_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' +
+  '<polygon points="4,20 7.5,19 19,7.5 16.5,5 5,16.5" fill="#f59e0b" stroke="#1f2937" stroke-width="1" stroke-linejoin="round"/>' +
+  '<polygon points="4,20 5,16.5 7.5,19" fill="#1f2937"/>' +
+  '<polygon points="16.5,5 19,7.5 20.5,6 18,3.5" fill="#fca5a5" stroke="#1f2937" stroke-width="1" stroke-linejoin="round"/>' +
+  '</svg>';
+const ERASER_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26">' +
+  '<g transform="rotate(-35 13 13)">' +
+  '<rect x="4" y="10" width="16" height="8" rx="1.5" fill="#fecdd3" stroke="#1f2937" stroke-width="1"/>' +
+  '<rect x="4" y="10" width="5.5" height="8" rx="1.5" fill="#fb7185" stroke="#1f2937" stroke-width="1"/>' +
+  '</g></svg>';
+const PENCIL_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(PENCIL_SVG)}") 4 20, crosshair`;
+const ERASER_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(ERASER_SVG)}") 7 17, crosshair`;
+
 function densifyPts(pts: Pt[]): Pt[] {
   const dense: Pt[] = [];
   for (let i = 0; i < pts.length; i++) {
@@ -1829,7 +1844,12 @@ export function ReadingWorkspace({
               touchAction: tool ? "none" : undefined,
               userSelect: tool ? "none" : undefined,
               WebkitUserSelect: tool ? "none" : undefined,
-              cursor: tool ? "crosshair" : undefined,
+              cursor:
+                tool === "erase"
+                  ? ERASER_CURSOR
+                  : tool
+                    ? PENCIL_CURSOR
+                    : undefined,
             }}
             className="relative"
           >
