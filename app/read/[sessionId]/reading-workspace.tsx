@@ -13,6 +13,7 @@ import { HomeIcon } from "@/app/home-button";
 import {
   addAnnotation,
   deleteAnnotation,
+  updateAnnotationSpan,
   addRelation,
   addMarkTag,
   sendCoachMessage,
@@ -369,6 +370,91 @@ function recognizeSpan(
   return { paraId: bestPara, start, end };
 }
 
+const ERASER_R = 16;
+
+function densifyPts(pts: Pt[]): Pt[] {
+  const dense: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    dense.push(pts[i]);
+    const b = pts[i + 1];
+    if (b) {
+      const a = pts[i];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const steps = Math.min(10, Math.floor(dist / 5));
+      for (let s = 1; s < steps; s++)
+        dense.push({
+          x: a.x + ((b.x - a.x) * s) / steps,
+          y: a.y + ((b.y - a.y) * s) / steps,
+        });
+    }
+  }
+  return dense;
+}
+
+/** 지우개 획이 지나간 '문단별 글자 구간'을 계산(부분 지우기용). */
+function erasedByPara(
+  wrap: HTMLElement,
+  pts: Pt[],
+  r: number,
+): Map<string, [number, number][]> {
+  const byPara = new Map<string, Set<number>>();
+  for (const p of densifyPts(pts)) {
+    for (const dy of [0, -8, -14]) {
+      for (const dx of [-r, -r * 0.5, 0, r * 0.5, r]) {
+        const h = paraOffsetAtPoint(wrap, p.x + dx, p.y + dy);
+        if (!h) continue;
+        let set = byPara.get(h.paraId);
+        if (!set) {
+          set = new Set();
+          byPara.set(h.paraId, set);
+        }
+        set.add(h.offset);
+      }
+    }
+  }
+  const res = new Map<string, [number, number][]>();
+  for (const [para, set] of byPara) {
+    const offs = [...set].sort((a, b) => a - b);
+    if (!offs.length) continue;
+    const ivs: [number, number][] = [];
+    let lo = offs[0];
+    let hi = offs[0];
+    for (let i = 1; i < offs.length; i++) {
+      if (offs[i] - hi <= 2) hi = offs[i];
+      else {
+        ivs.push([lo, hi + 1]);
+        lo = offs[i];
+        hi = offs[i];
+      }
+    }
+    ivs.push([lo, hi + 1]);
+    res.set(para, ivs);
+  }
+  return res;
+}
+
+/** [s,e)에서 지운 구간들을 빼고 남는 구간들을 반환. */
+function subtractIntervals(
+  s: number,
+  e: number,
+  erased: [number, number][],
+): [number, number][] {
+  let parts: [number, number][] = [[s, e]];
+  for (const [es, ee] of erased) {
+    const next: [number, number][] = [];
+    for (const [ps, pe] of parts) {
+      if (ee <= ps || es >= pe) {
+        next.push([ps, pe]);
+        continue;
+      }
+      if (es > ps) next.push([ps, Math.min(es, pe)]);
+      if (ee < pe) next.push([Math.max(ee, ps), pe]);
+    }
+    parts = next;
+  }
+  return parts.filter(([a, b]) => b - a >= 1);
+}
+
 export function ReadingWorkspace({
   sessionId,
   title,
@@ -455,6 +541,7 @@ export function ReadingWorkspace({
     pts: [],
   });
   const [tempPath, setTempPath] = useState("");
+  const [eraser, setEraser] = useState<{ x: number; y: number } | null>(null);
 
   const marks = useMemo(
     () =>
@@ -808,6 +895,10 @@ export function ReadingWorkspace({
     stroke.current.pts.push({ x: e.clientX, y: e.clientY });
     const wr = articleRef.current?.getBoundingClientRect();
     if (!wr) return;
+    if (tool === "erase") {
+      setEraser({ x: e.clientX - wr.left, y: e.clientY - wr.top });
+      return;
+    }
     const d = stroke.current.pts
       .map(
         (p, i) =>
@@ -821,6 +912,7 @@ export function ReadingWorkspace({
     const pts = stroke.current.pts;
     stroke.current = { active: false, pts: [] };
     setTempPath("");
+    setEraser(null);
     handleStroke(pts);
   }
 
@@ -896,16 +988,63 @@ export function ReadingWorkspace({
     }
 
     if (tool === "erase") {
-      let target: string | null = null;
-      for (const p of pts) {
-        const m = markNearPoint(wrap, p.x, p.y, 24);
-        if (m) {
-          target = m;
-          break;
+      const eMap = erasedByPara(wrap, pts, ERASER_R);
+      const ERASE_TYPES = new Set([
+        "underline",
+        "circle",
+        "predict_cue",
+        "discourse",
+      ]);
+      let changed = false;
+      for (const a of annos) {
+        if (!ERASE_TYPES.has(a.type)) continue;
+        if (a.span_start == null || a.span_end == null) continue;
+        const erased = eMap.get(a.paragraph_id);
+        if (!erased) continue;
+        const remain = subtractIntervals(a.span_start, a.span_end, erased);
+        if (
+          remain.length === 1 &&
+          remain[0][0] === a.span_start &&
+          remain[0][1] === a.span_end
+        )
+          continue;
+        changed = true;
+        if (remain.length === 0) {
+          handleErase(a.id);
+          continue;
+        }
+        const [fs, fe] = remain[0];
+        setAnnos((prev) =>
+          prev.map((x) =>
+            x.id === a.id ? { ...x, span_start: fs, span_end: fe } : x,
+          ),
+        );
+        startTransition(async () => {
+          await updateAnnotationSpan(a.id, sessionId, fs, fe);
+        });
+        for (let i = 1; i < remain.length; i++) {
+          const [rs, re] = remain[i];
+          const temp = tempAnno({
+            paragraph_id: a.paragraph_id,
+            type: a.type,
+            span_start: rs,
+            span_end: re,
+            target_ref: null,
+            from_ref: null,
+            relation_type: null,
+          });
+          commitAdd(temp, () =>
+            addAnnotation({
+              sessionId,
+              paragraphId: a.paragraph_id,
+              type: a.type as "underline" | "circle" | "discourse" | "predict_cue",
+              spanStart: rs,
+              spanEnd: re,
+            }),
+          );
         }
       }
-      if (target) handleErase(target);
-      else setMsg("지울 표시 위를 그어 주세요.");
+      if (!changed) setMsg("지울 표시 위를 그어 주세요.");
       return;
     }
 
@@ -1495,6 +1634,17 @@ export function ReadingWorkspace({
                   strokeOpacity={0.7}
                 />
               </svg>
+            )}
+            {eraser && (
+              <div
+                className="pointer-events-none absolute z-20 rounded-full border-2 border-rose-400/80 bg-rose-300/25"
+                style={{
+                  left: eraser.x - ERASER_R,
+                  top: eraser.y - ERASER_R,
+                  width: ERASER_R * 2,
+                  height: ERASER_R * 2,
+                }}
+              />
             )}
             <article className="flex flex-col gap-5">
               {paragraphs.map((p) => (

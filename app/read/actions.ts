@@ -615,3 +615,20 @@ export async function scoreSessionAction(
     };
   return { ...result.scores, comment: result.comment };
 }
+
+/** 표시의 글자 범위를 수정한다(지우개 부분 지우기용). 소유 세션만. */
+export async function updateAnnotationSpan(
+  id: string,
+  sessionId: string,
+  spanStart: number,
+  spanEnd: number,
+): Promise<{ error?: string }> {
+  const { supabase } = await requireOwnedSession(sessionId);
+  if (spanEnd <= spanStart) return { error: "잘못된 범위" };
+  const { error } = await supabase
+    .from("annotations")
+    .update({ span_start: spanStart, span_end: spanEnd })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
