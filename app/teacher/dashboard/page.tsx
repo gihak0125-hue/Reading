@@ -33,6 +33,16 @@ const overlaps = (as: number, ae: number, bs: number, be: number) =>
   as < be && ae > bs;
 const clip = (t: string, n = 40) => (t.length > n ? t.slice(0, n) + "…" : t);
 
+function ScoreCell({ v }: { v: number | null }) {
+  if (v == null)
+    return <span className="text-gray-300 dark:text-gray-600">–</span>;
+  return (
+    <span className="inline-block rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+      {v}
+    </span>
+  );
+}
+
 export default async function TeacherDashboard() {
   const { supabase, user } = await requireTeacher("/teacher/dashboard");
 
@@ -215,6 +225,36 @@ export default async function TeacherDashboard() {
       ],
     },
   ];
+
+  const perStudent = studentList
+    .map((st) => {
+      const mySess = new Set(
+        sessionList.filter((x) => x.student_id === st.id).map((x) => x.id),
+      );
+      const rowsFor = (stage: string) =>
+        sc.filter((r) => r.stage === stage && mySess.has(r.session_id));
+      const avgPair = (rs: typeof sc) =>
+        avgOf(rs.flatMap((r) => [r.fact, r.inference]));
+      const readRows = rowsFor("reading");
+      const checkRows = rowsFor("check");
+      const critRows = rowsFor("critique");
+      return {
+        id: st.id,
+        no: st.student_no,
+        name: st.display_name ?? "학생",
+        reading: avgPair(readRows),
+        check: avgPair(checkRows),
+        critique: avgOf(critRows.map((r) => r.critique)),
+        any: readRows.length + checkRows.length + critRows.length > 0,
+      };
+    })
+    .filter((r) => r.any)
+    .sort((a, b) => {
+      if (a.no == null && b.no == null) return a.name.localeCompare(b.name);
+      if (a.no == null) return 1;
+      if (b.no == null) return -1;
+      return a.no - b.no;
+    });
 
   // 주별 추이(최근 6주): 완료 읽기 수 + 어려움 진단 수
   const WK = 7 * 24 * 60 * 60 * 1000;
@@ -469,6 +509,53 @@ export default async function TeacherDashboard() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+        <h2 className="mb-1 font-semibold">학생별 현황</h2>
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+          단계별 평균 점수(읽기·독해 확인 = 사실·추론 평균, 관점 평가 = 비판). 아직 안 한 단계는 –.
+        </p>
+        {perStudent.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-400 dark:border-gray-700">
+            아직 활동한 학생이 없어요.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-400">
+                  <th className="py-1 pr-2 text-left font-medium">학생</th>
+                  <th className="px-2 text-center font-medium">읽기</th>
+                  <th className="px-2 text-center font-medium">독해 확인</th>
+                  <th className="px-2 text-center font-medium">관점 평가</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perStudent.map((r) => (
+                  <tr
+                    key={r.id}
+                    className="border-t border-gray-100 dark:border-gray-800"
+                  >
+                    <td className="py-1.5 pr-2 font-medium text-gray-700 dark:text-gray-200">
+                      {r.no != null ? `${r.no} ` : ""}
+                      {r.name}
+                    </td>
+                    <td className="px-2 text-center">
+                      <ScoreCell v={r.reading} />
+                    </td>
+                    <td className="px-2 text-center">
+                      <ScoreCell v={r.check} />
+                    </td>
+                    <td className="px-2 text-center">
+                      <ScoreCell v={r.critique} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
