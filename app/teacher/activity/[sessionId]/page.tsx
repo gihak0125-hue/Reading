@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
+import { FreehandOverlay } from "./freehand-overlay";
 
 const REL_KO: Record<string, string> = {
   cause_effect: "인과",
@@ -103,6 +104,12 @@ export default async function ActivityDetailPage({
     .eq("session_id", sessionId)
     .order("created_at", { ascending: true });
 
+  const { data: freehand } = await supabase
+    .from("freehand_strokes")
+    .select("id, d, color")
+    .eq("session_id", sessionId);
+  const fhStrokes = (freehand ?? []) as { id: string; d: string; color: string }[];
+
   const allAnnos = (annos ?? []) as Anno[];
   const marks = allAnnos.filter(
     (a) => a.type === "underline" || a.type === "circle",
@@ -140,7 +147,13 @@ export default async function ActivityDetailPage({
       {/* 표시된 지문 */}
       <section className="rounded-xl border border-gray-200 p-5 dark:border-gray-800">
         <h2 className="mb-3 font-semibold">📖 학생이 표시한 지문</h2>
-        <div className="flex flex-col gap-4">
+        {fhStrokes.length > 0 && (
+          <p className="mb-2 text-xs text-gray-400">
+            ✍️ 학생 자유 필기 포함(위치는 대략)
+          </p>
+        )}
+        <div className="relative flex flex-col gap-4">
+          <FreehandOverlay strokes={fhStrokes} />
           {(paragraphs ?? []).map((p) => (
             <p
               key={p.id}
