@@ -538,9 +538,14 @@ export default async function TeacherDashboard() {
                     key={r.id}
                     className="border-t border-gray-100 dark:border-gray-800"
                   >
-                    <td className="py-1.5 pr-2 font-medium text-gray-700 dark:text-gray-200">
-                      {r.no != null ? `${r.no} ` : ""}
-                      {r.name}
+                    <td className="py-1.5 pr-2 font-medium">
+                      <Link
+                        href={"/teacher/student/" + r.id}
+                        className="text-gray-700 hover:text-amber-700 hover:underline dark:text-gray-200 dark:hover:text-amber-400"
+                      >
+                        {r.no != null ? `${r.no} ` : ""}
+                        {r.name}
+                      </Link>
                     </td>
                     <td className="px-2 text-center">
                       <ScoreCell v={r.reading} />
