@@ -296,6 +296,30 @@ export default async function TeacherDashboard() {
   for (const m of msgs ?? []) if (m.role === "student") explainTotal++;
 
   const titleOf = new Map((sessPassages ?? []).map((p) => [p.id, p.title]));
+  const passageStats = touchedPassageIds
+    .map((pid) => {
+      const pSess = sessionList.filter((x) => x.passage_id === pid);
+      const pIds = new Set(pSess.map((x) => x.id));
+      const pScores = sc.filter((r) => pIds.has(r.session_id));
+      const understand = avgOf(
+        pScores
+          .filter((r) => r.stage === "reading" || r.stage === "check")
+          .flatMap((r) => [r.fact, r.inference]),
+      );
+      const critique = avgOf(
+        pScores.filter((r) => r.stage === "critique").map((r) => r.critique),
+      );
+      return {
+        id: pid,
+        title: titleOf.get(pid) ?? "지문",
+        students: new Set(pSess.map((x) => x.student_id)).size,
+        done: pSess.filter((x) => x.status === "completed").length,
+        understand,
+        critique,
+      };
+    })
+    .filter((p) => p.students > 0)
+    .sort((a, b) => (a.understand ?? 999) - (b.understand ?? 999));
   const nameOf = new Map(
     studentList.map((s) => [
       s.id,
@@ -555,6 +579,49 @@ export default async function TeacherDashboard() {
                     </td>
                     <td className="px-2 text-center">
                       <ScoreCell v={r.critique} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:col-span-2">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold">지문별 현황</h2>
+          <span className="text-xs text-gray-400">이해 점수 낮을수록 어려웠던 지문</span>
+        </div>
+        {passageStats.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-400 dark:border-gray-700">
+            아직 지문 활동이 없어요.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-400">
+                  <th className="py-1 pr-2 text-left font-medium">지문</th>
+                  <th className="px-2 text-center font-medium">읽은 학생</th>
+                  <th className="px-2 text-center font-medium">완료</th>
+                  <th className="px-2 text-center font-medium">이해</th>
+                  <th className="px-2 text-center font-medium">비판</th>
+                </tr>
+              </thead>
+              <tbody>
+                {passageStats.map((p) => (
+                  <tr key={p.id} className="border-t border-gray-100 dark:border-gray-800">
+                    <td className="py-1.5 pr-2 font-medium text-gray-700 dark:text-gray-200">
+                      {p.title}
+                    </td>
+                    <td className="px-2 text-center">{p.students}</td>
+                    <td className="px-2 text-center">{p.done}</td>
+                    <td className="px-2 text-center">
+                      <ScoreCell v={p.understand} />
+                    </td>
+                    <td className="px-2 text-center">
+                      <ScoreCell v={p.critique} />
                     </td>
                   </tr>
                 ))}
