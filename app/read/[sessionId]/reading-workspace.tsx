@@ -535,6 +535,8 @@ export function ReadingWorkspace({
     fact?: number;
     inference?: number;
     critique?: number;
+    detail?: number;
+    main?: number;
     comment: string;
   } | null>(null);
   const [scoring, startScoring] = useTransition();
@@ -1396,6 +1398,8 @@ export function ReadingWorkspace({
               ) : scores ? (
                 <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 dark:border-gray-800">
                   {[
+                    { label: "세부", value: scores.detail, color: "bg-emerald-500" },
+                    { label: "중심", value: scores.main, color: "bg-teal-500" },
                     { label: "사실적 독해", value: scores.fact, color: "bg-emerald-500" },
                     { label: "추론적 독해", value: scores.inference, color: "bg-sky-500" },
                     { label: "비판적 독해", value: scores.critique, color: "bg-rose-500" },

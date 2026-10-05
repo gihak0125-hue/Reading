@@ -181,7 +181,7 @@ export default async function TeacherDashboard() {
   const { data: scoreRows } = sessionIds.length
     ? await supabase
         .from("session_scores")
-        .select("session_id, stage, fact, inference, critique")
+        .select("session_id, stage, fact, inference, critique, detail, main")
         .in("session_id", sessionIds)
     : {
         data: [] as {
@@ -190,6 +190,8 @@ export default async function TeacherDashboard() {
           fact: number | null;
           inference: number | null;
           critique: number | null;
+          detail: number | null;
+          main: number | null;
         }[],
       };
   const avgOf = (arr: (number | null)[]) => {
@@ -213,7 +215,8 @@ export default async function TeacherDashboard() {
       label: "독해 확인",
       n: byStage("check").length,
       bars: [
-        { label: "사실", value: avgOf(byStage("check").map((r) => r.fact)), color: "bg-emerald-500" },
+        { label: "세부", value: avgOf(byStage("check").map((r) => r.detail)), color: "bg-emerald-500" },
+        { label: "중심", value: avgOf(byStage("check").map((r) => r.main)), color: "bg-teal-500" },
         { label: "추론", value: avgOf(byStage("check").map((r) => r.inference)), color: "bg-sky-500" },
       ],
     },
@@ -244,7 +247,7 @@ export default async function TeacherDashboard() {
         no: st.student_no,
         name: st.display_name ?? "학생",
         reading: avgPair(readRows),
-        check: avgPair(checkRows),
+        check: avgOf(checkRows.flatMap((r) => [r.detail, r.main, r.inference])),
         critique: avgOf(critRows.map((r) => r.critique)),
         any: readRows.length + checkRows.length + critRows.length > 0,
       };
@@ -303,9 +306,13 @@ export default async function TeacherDashboard() {
       const pIds = new Set(pSess.map((x) => x.id));
       const pScores = sc.filter((r) => pIds.has(r.session_id));
       const understand = avgOf(
-        pScores
-          .filter((r) => r.stage === "reading" || r.stage === "check")
-          .flatMap((r) => [r.fact, r.inference]),
+        pScores.flatMap((r) =>
+          r.stage === "reading"
+            ? [r.fact, r.inference]
+            : r.stage === "check"
+              ? [r.detail, r.main, r.inference]
+              : [],
+        ),
       );
       const critique = avgOf(
         pScores.filter((r) => r.stage === "critique").map((r) => r.critique),

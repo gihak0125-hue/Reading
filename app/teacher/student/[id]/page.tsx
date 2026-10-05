@@ -8,6 +8,8 @@ type ScoreRow = {
   fact: number | null;
   inference: number | null;
   critique: number | null;
+  detail: number | null;
+  main: number | null;
   comment: string | null;
 };
 
@@ -67,7 +69,7 @@ export default async function StudentDetailPage({
     sessionIds.length
       ? supabase
           .from("session_scores")
-          .select("session_id, stage, fact, inference, critique, comment")
+          .select("session_id, stage, fact, inference, critique, detail, main, comment")
           .in("session_id", sessionIds)
       : Promise.resolve({ data: [] as ScoreRow[] }),
   ]);
@@ -146,7 +148,8 @@ export default async function StudentDetailPage({
                       독해 확인
                     </p>
                     <div className="flex flex-col gap-2">
-                      <Metric label="사실" v={check?.fact ?? null} />
+                      <Metric label="세부" v={check?.detail ?? null} />
+                      <Metric label="중심" v={check?.main ?? null} />
                       <Metric label="추론" v={check?.inference ?? null} />
                     </div>
                   </div>

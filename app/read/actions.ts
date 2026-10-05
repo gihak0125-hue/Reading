@@ -504,7 +504,14 @@ export async function scoreSessionAction(
   sessionId: string,
   stage: "reading" | "check" | "critique",
 ): Promise<
-  | { fact?: number; inference?: number; critique?: number; comment: string }
+  | {
+      fact?: number;
+      inference?: number;
+      critique?: number;
+      detail?: number;
+      main?: number;
+      comment: string;
+    }
   | { error: string }
 > {
   const { supabase } = await requireOwnedSession(sessionId);
@@ -632,6 +639,8 @@ export async function scoreSessionAction(
     fact: result.scores.fact ?? null,
     inference: result.scores.inference ?? null,
     critique: result.scores.critique ?? null,
+    detail: result.scores.detail ?? null,
+    main: result.scores.main ?? null,
     comment: result.comment || null,
     updated_at: new Date().toISOString(),
   });

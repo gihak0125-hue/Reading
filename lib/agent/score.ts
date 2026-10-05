@@ -12,7 +12,16 @@ import { getOpenAI, pickModel } from "@/lib/openai";
 export type ScoreStage = "reading" | "check" | "critique";
 
 export type ScoreResult =
-  | { scores: { fact?: number; inference?: number; critique?: number }; comment: string }
+  | {
+      scores: {
+        fact?: number;
+        inference?: number;
+        critique?: number;
+        detail?: number;
+        main?: number;
+      };
+      comment: string;
+    }
   | { error: string };
 
 type ScoreCtx = {
@@ -66,10 +75,11 @@ JSON만: {"fact":0,"inference":0,"comment":""}`;
     user = `[지문]${NL}${ctx.passageText}${NL}${NL}[학생 표시]${NL}${marksText}${NL}${NL}[학생 관계]${NL}${relText}${NL}${NL}[교사 정답 기준 — 핵심정보]${NL}${keyInfoText}${NL}[교사 정답 기준 — 핵심 관계]${NL}${keyRelText}`;
   } else if (ctx.stage === "check") {
     system = `당신은 고등학교 추론적 독해 '형성 평가' 채점자입니다. 학생이 읽은 뒤 나눈 '독해 확인(세부·중심·추론 문답)' 대화를 근거로 채점합니다.
-- fact(사실): 세부·중심 내용을 정확히 이해했는가.
+- detail(세부): 글에 명시된 구체적 사실을 정확히 이해했는가.
+- main(중심): 문단·글 전체의 요지를 정확히 파악했는가.
 - inference(추론): 드러나지 않은 의미·필자 의도를 타당하게 추론했는가.
 각 0~100점. 정답을 드러내지 말고, 격려하는 짧은 피드백 한 줄.
-JSON만: {"fact":0,"inference":0,"comment":""}` + rubricNote;
+JSON만: {"detail":0,"main":0,"inference":0,"comment":""}` + rubricNote;
     user = `[지문]${NL}${ctx.passageText}${NL}${NL}[독해 확인 대화]${NL}${convo}${NL}${NL}[교사 정답 기준 — 핵심정보]${NL}${keyInfoText}` + (ctx.rubric ? `${NL}${NL}[교사 채점 루브릭 — 이 기준으로만 채점]${NL}${ctx.rubric}` : "");
   } else {
     system = `당신은 고등학교 '비판적 독해(관점 평가)' 형성 평가 채점자입니다. 학생이 읽은 뒤 나눈 '관점 평가' 대화를 근거로 채점합니다.
@@ -94,6 +104,15 @@ JSON만: {"critique":0,"comment":""}` + rubricNote;
     const comment = typeof p.comment === "string" ? p.comment.trim() : "";
     if (ctx.stage === "critique")
       return { scores: { critique: clamp(p.critique) }, comment };
+    if (ctx.stage === "check")
+      return {
+        scores: {
+          detail: clamp(p.detail),
+          main: clamp(p.main),
+          inference: clamp(p.inference),
+        },
+        comment,
+      };
     return { scores: { fact: clamp(p.fact), inference: clamp(p.inference) }, comment };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "score_failed" };
