@@ -102,7 +102,7 @@ export function CheckQuestions({
           onChange={(e) => set("rubric", e.target.value)}
           rows={3}
           maxLength={1000}
-          placeholder="예) 세부: 글에 명시된 사실 정확히 제시 50점 · 중심: 문단 요지 포착 30점 · 근거 인용 20점"
+          placeholder="예) 사실(세부·중심): 글의 사실·요지 정확히 제시 50점 · 추론: 숨은 의미·필자 의도 타당하게 추론 40점 · 글 근거 인용 10점"
           className="rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
         />
       </label>
