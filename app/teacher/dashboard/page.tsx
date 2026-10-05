@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireTeacher } from "@/lib/auth";
+import { ExportCsv } from "./export-csv";
 
 type Anno = {
   id: string;
@@ -537,7 +538,18 @@ export default async function TeacherDashboard() {
       </section>
 
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:col-span-2">
-        <h2 className="mb-1 font-semibold">학생별 현황</h2>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h2 className="font-semibold">학생별 현황</h2>
+          <ExportCsv
+            rows={perStudent.map((r) => ({
+              no: r.no,
+              name: r.name,
+              reading: r.reading,
+              check: r.check,
+              critique: r.critique,
+            }))}
+          />
+        </div>
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           단계별 평균 점수(읽기·독해 확인 = 사실·추론 평균, 관점 평가 = 비판). 아직 안 한 단계는 –.
         </p>
