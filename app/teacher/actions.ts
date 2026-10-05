@@ -362,6 +362,7 @@ export async function saveSuggestions(input: {
 export async function saveCritiqueNote(
   passageId: string,
   note: string,
+  rubric: string = "",
 ): Promise<{ error?: string; ok?: boolean }> {
   const { supabase, user } = await requireTeacher();
   const { data: passage } = await supabase
@@ -375,6 +376,7 @@ export async function saveCritiqueNote(
   const { error } = await supabase.from("passage_critique").upsert({
     passage_id: passageId,
     note: note.trim() || null,
+    rubric: rubric.trim() || null,
     updated_at: new Date().toISOString(),
   });
   if (error) return { error: `저장 실패: ${error.message}` };
@@ -390,6 +392,7 @@ export type CheckQuestionsInput = {
   main_a: string;
   inference_q: string;
   inference_a: string;
+  rubric: string;
 };
 
 /** 지문의 '독해 확인 문항'(세부·중심·추론) 저장 */
@@ -415,6 +418,7 @@ export async function saveCheckQuestions(
     main_a: clean(data.main_a),
     inference_q: clean(data.inference_q),
     inference_a: clean(data.inference_a),
+    rubric: clean(data.rubric),
     updated_at: new Date().toISOString(),
   });
   if (error) return { error: `저장 실패: ${error.message}` };
@@ -457,7 +461,17 @@ export async function suggestCritiqueAction(
 /** 독해 확인 문항 AI 추천 (교사 보조) */
 export async function suggestChecksAction(
   passageId: string,
-): Promise<{ checks?: CheckQuestionsInput; error?: string }> {
+): Promise<{
+  checks?: {
+    detail_q: string;
+    detail_a: string;
+    main_q: string;
+    main_a: string;
+    inference_q: string;
+    inference_a: string;
+  };
+  error?: string;
+}> {
   const { supabase, user } = await requireTeacher();
   const { data: passage } = await supabase
     .from("passages")

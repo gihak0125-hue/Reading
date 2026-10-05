@@ -33,7 +33,7 @@ export function CheckQuestions({
       const r = await suggestChecksAction(passageId);
       if (r.error) setMsg(r.error);
       else if (r.checks) {
-        setV(r.checks);
+        setV((prev) => ({ ...prev, ...r.checks }));
         setMsg("AI 추천을 넣었어요. 확인·수정 후 저장하세요.");
       } else setMsg("추천 결과가 비었어요.");
     });
@@ -90,6 +90,22 @@ export function CheckQuestions({
           </div>
         ))}
       </div>
+      <label className="mt-3 flex flex-col gap-1 text-sm">
+        <span className="font-medium">
+          채점 루브릭{" "}
+          <span className="text-xs font-normal text-gray-400">
+            (선택 · 서술형 채점 기준·배점. 있으면 AI가 이 기준으로 채점)
+          </span>
+        </span>
+        <textarea
+          value={v.rubric}
+          onChange={(e) => set("rubric", e.target.value)}
+          rows={3}
+          maxLength={1000}
+          placeholder="예) 세부: 글에 명시된 사실 정확히 제시 50점 · 중심: 문단 요지 포착 30점 · 근거 인용 20점"
+          className="rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+        />
+      </label>
       <div className="mt-3 flex items-center gap-3">
         <button
           type="button"

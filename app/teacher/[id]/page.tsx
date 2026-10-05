@@ -38,13 +38,13 @@ export default async function PassageDetailPage({
 
   const { data: critique } = await supabase
     .from("passage_critique")
-    .select("note")
+    .select("note, rubric")
     .eq("passage_id", id)
     .maybeSingle();
 
   const { data: checks } = await supabase
     .from("passage_checks")
-    .select("detail_q, detail_a, main_q, main_a, inference_q, inference_a")
+    .select("detail_q, detail_a, main_q, main_a, inference_q, inference_a, rubric")
     .eq("passage_id", id)
     .maybeSingle();
 
@@ -83,7 +83,11 @@ export default async function PassageDetailPage({
 
       <AiSuggest passageId={passage.id} />
 
-      <CritiqueNote passageId={passage.id} initial={critique?.note ?? ""} />
+      <CritiqueNote
+        passageId={passage.id}
+        initial={critique?.note ?? ""}
+        initialRubric={critique?.rubric ?? ""}
+      />
 
       <CheckQuestions
         passageId={passage.id}
@@ -94,6 +98,7 @@ export default async function PassageDetailPage({
           main_a: checks?.main_a ?? "",
           inference_q: checks?.inference_q ?? "",
           inference_a: checks?.inference_a ?? "",
+          rubric: checks?.rubric ?? "",
         }}
       />
 

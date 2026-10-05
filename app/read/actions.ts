@@ -559,9 +559,11 @@ export async function scoreSessionAction(
   let keyInfos: string[] = [];
   let keyRelations: { from: string; to: string; relation: string }[] = [];
   let critiqueNote = "";
+  let rubric = "";
   const paraIds = (paragraphs ?? []).map((p) => p.id);
   if (svc && session.passage_id && paraIds.length) {
-    const [{ data: ki }, { data: kr }, { data: cn }] = await Promise.all([
+    const [{ data: ki }, { data: kr }, { data: cn }, { data: pcr }] =
+      await Promise.all([
       svc
         .from("passage_key_info")
         .select("paragraph_id, span_start, span_end, kind")
@@ -574,7 +576,12 @@ export async function scoreSessionAction(
         .eq("passage_id", session.passage_id),
       svc
         .from("passage_critique")
-        .select("note")
+        .select("note, rubric")
+        .eq("passage_id", session.passage_id)
+        .maybeSingle(),
+      svc
+        .from("passage_checks")
+        .select("rubric")
         .eq("passage_id", session.passage_id)
         .maybeSingle(),
     ]);
@@ -591,7 +598,10 @@ export async function scoreSessionAction(
         relation: REL_KO[r.relation_type] ?? "관계",
       }))
       .filter((r) => r.from && r.to);
-    critiqueNote = ((cn as { note?: string } | null)?.note ?? "").trim();
+    const cnr = cn as { note?: string; rubric?: string } | null;
+    critiqueNote = (cnr?.note ?? "").trim();
+    const checkRubric = ((pcr as { rubric?: string } | null)?.rubric ?? "").trim();
+    rubric = stage === "critique" ? (cnr?.rubric ?? "").trim() : checkRubric;
   }
 
   const passageText = (paragraphs ?? []).map((p) => p.text).join("\n\n");
@@ -605,6 +615,7 @@ export async function scoreSessionAction(
     keyInfos,
     keyRelations,
     critiqueNote,
+    rubric,
     history: (history ?? []).map((h) => ({
       role: h.role === "agent" ? "agent" : "student",
       content: h.content,

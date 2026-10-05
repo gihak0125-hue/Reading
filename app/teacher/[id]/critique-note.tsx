@@ -6,11 +6,14 @@ import { saveCritiqueNote, suggestCritiqueAction } from "../actions";
 export function CritiqueNote({
   passageId,
   initial,
+  initialRubric,
 }: {
   passageId: string;
   initial: string;
+  initialRubric: string;
 }) {
   const [note, setNote] = useState(initial);
+  const [rubric, setRubric] = useState(initialRubric);
   const [pending, start] = useTransition();
   const [suggesting, startSuggest] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -60,6 +63,22 @@ export function CritiqueNote({
         placeholder="예) 관점A(필자): ~주장, 전제 ~. 관점B: ~. 평가 기준: ~. 근거 자료(통계·사례·인용) 신뢰성: ~"
         className="mt-2 w-full resize-y rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
       />
+      <label className="mt-3 flex flex-col gap-1 text-sm">
+        <span className="font-medium">
+          채점 루브릭{" "}
+          <span className="text-xs font-normal text-gray-400">
+            (선택 · 비판 채점 기준·배점. 있으면 AI가 이 기준으로 채점)
+          </span>
+        </span>
+        <textarea
+          value={rubric}
+          onChange={(e) => setRubric(e.target.value)}
+          rows={3}
+          maxLength={1000}
+          placeholder="예) 판단 기준 명료 40점 · 한 관점으로 다른 관점 비판 40점 · 글의 근거 인용 20점"
+          className="w-full resize-y rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+        />
+      </label>
       <div className="mt-2 flex items-center gap-3">
         <button
           type="button"
@@ -67,7 +86,7 @@ export function CritiqueNote({
           onClick={() => {
             setMsg(null);
             start(async () => {
-              const r = await saveCritiqueNote(passageId, note);
+              const r = await saveCritiqueNote(passageId, note, rubric);
               setMsg(r.error ?? "저장했어요.");
             });
           }}
