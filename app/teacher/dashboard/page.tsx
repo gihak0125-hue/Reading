@@ -413,7 +413,7 @@ export default async function TeacherDashboard() {
   ];
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-12">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">교사 대시보드</h1>
@@ -435,6 +435,7 @@ export default async function TeacherDashboard() {
         ))}
       </section>
 
+      <div className="grid gap-6 lg:grid-cols-2">
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
         <h2 className="mb-1 font-semibold">주별 추이 (최근 6주)</h2>
         <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
@@ -511,7 +512,7 @@ export default async function TeacherDashboard() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:col-span-2">
         <h2 className="mb-1 font-semibold">학생별 현황</h2>
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           단계별 평균 점수(읽기·독해 확인 = 사실·추론 평균, 관점 평가 = 비판). 아직 안 한 단계는 –.
@@ -595,7 +596,7 @@ export default async function TeacherDashboard() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:col-span-2">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-semibold">많은 학생이 어려워한 부분</h2>
           <span className="text-xs text-gray-400">표시율 낮을수록 어려움</span>
@@ -655,7 +656,7 @@ export default async function TeacherDashboard() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+      <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:col-span-2">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">최근 활동</h2>
           <Link href="/teacher/activity" className="text-xs text-amber-700 hover:underline dark:text-amber-400">전체 보기 →</Link>
@@ -678,6 +679,7 @@ export default async function TeacherDashboard() {
           </ul>
         )}
       </section>
+      </div>
     </main>
   );
 }
