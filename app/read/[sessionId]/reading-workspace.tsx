@@ -794,9 +794,13 @@ export function ReadingWorkspace({
         push(from, { text: `${n}→`, tone: "blue" });
         push(to, { text: `→${n}`, tone: "blue" });
       } else if (rt === "similarity") {
-        n++;
-        push(from, { text: `${n}=`, tone: "sky" });
-        push(to, { text: `${n}=`, tone: "sky" });
+        if (!from || !to) {
+          push(from ?? to, { text: "=", tone: "sky" });
+        } else {
+          n++;
+          push(from, { text: `${n}=`, tone: "sky" });
+          push(to, { text: `${n}=`, tone: "sky" });
+        }
       } else if (rt === "compare_contrast") {
         n++;
         push(from, { text: `${n}↔`, tone: "violet" });
@@ -1264,6 +1268,33 @@ export function ReadingWorkspace({
         pts[pts.length - 1].x,
         pts[pts.length - 1].y,
       );
+      // 공통점: 한 표시만 짚어도 공통점으로 인정(문장 하나로 공통점이 설명되는 경우)
+      if (tool === "similar" && (!from || !to || from === to)) {
+        const hit = from ?? to;
+        if (!hit) {
+          setMsg("공통점을 표시할 글자(밑줄·동그라미) 위를 짚어 주세요.");
+          return;
+        }
+        const mk = annoById.get(hit);
+        const temp = tempAnno({
+          paragraph_id: mk?.paragraph_id ?? "",
+          type: "arrow",
+          span_start: mk?.span_start ?? 0,
+          span_end: mk?.span_end ?? 0,
+          from_ref: hit,
+          target_ref: null,
+          relation_type: "similarity",
+        });
+        commitAdd(temp, () =>
+          addMarkTag({
+            sessionId,
+            annotationId: hit,
+            relationType: "similarity",
+            role: "from",
+          }),
+        );
+        return;
+      }
       if (!from || !to) {
         setMsg("표시(밑줄·동그라미)에서 시작해 다른 표시로 그어 주세요.");
         return;
@@ -1342,6 +1373,8 @@ export function ReadingWorkspace({
       return "'자유 필기' — 본문 위에 손으로 자유롭게 쓰면 그대로 남아요.";
     if (tool && ROLE_TOOL[tool])
       return `'${TOOLS.find((t) => t.id === tool)?.label}' — 해당하는 표시(밑줄·동그라미) 하나를 탭하면 역할이 찍혀요.`;
+    if (tool === "similar")
+      return "'공통점' — 두 표시를 이어 그으면 두 대상의 공통점, 한 표시만 짚으면 그 문장 자체를 공통점으로 표시해요.";
     if (tool && REL_TOOL_TYPE[tool])
       return `'${TOOLS.find((t) => t.id === tool)?.label}' — 표시 두 개를(첫 표시 → 다음 표시) 이어 그으면 관계가 표시돼요. 먼저 밑줄·동그라미로 표시부터 하세요.`;
     return "밑줄=핵심문장, 동그라미=핵심어. 도구를 고르면 손으로 표시해요. (도구를 끄면 읽기·스크롤)";
@@ -1870,7 +1903,7 @@ export function ReadingWorkspace({
                     <b>Q 질문 / A 답</b> — 표시 하나를 탭해 역할 찍기
                   </li>
                   <li>
-                    <b>= 공통점 / ≠ 차이점</b> — 두 표시를 이어 견주기
+                    <b>= 공통점</b> — 두 표시를 잇거나, 한 표시만 짚어도 공통점 / <b>≠ 차이점</b> — 두 표시를 이어 견주기
                   </li>
                   <li>
                     <b>① 나열</b> — 여러 표시를 순서대로 탭해 번호 매기기

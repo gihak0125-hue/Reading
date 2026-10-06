@@ -10,6 +10,9 @@ const REL_KO: Record<string, string> = {
   problem_solution: "문제-해결",
   question_answer: "문답",
   listing: "나열",
+  similarity: "공통점",
+  contrast: "차이점",
+  elaboration: "상술",
 };
 
 type Anno = {
@@ -175,20 +178,35 @@ export default async function ActivityDetailPage({
           <p className="text-sm text-gray-400">아직 없음</p>
         ) : (
           <ul className="flex flex-col gap-2 text-sm">
-            {relations.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center gap-1.5">
-                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
-                  {markText(a.from_ref)}
-                </span>
-                <span className="font-medium text-amber-700">
-                  {a.relation_type === "compare_contrast" ? "↔" : "→"}{" "}
-                  {REL_KO[a.relation_type ?? "listing"] ?? "관계"}
-                </span>
-                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
-                  {markText(a.target_ref)}
-                </span>
-              </li>
-            ))}
+            {relations.map((a) => {
+              const rt = a.relation_type ?? "listing";
+              const label = REL_KO[rt] ?? "관계";
+              const single = !a.from_ref !== !a.target_ref;
+              if (single) {
+                const ref = a.from_ref ?? a.target_ref;
+                return (
+                  <li key={a.id} className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
+                      {markText(ref)}
+                    </span>
+                    <span className="font-medium text-amber-700">· {label}</span>
+                  </li>
+                );
+              }
+              return (
+                <li key={a.id} className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
+                    {markText(a.from_ref)}
+                  </span>
+                  <span className="font-medium text-amber-700">
+                    {rt === "compare_contrast" ? "↔" : "→"} {label}
+                  </span>
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">
+                    {markText(a.target_ref)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

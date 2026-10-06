@@ -189,7 +189,11 @@ export async function addRelation(input: {
 export async function addMarkTag(input: {
   sessionId: string;
   annotationId: string;
-  relationType: "problem_solution" | "question_answer" | "cause_effect";
+  relationType:
+    | "problem_solution"
+    | "question_answer"
+    | "cause_effect"
+    | "similarity";
   role: "from" | "to";
 }): Promise<{ error?: string; id?: string }> {
   const { supabase } = await requireOwnedSession(input.sessionId);
