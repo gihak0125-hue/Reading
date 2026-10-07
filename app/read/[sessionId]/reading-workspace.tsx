@@ -1222,6 +1222,46 @@ export function ReadingWorkspace({
           });
         }
       }
+      // 관계(화살표) 지우기 — 그어진 곡선(또는 단일 표시) 근처를 지나면 삭제
+      const rectOfMark = (markId: string | null) => {
+        if (!markId) return null;
+        const els = wrap.querySelectorAll("[data-marks~=\"" + markId + "\"]");
+        if (!els.length) return null;
+        let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+        els.forEach((el) => {
+          const r = el.getBoundingClientRect();
+          x1 = Math.min(x1, r.left); y1 = Math.min(y1, r.top);
+          x2 = Math.max(x2, r.right); y2 = Math.max(y2, r.bottom);
+        });
+        return { cx: (x1 + x2) / 2 - erect.left, top: y1 - erect.top, cy: (y1 + y2) / 2 - erect.top };
+      };
+      const nearPt = (ax: number, ay: number) => epts.some((e) => Math.hypot(ax - e.x, ay - e.y) <= ERASER_R + 7);
+      for (const a of annos) {
+        if (a.type !== "arrow") continue;
+        const fr = rectOfMark(a.from_ref);
+        const tr = rectOfMark(a.target_ref);
+        let hit = false;
+        if (fr && tr) {
+          const fx = fr.cx, fy = fr.top - 3, tx = tr.cx, ty = tr.top - 3;
+          const mx = (fx + tx) / 2, my = (fy + ty) / 2;
+          const dx = tx - fx, dy = ty - fy;
+          const len = Math.hypot(dx, dy) || 1;
+          const off = Math.min(48, len * 0.35) + 10;
+          let px = -dy / len, py = dx / len;
+          if (py > 0) { px = -px; py = -py; }
+          const cx = mx + px * off, cy = my + py * off;
+          for (let i = 0; i <= 12 && !hit; i++) {
+            const t = i / 12, u = 1 - t;
+            const qx = u * u * fx + 2 * u * t * cx + t * t * tx;
+            const qy = u * u * fy + 2 * u * t * cy + t * t * ty;
+            if (nearPt(qx, qy)) hit = true;
+          }
+        } else {
+          const c = fr || tr;
+          if (c && nearPt(c.cx, c.cy)) hit = true;
+        }
+        if (hit) { changed = true; handleErase(a.id); }
+      }
       if (!changed) setMsg("지울 표시 위를 그어 주세요.");
       return;
     }
