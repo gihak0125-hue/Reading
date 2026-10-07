@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode, useRef, useState } from "react";
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Pt = { x: number; y: number };
-type Conn = { id: number; type: "contrast" | "similar"; path: string; mid: Pt };
+type Mark = { id: number; start: number; end: number };
+type Relation = { id: number; a: number; b: number };
+type Geo = { id: number; x1: number; y1: number; x2: number; y2: number; mx: number; my: number };
 
 const PARA =
   "식물의 지속적인 생장은 특정 부위에 존재하는 분열 조직에 의해 이루어진다. 식물의 생장과 관련된 주요 분열 조직에는 측생 분열 조직과 정단 분열 조직이 있다. 측생 분열 조직은 줄기나 뿌리의 측면에 위치하여 부피 생장을 유도하고, 정단 분열 조직은 줄기와 뿌리의 끝, 즉 정단에 위치하여 길이 생장을 담당한다. 이 두 조직은 식물이 다양한 구조를 갖추고 기능적으로 발달해 나가는 데 중요한 기반이 된다.";
 
-// 비교 대상 영역(오프셋). 측생 설명 절 / 정단 설명 절 / 공통점 문장.
+// 비교 대상 영역(오프셋): 측생 설명 절 / 정단 설명 절 / 공통점 문장
 const SG0 = PARA.indexOf("측생 분열 조직은 줄기나");
 const SG1 = PARA.indexOf("유도하고") + 4;
 const JD0 = PARA.indexOf("정단 분열 조직은 줄기와");
@@ -24,6 +26,7 @@ function regionOf(o: number): Region {
   if (o >= CM0 && o < CM1) return "cm";
   return null;
 }
+const markRegion = (m: Mark): Region => regionOf(Math.floor((m.start + m.end) / 2));
 
 function offsetInContainer(container: HTMLElement, node: Node, nodeOffset: number): number {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
@@ -72,55 +75,114 @@ function densify(pts: Pt[]): Pt[] {
   }
   return out;
 }
-// 획의 시작/끝 지점이 어느 영역에서 출발해 어느 영역으로 갔는지
-function endRegions(wrap: HTMLElement, pts: Pt[]): { a: Region; b: Region } {
-  const dense = densify(pts);
-  const regionAt = (p: Pt): Region => {
-    for (const dy of [0, -8, 8, -14]) {
+function recognize(wrap: HTMLElement, pts: Pt[]): { start: number; end: number } | null {
+  const offs: number[] = [];
+  for (const p of densify(pts)) {
+    for (const dy of [-4, -9, -14]) {
       const o = offsetAtPoint(wrap, p.x, p.y + dy);
-      if (o != null) return regionOf(o);
+      if (o != null) { offs.push(o); break; }
     }
-    return null;
-  };
-  let a: Region = null;
-  for (let i = 0; i < dense.length; i++) {
-    const r = regionAt(dense[i]);
-    if (r) { a = r; break; }
   }
-  let b: Region = null;
-  for (let i = dense.length - 1; i >= 0; i--) {
-    const r = regionAt(dense[i]);
-    if (r) { b = r; break; }
+  if (offs.length < 2) return null;
+  offs.sort((a, b) => a - b);
+  const start = offs[0];
+  const end = offs[offs.length - 1];
+  return end > start ? { start, end } : null;
+}
+const overlap = (s1: number, e1: number, s2: number, e2: number) =>
+  Math.max(0, Math.min(e1, e2) - Math.max(s1, s2));
+
+// 획 끝 지점 근처의 표시(data-marks) id를 찾는다. (실제 앱과 동일 방식)
+function markNearPoint(wrap: HTMLElement, x: number, y: number, maxDist = 44): number | null {
+  const els = document.elementsFromPoint(x, y);
+  for (const el of els) {
+    const m = (el as HTMLElement).closest?.("[data-marks]") as HTMLElement | null;
+    if (m && wrap.contains(m)) {
+      const id = m.getAttribute("data-marks")?.split(" ")[0];
+      if (id) return Number(id);
+    }
   }
-  return { a, b };
+  let best: number | null = null;
+  let bestD = maxDist;
+  wrap.querySelectorAll<HTMLElement>("[data-marks]").forEach((el) => {
+    const r = el.getBoundingClientRect();
+    const dx = Math.max(r.left - x, 0, x - r.right);
+    const dy = Math.max(r.top - y, 0, y - r.bottom);
+    const d = Math.hypot(dx, dy);
+    if (d < bestD) { bestD = d; best = Number(el.getAttribute("data-marks")?.split(" ")[0]); }
+  });
+  return best;
+}
+// 특정 표시 id가 그려진 요소들의 합집합 중심(컨테이너 기준)
+function centerOfMark(wrap: HTMLElement, id: number): Pt | null {
+  const wr = wrap.getBoundingClientRect();
+  let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+  wrap.querySelectorAll<HTMLElement>("[data-marks]").forEach((el) => {
+    if (!el.getAttribute("data-marks")?.split(" ").includes(String(id))) return;
+    const rc = el.getBoundingClientRect();
+    l = Math.min(l, rc.left); t = Math.min(t, rc.top); r = Math.max(r, rc.right); b = Math.max(b, rc.bottom);
+  });
+  if (l === Infinity) return null;
+  return { x: (l + r) / 2 - wr.left, y: (t + b) / 2 - wr.top };
 }
 
+type Tool = "underline" | "contrast" | "similar" | "erase";
 type Celebrate = { title: string; sub: string; final?: boolean } | null;
 
 export function PracticeRelation() {
-  const [tool, setTool] = useState<"contrast" | "similar">("contrast");
-  const [conns, setConns] = useState<Conn[]>([]);
-  const [contrastDone, setContrastDone] = useState(false);
-  const [commonDone, setCommonDone] = useState(false);
+  const [tool, setTool] = useState<Tool>("underline");
+  const [marks, setMarks] = useState<Mark[]>([]);
+  const [relations, setRelations] = useState<Relation[]>([]);
+  const [commonMarkId, setCommonMarkId] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState<Celebrate>(null);
   const [changeKey, setChangeKey] = useState(0);
+  const [geo, setGeo] = useState<Geo[]>([]);
+  const [commonPt, setCommonPt] = useState<Pt | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({ active: false, pts: [] });
   const [path, setPath] = useState("");
+
+  const contrastDone = relations.length > 0;
+  const commonDone = commonMarkId != null;
 
   function say(next: string | null) {
     setMsg(next);
     setChangeKey((v) => v + 1);
   }
   function reset() {
-    setConns([]);
-    setContrastDone(false);
-    setCommonDone(false);
-    setCelebrate(null);
-    setTool("contrast");
-    say(null);
+    setMarks([]); setRelations([]); setCommonMarkId(null);
+    setCelebrate(null); setTool("underline"); say(null);
+  }
+
+  function measure() {
+    const wrap = ref.current;
+    if (!wrap) return;
+    const g: Geo[] = [];
+    for (const rel of relations) {
+      const A = centerOfMark(wrap, rel.a);
+      const B = centerOfMark(wrap, rel.b);
+      if (A && B) g.push({ id: rel.id, x1: A.x, y1: A.y, x2: B.x, y2: B.y, mx: (A.x + B.x) / 2, my: (A.y + B.y) / 2 });
+    }
+    setGeo(g);
+    setCommonPt(commonMarkId != null ? centerOfMark(wrap, commonMarkId) : null);
+  }
+  useLayoutEffect(() => { measure(); /* eslint-disable-next-line */ }, [relations, marks, commonMarkId]);
+  useEffect(() => {
+    const h = () => measure();
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+    /* eslint-disable-next-line */
+  }, [relations, marks, commonMarkId]);
+
+  function finishContrast() {
+    if (commonDone) setCelebrate({ title: "완벽해요! 🎉", sub: "두 조직의 다른 점과 공통점을 모두 연결했어요. 비교·대조 연습을 끝냈어요!", final: true });
+    else setCelebrate({ title: "차이점을 이었어요! 👏", sub: "밑줄 친 두 부분을 ↔로 연결했어요. 이제 두 조직의 '공통점'도 밑줄 긋고 '= 공통점'으로 표시해 볼까요?" });
+  }
+  function finishCommon() {
+    if (contrastDone) setCelebrate({ title: "완벽해요! 🎉", sub: "두 조직의 다른 점과 공통점을 모두 연결했어요. 비교·대조 연습을 끝냈어요!", final: true });
+    else setCelebrate({ title: "공통점을 찾았어요! 👏", sub: "두 조직이 함께 하는 일에 = 로 표시했어요. 이제 서로 '다른 점'도 밑줄 긋고 '↔ 차이점'으로 이어 볼까요?" });
   }
 
   function down(e: React.PointerEvent) {
@@ -133,91 +195,119 @@ export function PracticeRelation() {
     stroke.current.pts.push({ x: e.clientX, y: e.clientY });
     const wr = ref.current?.getBoundingClientRect();
     if (!wr) return;
-    setPath(
-      stroke.current.pts
-        .map((p, i) => (i ? "L" : "M") + " " + (p.x - wr.left).toFixed(1) + " " + (p.y - wr.top).toFixed(1))
-        .join(" "),
-    );
+    setPath(stroke.current.pts.map((p, i) => (i ? "L" : "M") + " " + (p.x - wr.left).toFixed(1) + " " + (p.y - wr.top).toFixed(1)).join(" "));
   }
   function up() {
     if (!stroke.current.active) return;
     const pts = stroke.current.pts;
     stroke.current = { active: false, pts: [] };
-    const drawnPath = path;
     setPath("");
     const wrap = ref.current;
     if (!wrap || pts.length < 2) return;
-    const wr = wrap.getBoundingClientRect();
-    const first = pts[0];
-    const last = pts[pts.length - 1];
-    const mid: Pt = { x: (first.x + last.x) / 2 - wr.left, y: (first.y + last.y) / 2 - wr.top - 10 };
-    const { a, b } = endRegions(wrap, pts);
-    const set = new Set([a, b].filter(Boolean));
+    const first = pts[0], last = pts[pts.length - 1];
+
+    if (tool === "underline") {
+      const span = recognize(wrap, pts);
+      if (!span) { say("글자 위를 지나가도록 밑줄을 그어 주세요."); return; }
+      const m: Mark = { id: ++idRef.current, start: span.start, end: span.end };
+      const next = [...marks, m];
+      setMarks(next);
+      const hasSg = next.some((x) => markRegion(x) === "sg");
+      const hasJd = next.some((x) => markRegion(x) === "jd");
+      if (hasSg && hasJd && !contrastDone) say("좋아요! 이제 '↔ 차이점' 도구로 밑줄 친 두 부분(측생 쪽 ↔ 정단 쪽)을 이어 보세요.");
+      else if (markRegion(m) === "cm" && !commonDone) say("좋아요! 이제 '= 공통점' 도구로 그 밑줄 위에 표시해요.");
+      else say("비교할 부분에 밑줄을 그어요. 두 조직의 다른 점(위치·하는 일)과 공통점을 찾아 밑줄!");
+      return;
+    }
+
+    if (tool === "erase") {
+      const eoffs: number[] = [];
+      for (const p of densify(pts)) for (const dy of [0, -8, -14]) { const o = offsetAtPoint(wrap, p.x, p.y + dy); if (o != null) { eoffs.push(o); break; } }
+      if (!eoffs.length) { say("지울 밑줄 위를 그어 주세요."); return; }
+      eoffs.sort((a, b) => a - b);
+      const es = eoffs[0], ee = eoffs[eoffs.length - 1];
+      const removed = marks.filter((mm) => overlap(mm.start, mm.end, es, ee) > 0).map((mm) => mm.id);
+      if (!removed.length) { say("지울 밑줄 위를 그어 주세요."); return; }
+      setMarks((prev) => prev.filter((mm) => !removed.includes(mm.id)));
+      setRelations((prev) => prev.filter((r) => !removed.includes(r.a) && !removed.includes(r.b)));
+      if (commonMarkId != null && removed.includes(commonMarkId)) setCommonMarkId(null);
+      say("지웠어요. 다시 표시해 볼까요?");
+      return;
+    }
 
     if (tool === "contrast") {
-      if (set.has("sg") && set.has("jd")) {
-        const c: Conn = { id: ++idRef.current, type: "contrast", path: drawnPath, mid };
-        setConns((prev) => [...prev, c]);
-        if (!contrastDone) {
-          setContrastDone(true);
-          setTool("similar");
-          say(null);
-          setCelebrate({
-            title: "차이점을 찾았어요! 👏",
-            sub: "측생 분열 조직과 정단 분열 조직을 ↔로 이었어요. 둘은 위치(측면·끝)도, 하는 일(부피·길이 생장)도 서로 달라요. 이제 두 조직의 '공통점'을 찾아볼까요?",
-          });
-        } else {
-          say("좋아요! 다른 점을 하나 더 이었어요.");
-        }
-      } else if (set.has("cm")) {
-        say("지금은 '다른 점'을 이을 차례예요. 공통점은 아래 '= 공통점' 도구로 표시해요.");
-      } else if (set.size === 1) {
-        say("두 조직을 서로 이어야 해요. 측생 쪽 설명에서 정단 쪽 설명으로 그어 보세요.");
+      const a = markNearPoint(wrap, first.x, first.y);
+      const b = markNearPoint(wrap, last.x, last.y);
+      if (a == null || b == null) { say("먼저 비교할 두 곳에 밑줄을 긋고, 그 두 밑줄을 서로 이어 주세요."); return; }
+      if (a === b) { say("서로 다른 두 밑줄을 이어야 해요."); return; }
+      const ma = marks.find((m) => m.id === a)!, mb = marks.find((m) => m.id === b)!;
+      const rs = new Set([markRegion(ma), markRegion(mb)]);
+      if (rs.has("sg") && rs.has("jd")) {
+        if (relations.some((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a))) { say("이미 이은 부분이에요. 다른 점을 더 이어 볼까요?"); return; }
+        setRelations((prev) => [...prev, { id: ++idRef.current, a, b }]);
+        finishContrast();
+      } else if (rs.has("cm")) {
+        say("공통점은 '= 공통점' 도구로 표시해요. 지금은 측생 쪽과 정단 쪽의 '다른 점'을 이어요.");
       } else {
-        say("측생 분열 조직 설명과 정단 분열 조직 설명을 서로 이어 보세요. (낱말끼리 이어도, 문장끼리 이어도 좋아요.)");
+        say("측생 쪽 밑줄과 정단 쪽 밑줄을 서로 이어야 해요. (같은 쪽끼리는 안 돼요.)");
       }
+      return;
+    }
+
+    // similar
+    const m = markNearPoint(wrap, first.x, first.y) ?? markNearPoint(wrap, last.x, last.y);
+    if (m == null) { say("먼저 공통점(마지막 문장)에 밑줄을 긋고, 그 위에 = 로 표시해요."); return; }
+    if (markRegion(marks.find((x) => x.id === m)!) === "cm") {
+      setCommonMarkId(m);
+      finishCommon();
     } else {
-      if (a === "cm" && b === "cm") {
-        const c: Conn = { id: ++idRef.current, type: "similar", path: drawnPath, mid };
-        setConns((prev) => [...prev, c]);
-        setCommonDone(true);
-        setCelebrate({
-          title: "완벽해요! 🎉",
-          sub: "두 조직은 서로 다르지만, '식물의 생장과 발달에 기여한다'는 공통점이 있어요. 비교·대조 연습을 끝냈어요!",
-          final: true,
-        });
-      } else {
-        say("두 조직이 '함께' 하는 일(공통점)을 말한 마지막 문장에 그어 보세요.");
-      }
+      say("공통점은 두 조직이 '함께' 하는 일이에요. 마지막 문장에 밑줄을 긋고 표시해요.");
     }
   }
 
-  // 영역별 배경 틴트로 비교 대상을 보여 준다.
-  const cuts = [...new Set([0, SG0, SG1, JD0, JD1, CM0, CM1, PARA.length])].sort((a, b) => a - b);
+  // 세그먼트: 영역 틴트 + 밑줄 + data-marks(연결 대상 인식용)
+  const relSet = new Set<number>();
+  relations.forEach((r) => { relSet.add(r.a); relSet.add(r.b); });
+  const cutSet = new Set<number>([0, PARA.length, SG0, SG1, JD0, JD1, CM0, CM1]);
+  marks.forEach((m) => { cutSet.add(Math.max(0, m.start)); cutSet.add(Math.min(PARA.length, m.end)); });
+  const cuts = [...cutSet].filter((c) => c >= 0 && c <= PARA.length).sort((a, b) => a - b);
   const segs: ReactNode[] = [];
   for (let i = 0; i < cuts.length - 1; i++) {
-    const s = cuts[i];
-    const e = cuts[i + 1];
+    const s = cuts[i], e = cuts[i + 1];
     if (e <= s) continue;
     const r = regionOf(s);
-    const cls =
-      r === "sg" ? "rounded bg-sky-50 text-sky-900"
-      : r === "jd" ? "rounded bg-amber-50 text-amber-900"
-      : r === "cm" ? "rounded bg-emerald-50 text-emerald-900"
+    const bg = r === "sg" ? "bg-sky-50" : r === "jd" ? "bg-amber-50" : r === "cm" ? "bg-emerald-50" : "";
+    const cover = marks.filter((m) => m.start <= s && m.end >= e);
+    const ids = cover.map((m) => m.id);
+    const isCommon = commonMarkId != null && ids.includes(commonMarkId);
+    const isRel = ids.some((id) => relSet.has(id));
+    const ul = cover.length
+      ? isCommon
+        ? "underline decoration-emerald-500 decoration-2 underline-offset-4"
+        : isRel
+        ? "underline decoration-rose-500 decoration-2 underline-offset-4"
+        : "underline decoration-blue-500 decoration-2 underline-offset-4"
       : "";
     segs.push(
-      <span key={i} className={cls || undefined}>
+      <span key={i} data-marks={ids.length ? ids.join(" ") : undefined} className={[bg, ul, "rounded"].filter(Boolean).join(" ") || undefined}>
         {PARA.slice(s, e)}
       </span>,
     );
   }
 
   const defaultLine =
-    tool === "contrast"
-      ? "두 분열 조직은 어떻게 다를까요? 측생 쪽 설명에서 정단 쪽 설명으로 선을 그어 ↔로 이어 보세요. (낱말끼리 이어도, 문장끼리 이어도 좋아요.)"
-      : "두 조직의 '공통점'(둘이 함께 하는 일)을 말한 마지막 문장에 선을 그어 = 로 표시해요.";
+    tool === "underline" ? "먼저 비교할 부분에 밑줄을 그어요. 두 조직의 다른 점(위치·하는 일)과 공통점을 찾아 밑줄!"
+    : tool === "contrast" ? "밑줄 친 측생 쪽 부분과 정단 쪽 부분을 선으로 이어 ↔ 차이점으로 연결해요."
+    : tool === "similar" ? "공통점(마지막 문장)에 밑줄을 긋고, 그 위에 선을 그어 = 로 표시해요."
+    : "잘못 친 밑줄 위에 선을 그으면 지워져요.";
   const coachLine = msg ?? defaultLine;
-  const strokeColor = tool === "contrast" ? "#f43f5e" : "#10b981";
+  const tcolor: Record<Tool, string> = { underline: "#3b82f6", contrast: "#f43f5e", similar: "#10b981", erase: "#9ca3af" };
+
+  const toolBtn = (t: Tool, label: string, icon: string, active: string) => (
+    <button type="button" onClick={() => setTool(t)} className={"flex flex-col items-center gap-0.5 rounded-lg border px-3 py-2 text-xs " + (tool === t ? active : "border-gray-200 bg-white text-gray-600")}>
+      <span className="text-base leading-none">{icon}</span>{label}
+    </button>
+  );
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-4 px-4 py-6">
@@ -239,12 +329,10 @@ export function PracticeRelation() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setTool("contrast")} className={"flex flex-col items-center gap-0.5 rounded-lg border px-3 py-2 text-xs " + (tool === "contrast" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-gray-200 bg-white text-gray-600")}>
-          <span className="text-base leading-none">↔</span>차이점(다른 점)
-        </button>
-        <button type="button" onClick={() => setTool("similar")} className={"flex flex-col items-center gap-0.5 rounded-lg border px-3 py-2 text-xs " + (tool === "similar" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 bg-white text-gray-600")}>
-          <span className="text-base leading-none">=</span>공통점(같은 점)
-        </button>
+        {toolBtn("underline", "밑줄", "▁", "border-blue-500 bg-blue-50 text-blue-700")}
+        {toolBtn("contrast", "차이점(↔)", "↔", "border-rose-500 bg-rose-50 text-rose-700")}
+        {toolBtn("similar", "공통점(=)", "=", "border-emerald-500 bg-emerald-50 text-emerald-700")}
+        {toolBtn("erase", "지우개", "⌫", "border-gray-400 bg-gray-100 text-gray-700")}
         <button type="button" onClick={reset} className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50">다시 하기</button>
       </div>
 
@@ -255,19 +343,24 @@ export function PracticeRelation() {
         onPointerUp={up}
         onPointerCancel={up}
         style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none", cursor: "crosshair" }}
-        className="relative rounded-2xl border border-gray-200 bg-white p-6 text-[17px] leading-[2.2] text-gray-800 shadow-sm"
+        className="relative rounded-2xl border border-gray-200 bg-white p-6 text-[17px] leading-[2.3] text-gray-800 shadow-sm"
       >
         <p data-para className="whitespace-pre-wrap">{segs}</p>
         <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
-          {conns.map((c) => (
-            <g key={c.id}>
-              <path d={c.path} fill="none" stroke={c.type === "contrast" ? "#f43f5e" : "#10b981"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.85} />
-              <text x={c.mid.x} y={c.mid.y} textAnchor="middle" fontSize="15" fontWeight="700" fill={c.type === "contrast" ? "#e11d48" : "#059669"}>{c.type === "contrast" ? "↔" : "="}</text>
+          {geo.map((g) => (
+            <g key={g.id}>
+              <path d={`M ${g.x1} ${g.y1} Q ${g.mx} ${g.my - 34} ${g.x2} ${g.y2}`} fill="none" stroke="#f43f5e" strokeWidth={2.5} strokeOpacity={0.85} strokeLinecap="round" />
+              <circle cx={g.mx} cy={g.my - 17} r={11} fill="#fff" stroke="#f43f5e" strokeWidth={1.5} />
+              <text x={g.mx} y={g.my - 12} textAnchor="middle" fontSize="14" fontWeight="700" fill="#e11d48">↔</text>
             </g>
           ))}
-          {path && (
-            <path d={path} fill="none" stroke={strokeColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.6} />
+          {commonPt && (
+            <g>
+              <circle cx={commonPt.x} cy={commonPt.y - 20} r={11} fill="#fff" stroke="#10b981" strokeWidth={1.5} />
+              <text x={commonPt.x} y={commonPt.y - 15} textAnchor="middle" fontSize="15" fontWeight="700" fill="#059669">=</text>
+            </g>
           )}
+          {path && <path d={path} fill="none" stroke={tcolor[tool]} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.6} />}
         </svg>
       </div>
 
