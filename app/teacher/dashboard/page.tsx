@@ -215,8 +215,8 @@ export default async function TeacherDashboard() {
       label: "독해 확인",
       n: byStage("check").length,
       bars: [
-        { label: "세부", value: avgOf(byStage("check").map((r) => r.detail)), color: "bg-emerald-500" },
-        { label: "중심", value: avgOf(byStage("check").map((r) => r.main)), color: "bg-teal-500" },
+        { label: "세부 내용 파악", value: avgOf(byStage("check").map((r) => r.detail)), color: "bg-emerald-500" },
+        { label: "중심 내용 파악", value: avgOf(byStage("check").map((r) => r.main)), color: "bg-teal-500" },
         { label: "추론", value: avgOf(byStage("check").map((r) => r.inference)), color: "bg-sky-500" },
       ],
     },

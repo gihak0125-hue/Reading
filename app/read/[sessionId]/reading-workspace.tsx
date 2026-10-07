@@ -1422,7 +1422,7 @@ export function ReadingWorkspace({
                   {phase === "read_score"
                     ? "밑줄·동그라미로 핵심을 얼마나 잘 짚었는지 보여줘요."
                     : phase === "check_score"
-                      ? "세부·중심·추론 문항에 얼마나 잘 답했는지 보여줘요."
+                      ? "세부 내용·중심 내용·추론 문항에 얼마나 잘 답했는지 보여줘요."
                       : "한 관점으로 다른 관점을 얼마나 잘 비판했는지 보여줘요."}
                 </p>
               </div>
@@ -1431,8 +1431,8 @@ export function ReadingWorkspace({
               ) : scores ? (
                 <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 dark:border-gray-800">
                   {[
-                    { label: "세부", value: scores.detail, color: "bg-emerald-500" },
-                    { label: "중심", value: scores.main, color: "bg-teal-500" },
+                    { label: "세부 내용 파악", value: scores.detail, color: "bg-emerald-500" },
+                    { label: "중심 내용 파악", value: scores.main, color: "bg-teal-500" },
                     { label: "사실적 독해", value: scores.fact, color: "bg-emerald-500" },
                     { label: "추론적 독해", value: scores.inference, color: "bg-sky-500" },
                     { label: "비판적 독해", value: scores.critique, color: "bg-rose-500" },

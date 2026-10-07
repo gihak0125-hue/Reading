@@ -148,8 +148,8 @@ export default async function StudentDetailPage({
                       독해 확인
                     </p>
                     <div className="flex flex-col gap-2">
-                      <Metric label="세부" v={check?.detail ?? null} />
-                      <Metric label="중심" v={check?.main ?? null} />
+                      <Metric label="세부 내용 파악" v={check?.detail ?? null} />
+                      <Metric label="중심 내용 파악" v={check?.main ?? null} />
                       <Metric label="추론" v={check?.inference ?? null} />
                     </div>
                   </div>
