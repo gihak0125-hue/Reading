@@ -535,6 +535,9 @@ export function ReadingWorkspace({
   const [showBody, setShowBody] = useState(false);
   // 확인/관점 각 단계 대화만 보여주기 위한 시작 인덱스(단계 전환 시 갱신)
   const [convStart, setConvStart] = useState(0);
+  // 낙관적 표시: 메시지를 로컬 상태로 미러링(서버 갱신 시 동기화)
+  const [localMsgs, setLocalMsgs] = useState<CoachTurn[]>(messages);
+  useEffect(() => setLocalMsgs(messages), [messages]);
   const [scores, setScores] = useState<{
     fact?: number;
     inference?: number;
@@ -843,14 +846,14 @@ export function ReadingWorkspace({
   }, [relations]);
 
   const studentTurns = useMemo(
-    () => messages.filter((m) => m.role === "student"),
-    [messages],
+    () => localMsgs.filter((m) => m.role === "student"),
+    [localMsgs],
   );
   const lastAgent = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--)
-      if (messages[i].role === "agent") return messages[i].content;
+    for (let i = localMsgs.length - 1; i >= 0; i--)
+      if (localMsgs[i].role === "agent") return localMsgs[i].content;
     return null;
-  }, [messages]);
+  }, [localMsgs]);
 
   // 학생이 읽으며 표시/연결하면(입력 없이도) 코치가 먼저 짧게 피드백
   useEffect(() => {
@@ -919,7 +922,7 @@ export function ReadingWorkspace({
 
   function askCritique() {
     setCoachNote(null);
-    setConvStart(messages.length);
+    setConvStart(localMsgs.length);
     startCoach(async () => {
       const res = await sendCoachMessage({
         sessionId,
@@ -933,7 +936,7 @@ export function ReadingWorkspace({
 
   function askCheck() {
     setCoachNote(null);
-    setConvStart(messages.length);
+    setConvStart(localMsgs.length);
     startCoach(async () => {
       const res = await sendCoachMessage({
         sessionId,
@@ -1396,12 +1399,23 @@ export function ReadingWorkspace({
     if (!hint && !text) return;
     if (!hint && text) setSeCue(false);
     setCoachNote(null);
+    if (!hint && text) {
+      setLocalMsgs((m) => [
+        ...m,
+        {
+          id: "temp-" + Date.now(),
+          role: "student",
+          content: text,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      setDraft("");
+    }
     startCoach(async () => {
       const res = await sendCoachMessage({ sessionId, text, hint });
       if (res.needsKey)
         setCoachNote("AI 코치를 켜려면 API 키가 필요해요. (설명은 저장됐어요)");
       else if (res.error) setCoachNote(res.error);
-      else setDraft("");
     });
   }
 
@@ -1639,12 +1653,12 @@ export function ReadingWorkspace({
 
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-              {messages.slice(convStart).length === 0 && !coachPending && (
+              {localMsgs.slice(convStart).length === 0 && !coachPending && (
                 <p className="text-sm text-gray-400">
                   코치가 곧 질문을 띄울 거예요…
                 </p>
               )}
-              {messages.slice(convStart).slice(-12).map((m) => (
+              {localMsgs.slice(convStart).slice(-12).map((m) => (
                 <div
                   key={m.id}
                   className={m.role === "agent" ? "flex" : "flex flex-row-reverse"}
