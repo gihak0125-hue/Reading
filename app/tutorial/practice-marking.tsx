@@ -79,6 +79,25 @@ function recognize(wrap: HTMLElement, pts: Pt[], type: "underline" | "circle"): 
 const overlap = (s1: number, e1: number, s2: number, e2: number) =>
   Math.max(0, Math.min(e1, e2) - Math.max(s1, s2));
 
+// 여러 밑줄 획을 합쳐 [0,sentEnd] 구간을 얼마나 덮었는지(union)와 가장 멀리 간 끝
+function sentCoverage(unds: Mark[], sentEnd: number): { covered: number; maxEnd: number } {
+  const ivs = unds
+    .map((u) => [Math.max(0, u.start), Math.min(sentEnd, u.end)] as [number, number])
+    .filter(([a, b]) => b > a)
+    .sort((p, q) => p[0] - q[0]);
+  let covered = 0;
+  let cur: [number, number] | null = null;
+  for (const [a, b] of ivs) {
+    if (!cur || a > cur[1]) {
+      if (cur) covered += cur[1] - cur[0];
+      cur = [a, b];
+    } else cur[1] = Math.max(cur[1], b);
+  }
+  if (cur) covered += cur[1] - cur[0];
+  const maxEnd = unds.length ? Math.max(...unds.map((u) => u.end)) : 0;
+  return { covered, maxEnd };
+}
+
 export function PracticeMarking() {
   const topicStr = "법적 의제";
   const topicStart = PARA.indexOf(topicStr);
@@ -147,9 +166,8 @@ export function PracticeMarking() {
       setTopicDone(
         rem.some((mm) => mm.type === "circle" && overlap(mm.start, mm.end, topicStart, topicEnd) >= 2),
       );
-      setSentDone(
-        rem.some((mm) => mm.type === "underline" && overlap(mm.start, mm.end, 0, sentEnd) >= sentEnd * 0.4),
-      );
+      const rc = sentCoverage(rem.filter((mm) => mm.type === "underline"), sentEnd);
+      setSentDone(rc.covered >= sentEnd * 0.6 && rc.maxEnd >= sentEnd - 4);
       setMsg("지웠어요. 다시 표시해 볼까요?");
       return;
     }
@@ -174,9 +192,9 @@ export function PracticeMarking() {
         setMsg("음… 이 글이 처음부터 끝까지 다루는 낱말은 무엇일까요? ‘법적 의제’에 동그라미를 쳐 보세요.");
       }
     } else {
-      const ov = overlap(span.start, span.end, 0, sentEnd);
-      const reachesEnd = span.end >= sentEnd - 4;
-      if (ov >= sentEnd * 0.6 && reachesEnd) {
+      const unds = marks.filter((x) => x.type === "underline").concat(m);
+      const { covered, maxEnd } = sentCoverage(unds, sentEnd);
+      if (covered >= sentEnd * 0.6 && maxEnd >= sentEnd - 4) {
         setSentDone(true);
         setMsg(null);
         setCelebrate({
@@ -184,7 +202,7 @@ export function PracticeMarking() {
           sub: "중심화제와 중심 문장을 모두 찾았어요. 첫 문장이 개념을 정의하는 중심 문장이에요.",
           final: true,
         });
-      } else if (ov > 0) {
+      } else if (covered > 0) {
         setMsg("중심 문장은 처음부터 끝(‘의미한다’)까지예요. 문장 전체에 밑줄을 그어 보세요.");
       } else if (overlap(span.start, span.end, sentEnd, PARA.length) > 0) {
         setMsg("그 문장은 ‘가령~’으로 시작하는 예시(뒷받침)예요. 개념을 정의한 첫 문장에 밑줄을 그어 보세요.");
