@@ -433,7 +433,7 @@ export default async function TeacherDashboard() {
   const rateOf = (h: Hard) => h.covered / h.total;
   hard.sort((a, b) => rateOf(a) - rateOf(b) || b.total - a.total);
   const hardTop = hard.filter((h) => h.total >= 1).slice(0, 8);
-  const kindLabel = { sentence: "핵심문장", keyword: "핵심어", relation: "관계" };
+  const kindLabel = { sentence: "핵심문장", keyword: "중심화제", relation: "관계" };
 
   const stats: { label: string; value: number; tone: string }[] = [
     { label: "학급", value: classList.length, tone: "text-amber-700 dark:text-amber-300" },

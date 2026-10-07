@@ -79,7 +79,7 @@ export function ParagraphTagger({
             disabled={pending}
             className="rounded-md bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-900 dark:text-amber-200"
           >
-            + 핵심어
+            + 중심화제
           </button>
           <button
             type="button"
@@ -112,7 +112,7 @@ export function ParagraphTagger({
                     : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200"
                 }`}
               >
-                {k.kind === "keyword" ? "핵심어" : "핵심문장"}
+                {k.kind === "keyword" ? "중심화제" : "핵심문장"}
               </span>
               <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">
                 “{text.slice(k.span_start, k.span_end)}”

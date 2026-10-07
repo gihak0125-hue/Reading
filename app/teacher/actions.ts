@@ -184,7 +184,7 @@ export type KeyInfoInput = {
   kind: "keyword" | "key_sentence";
 };
 
-/** 문단 텍스트의 일부 구간(span)을 핵심어/핵심문장으로 저장 */
+/** 문단 텍스트의 일부 구간(span)을 중심화제/핵심문장으로 저장 */
 export async function addKeyInfo(
   input: KeyInfoInput,
 ): Promise<{ error?: string }> {

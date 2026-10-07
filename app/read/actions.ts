@@ -351,7 +351,7 @@ export async function sendCoachMessage(input: {
           k.span_start,
           k.span_end,
         );
-        return `(${k.kind === "keyword" ? "핵심어" : "핵심문장"}) ${t}`;
+        return `(${k.kind === "keyword" ? "중심화제" : "핵심문장"}) ${t}`;
       })
       .filter((x) => x.length > 5);
     keyRelations = (kr ?? [])
@@ -599,7 +599,7 @@ export async function scoreSessionAction(
     keyInfos = (ki ?? [])
       .map((k) => {
         const t = (paraText.get(k.paragraph_id) ?? "").slice(k.span_start, k.span_end);
-        return `(${k.kind === "keyword" ? "핵심어" : "핵심문장"}) ${t}`;
+        return `(${k.kind === "keyword" ? "중심화제" : "핵심문장"}) ${t}`;
       })
       .filter((x) => x.length > 5);
     keyRelations = (kr ?? [])
