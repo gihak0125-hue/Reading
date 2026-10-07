@@ -86,11 +86,16 @@ export function PracticeMarking() {
   const dot = PARA.indexOf(". ");
   const sentEnd = dot >= 0 ? dot + 1 : PARA.length;
 
-  const [tool, setTool] = useState<"circle" | "underline">("circle");
+  const [tool, setTool] = useState<"circle" | "underline" | "erase">("circle");
   const [marks, setMarks] = useState<Mark[]>([]);
   const [topicDone, setTopicDone] = useState(false);
   const [sentDone, setSentDone] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [celebrate, setCelebrate] = useState<{
+    title: string;
+    sub: string;
+    final?: boolean;
+  } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({ active: false, pts: [] });
@@ -119,6 +124,36 @@ export function PracticeMarking() {
     setPath("");
     const wrap = ref.current;
     if (!wrap) return;
+
+    if (tool === "erase") {
+      const eoffs: number[] = [];
+      for (const p of densify(pts))
+        for (const dy of [0, -8, -14]) {
+          const o = offsetAtPoint(wrap, p.x, p.y + dy);
+          if (o != null) {
+            eoffs.push(o);
+            break;
+          }
+        }
+      if (!eoffs.length) {
+        setMsg("지울 표시 위를 그어 주세요.");
+        return;
+      }
+      eoffs.sort((a, b) => a - b);
+      const es = eoffs[0];
+      const ee = eoffs[eoffs.length - 1];
+      const rem = marks.filter((mm) => overlap(mm.start, mm.end, es, ee) === 0);
+      setMarks(rem);
+      setTopicDone(
+        rem.some((mm) => mm.type === "circle" && overlap(mm.start, mm.end, topicStart, topicEnd) >= 2),
+      );
+      setSentDone(
+        rem.some((mm) => mm.type === "underline" && overlap(mm.start, mm.end, 0, sentEnd) >= sentEnd * 0.4),
+      );
+      setMsg("지웠어요. 다시 표시해 볼까요?");
+      return;
+    }
+
     const span = recognize(wrap, pts, tool);
     if (!span) {
       setMsg("글자 위를 지나가도록 그어 주세요.");
@@ -130,15 +165,27 @@ export function PracticeMarking() {
       if (overlap(span.start, span.end, topicStart, topicEnd) >= 2) {
         setTopicDone(true);
         setTool("underline");
-        setMsg("좋아요! ‘법적 의제’가 이 글이 계속 다루는 중심화제예요. 이제 밑줄로 중심 문장을 찾아볼까요?");
+        setMsg(null);
+        setCelebrate({
+          title: "잘했어요!",
+          sub: "‘법적 의제’가 이 글이 계속 다루는 중심화제예요. 이제 중심 문장을 찾아볼까요?",
+        });
       } else {
         setMsg("음… 이 글이 처음부터 끝까지 다루는 낱말은 무엇일까요? ‘법적 의제’에 동그라미를 쳐 보세요.");
       }
     } else {
       const ov = overlap(span.start, span.end, 0, sentEnd);
-      if (ov >= sentEnd * 0.4) {
+      const reachesEnd = span.end >= sentEnd - 4;
+      if (ov >= sentEnd * 0.6 && reachesEnd) {
         setSentDone(true);
-        setMsg("정확해요! 첫 문장이 개념을 정의하는 중심 문장이에요.");
+        setMsg(null);
+        setCelebrate({
+          title: "완벽해요!",
+          sub: "중심화제와 중심 문장을 모두 찾았어요. 첫 문장이 개념을 정의하는 중심 문장이에요.",
+          final: true,
+        });
+      } else if (ov > 0) {
+        setMsg("중심 문장은 처음부터 끝(‘의미한다’)까지예요. 문장 전체에 밑줄을 그어 보세요.");
       } else if (overlap(span.start, span.end, sentEnd, PARA.length) > 0) {
         setMsg("그 문장은 ‘가령~’으로 시작하는 예시(뒷받침)예요. 개념을 정의한 첫 문장에 밑줄을 그어 보세요.");
       } else {
@@ -171,6 +218,24 @@ export function PracticeMarking() {
     );
   }
   const done = topicDone && sentDone;
+  const changeKey = done ? "done" : msg ? msg : topicDone ? "s2" : "s1";
+  const coachLine = done ? (
+    <span>
+      연습을 마쳤어요. 아래 <b>실제로 읽어보기</b>로 넘어가거나, <b>다시 하기</b>로
+      한 번 더 해볼 수 있어요.
+    </span>
+  ) : msg ? (
+    <span>{msg}</span>
+  ) : !topicDone ? (
+    <span>
+      ① 이 글이 처음부터 끝까지 다루는 <b>중심화제</b>(중심이 되는 낱말)에{" "}
+      <b>동그라미</b>를 쳐 보세요.
+    </span>
+  ) : (
+    <span>
+      ② 이제 글의 <b>중심 문장</b>(개념을 정의한 문장)에 <b>밑줄</b>을 그어 보세요.
+    </span>
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 px-5 py-10">
@@ -193,14 +258,19 @@ export function PracticeMarking() {
         </span>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-        {done ? (
-          <span>잘했어요! 중심화제(법적 의제)와 중심 문장(정의가 담긴 첫 문장)을 모두 찾았어요.</span>
-        ) : !topicDone ? (
-          <span>① 이 글이 처음부터 끝까지 다루는 <b>중심화제</b>(중심이 되는 낱말)에 <b>동그라미</b>를 쳐 보세요.</span>
-        ) : (
-          <span>② 이제 글의 <b>중심 문장</b>(개념을 정의한 문장)에 <b>밑줄</b>을 그어 보세요.</span>
-        )}
+      <div className="flex items-start gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-600 text-white shadow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+            <path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2z" />
+            <path d="M9 10h6M9 13h3" />
+          </svg>
+        </span>
+        <div
+          key={changeKey}
+          className="coach-pop relative rounded-2xl rounded-tl-sm border border-amber-200 bg-white px-4 py-3 text-sm leading-relaxed text-gray-800 shadow-sm dark:border-amber-900 dark:bg-gray-900 dark:text-gray-100"
+        >
+          {coachLine}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -222,9 +292,21 @@ export function PracticeMarking() {
         </button>
         <button
           type="button"
+          onClick={() => setTool("erase")}
+          className={"flex min-w-[72px] flex-col items-center gap-0.5 rounded-lg border px-3 py-2 text-xs " + (tool === "erase" ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-950")}
+        >
+          <span className="text-base leading-none">⌫</span>
+          지우개
+        </button>
+        <button
+          type="button"
           onClick={() => {
             setMarks([]);
             setMsg(null);
+            setTopicDone(false);
+            setSentDone(false);
+            setCelebrate(null);
+            setTool("circle");
           }}
           className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
@@ -246,12 +328,11 @@ export function PracticeMarking() {
         </p>
         {path && (
           <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
-            <path d={path} fill="none" stroke={tool === "circle" ? "#fb7185" : "#3b82f6"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.7} />
+            <path d={path} fill="none" stroke={tool === "circle" ? "#fb7185" : tool === "erase" ? "#9ca3af" : "#3b82f6"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.7} />
           </svg>
         )}
       </div>
 
-      {msg && <p className="text-sm text-gray-600 dark:text-gray-300">{msg}</p>}
 
       <div className="flex flex-wrap gap-2">
         {done && (
@@ -263,6 +344,46 @@ export function PracticeMarking() {
           나중에 하기
         </Link>
       </div>
+      {celebrate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="coach-pop flex w-full max-w-xs flex-col items-center gap-3 rounded-3xl bg-white p-7 text-center shadow-2xl dark:bg-gray-900">
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-3xl font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
+              ✓
+            </span>
+            <p className="text-lg font-bold text-gray-800 dark:text-gray-100">
+              {celebrate.title}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {celebrate.sub}
+            </p>
+            {celebrate.final ? (
+              <div className="mt-2 flex w-full flex-col gap-2">
+                <Link
+                  href="/read"
+                  className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+                >
+                  실제로 읽어보기 &rarr;
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setCelebrate(null)}
+                  className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  계속 연습
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCelebrate(null)}
+                className="mt-2 w-full rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+              >
+                계속하기
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
