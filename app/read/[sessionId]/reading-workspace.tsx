@@ -1656,7 +1656,45 @@ export function ReadingWorkspace({
                         : "rounded-tr-sm bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
                     }`}
                   >
-                    {m.content}
+                    {(() => {
+                      const mt =
+                        m.role === "agent"
+                          ? m.content.match(/(?:^|\n)\((\d+)\/(\d+)\)[ \t]*/)
+                          : null;
+                      if (!mt || mt.index == null) return m.content;
+                      const cur = Number(mt[1]);
+                      const total = Number(mt[2]);
+                      const before = m.content.slice(0, mt.index).trim();
+                      const body = m.content.slice(mt.index + mt[0].length).trim();
+                      return (
+                        <>
+                          {before && (
+                            <div className="mb-2 opacity-90">{before}</div>
+                          )}
+                          <div className="mb-1.5 flex items-center gap-2">
+                            <span className="rounded-full bg-amber-600 px-2 py-0.5 text-[11px] font-bold leading-none text-white">
+                              문항 {cur}/{total}
+                            </span>
+                            <span className="flex gap-1">
+                              {Array.from({ length: total }).map((_, i) => (
+                                <span
+                                  key={i}
+                                  className={
+                                    "h-1.5 w-1.5 rounded-full " +
+                                    (i + 1 === cur
+                                      ? "bg-amber-600"
+                                      : i + 1 < cur
+                                        ? "bg-amber-400"
+                                        : "bg-amber-200 dark:bg-amber-900")
+                                  }
+                                />
+                              ))}
+                            </span>
+                          </div>
+                          <div>{body}</div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
