@@ -225,6 +225,16 @@ export default async function DashboardPage() {
         </section>
       ) : (
         <div className="flex flex-col gap-4">
+          <Link
+            href="/tutorial"
+            className="flex items-center gap-3 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 px-5 py-3 text-sm text-amber-900 transition hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <span className="text-base">✏️</span>
+            <span>
+              처음이신가요? <b>표시(밑줄·동그라미) 연습</b>을 먼저 해보세요
+            </span>
+            <span className="ml-auto">&rarr;</span>
+          </Link>
           {resume && (
             <Link
               href={"/read/" + resume.id}
