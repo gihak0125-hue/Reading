@@ -750,4 +750,6 @@ export async function deleteFreehand(
   id: string,
   sessionId: string,
 ): Promise<void> {
-  const { supabase } = await requir
+  const { supabase } = await requireOwnedSession(sessionId);
+  await supabase.from("freehand_strokes").delete().eq("id", id);
+}
