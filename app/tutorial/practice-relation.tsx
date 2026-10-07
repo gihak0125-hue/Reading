@@ -405,12 +405,12 @@ export function PracticeRelation() {
             <p className="text-sm text-gray-500 dark:text-gray-400">{celebrate.sub}</p>
             {celebrate.final ? (
               <div className="mt-2 flex w-full flex-col gap-2">
-                <Link href="/read" className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800">
+                <Link href="/tutorial/3" className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800">
+                  다음 연습 · 예측단서 &rarr;
+                </Link>
+                <Link href="/read" className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                   실제로 읽어보기 &rarr;
                 </Link>
-                <button type="button" onClick={reset} className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                  다시 연습하기
-                </button>
               </div>
             ) : (
               <button type="button" onClick={() => setCelebrate(null)} className="mt-2 w-full rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800">
