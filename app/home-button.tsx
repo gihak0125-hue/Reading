@@ -31,6 +31,7 @@ export function HomeButton() {
     p === "/login" ||
     p === "/dashboard" ||
     p === "/tutorial" ||
+    p.startsWith("/tutorial/") ||
     p.startsWith("/read/");
   if (hide) return null;
   return (

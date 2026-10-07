@@ -377,18 +377,17 @@ export function PracticeMarking() {
             {celebrate.final ? (
               <div className="mt-2 flex w-full flex-col gap-2">
                 <Link
-                  href="/read"
+                  href="/tutorial/2"
                   className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+                >
+                  다음 연습 · 관계 연결 &rarr;
+                </Link>
+                <Link
+                  href="/read"
+                  className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   실제로 읽어보기 &rarr;
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setCelebrate(null)}
-                  className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  계속 연습
-                </button>
               </div>
             ) : (
               <button
