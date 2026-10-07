@@ -589,6 +589,7 @@ export function ReadingWorkspace({
 
   const [draft, setDraft] = useState("");
   const [coachPending, startCoach] = useTransition();
+  const [coachStreaming, setCoachStreaming] = useState(false);
   const [coachNote, setCoachNote] = useState<string | null>(null);
   const autoRef = useRef<{ count: number; at: number; off: boolean }>({
     count: annotations.length,
@@ -866,7 +867,12 @@ export function ReadingWorkspace({
       return;
     }
     const timer = setTimeout(() => {
-      if (coachPending || Date.now() - a.at < 45000 || total - a.count < 2)
+      if (
+        coachPending ||
+        coachStreaming ||
+        Date.now() - a.at < 45000 ||
+        total - a.count < 2
+      )
         return;
       a.count = total;
       a.at = Date.now();
@@ -880,7 +886,7 @@ export function ReadingWorkspace({
       });
     }, 7000);
     return () => clearTimeout(timer);
-  }, [marks.length, relations.length, status, sessionId, coachPending, startCoach]);
+  }, [marks.length, relations.length, status, sessionId, coachPending, coachStreaming, startCoach]);
 
   // 적절한 때 자기설명을 자동으로 띄워 학생이 쓰게 유도(읽는 중 2번: 예측·숨은 뜻)
   useEffect(() => {
@@ -894,7 +900,7 @@ export function ReadingWorkspace({
     if (!mode) return;
     const pick = mode;
     const timer = setTimeout(() => {
-      if (coachPending || Date.now() - r.at < 20000) return;
+      if (coachPending || coachStreaming || Date.now() - r.at < 20000) return;
       if (pick === "predict") r.predict = true;
       else r.hidden = true;
       r.at = Date.now();
@@ -905,56 +911,24 @@ export function ReadingWorkspace({
       });
     }, 5000);
     return () => clearTimeout(timer);
-  }, [marks.length, status, coachPending, studentTurns.length, earlyPredictCue, sessionId, startCoach]);
+  }, [marks.length, status, coachPending, coachStreaming, studentTurns.length, earlyPredictCue, sessionId, startCoach]);
 
   function askFeedback() {
-    setCoachNote(null);
-    startCoach(async () => {
-      const res = await sendCoachMessage({
-        sessionId,
-        text: "",
-        mode: "activity",
-      });
-      if (res.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
-      else if (res.error) setCoachNote(res.error);
-    });
+    void streamCoach({ mode: "activity" });
   }
 
   function askCritique() {
-    setCoachNote(null);
     setConvStart(localMsgs.length);
-    startCoach(async () => {
-      const res = await sendCoachMessage({
-        sessionId,
-        text: "",
-        mode: "critique",
-      });
-      if (res.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
-      else if (res.error) setCoachNote(res.error);
-    });
+    void streamCoach({ mode: "critique" });
   }
 
   function askCheck() {
-    setCoachNote(null);
     setConvStart(localMsgs.length);
-    startCoach(async () => {
-      const res = await sendCoachMessage({
-        sessionId,
-        text: "",
-        mode: "check",
-      });
-      if (res.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
-      else if (res.error) setCoachNote(res.error);
-    });
+    void streamCoach({ mode: "check" });
   }
 
   function askSelfExplain(mode: "predict" | "hidden") {
-    setCoachNote(null);
-    startCoach(async () => {
-      const res = await sendCoachMessage({ sessionId, text: "", mode });
-      if (res.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
-      else if (res.error) setCoachNote(res.error);
-    });
+    void streamCoach({ mode });
   }
 
   function annoText(a?: AnnotationData | null): string {
@@ -1394,29 +1368,85 @@ export function ReadingWorkspace({
     });
   }
 
+  async function streamCoach(opts: {
+    text?: string;
+    mode?: "activity" | "critique" | "check" | "predict" | "hidden";
+    hint?: boolean;
+  }) {
+    const text = (opts.text ?? "").trim();
+    setCoachNote(null);
+    const now = () => new Date().toISOString();
+    if (text && !opts.hint) {
+      setLocalMsgs((m) => [
+        ...m,
+        { id: "temp-s-" + Date.now(), role: "student", content: text, created_at: now() },
+      ]);
+    }
+    setCoachStreaming(true);
+    const aid = "stream-" + Date.now();
+    let appended = false;
+    const put = (content: string) =>
+      setLocalMsgs((m) => {
+        if (!appended) {
+          appended = true;
+          return [...m, { id: aid, role: "agent", content, created_at: now() }];
+        }
+        return m.map((x) => (x.id === aid ? { ...x, content } : x));
+      });
+    try {
+      const res = await fetch("/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, text, mode: opts.mode, hint: opts.hint }),
+      });
+      const ct = res.headers.get("Content-Type") ?? "";
+      if (ct.includes("application/json")) {
+        const j = await res.json();
+        if (j && j.needsKey) {
+          setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
+          setCoachStreaming(false);
+          return;
+        }
+      }
+      if (!res.ok || !res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let acc = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += dec.decode(value, { stream: true });
+        if (acc.trim()) put(acc);
+      }
+      if (!acc.trim() && appended)
+        setLocalMsgs((m) => m.filter((x) => x.id !== aid));
+    } catch {
+      const r = await sendCoachMessage({
+        sessionId,
+        text,
+        mode: opts.mode,
+        hint: opts.hint,
+      });
+      if (r.needsKey) setCoachNote("AI 코치를 켜려면 API 키가 필요해요.");
+      else if (r.error) setCoachNote(r.error);
+      else if (r.reply) put(r.reply);
+    } finally {
+      setCoachStreaming(false);
+    }
+  }
+
+
   function sendCoach(hint: boolean) {
     const text = draft.trim();
     if (!hint && !text) return;
-    if (!hint && text) setSeCue(false);
-    setCoachNote(null);
     if (!hint && text) {
-      setLocalMsgs((m) => [
-        ...m,
-        {
-          id: "temp-" + Date.now(),
-          role: "student",
-          content: text,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      setSeCue(false);
       setDraft("");
     }
-    startCoach(async () => {
-      const res = await sendCoachMessage({ sessionId, text, hint });
-      if (res.needsKey)
-        setCoachNote("AI 코치를 켜려면 API 키가 필요해요. (설명은 저장됐어요)");
-      else if (res.error) setCoachNote(res.error);
-    });
+    // 확인/관점 단계의 답은 해당 mode로 보내야 결정적 문항 진행·관점 프롬프트가 동작
+    const mode =
+      phase === "check" ? "check" : phase === "critique" ? "critique" : undefined;
+    void streamCoach({ text, hint, mode });
   }
 
   const toolHint = () => {
@@ -1653,7 +1683,7 @@ export function ReadingWorkspace({
 
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-              {localMsgs.slice(convStart).length === 0 && !coachPending && (
+              {localMsgs.slice(convStart).length === 0 && !coachPending && !coachStreaming && (
                 <p className="text-sm text-gray-400">
                   코치가 곧 질문을 띄울 거예요…
                 </p>
@@ -1712,7 +1742,7 @@ export function ReadingWorkspace({
                   </div>
                 </div>
               ))}
-              {coachPending && (
+              {(coachPending || coachStreaming) && (
                 <p className="text-xs text-gray-400">생각 중이에요…</p>
               )}
             </div>

@@ -289,3 +289,44 @@ export async function checkFeedback(args: {
     return { error: e instanceof Error ? e.message : "check_feedback_failed" };
   }
 }
+
+/**
+ * 스트리밍 응답에는 JSON(area)이 없으므로, 응답 후 '어려움 영역'을 따로 가볍게 분류한다.
+ * (활동/일반 대화에서만 진단 저장에 사용)
+ */
+export async function classifyArea(args: {
+  passageText: string;
+  marksText: string;
+  studentMessage: string;
+  agentMessage: string;
+}): Promise<string | null> {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const sys =
+    "학생의 독해 어려움이 어느 과정에서 큰지 하나로만 분류하세요: " +
+    "key_info(핵심정보 확인)·inference(추론)·viewpoint(관점 평가)·relation(관계 연결). 뚜렷하지 않으면 none. " +
+    'JSON으로만: {"area":"key_info|inference|viewpoint|relation|none"}';
+  const user =
+    "[지문 일부]\n" + args.passageText.slice(0, 1200) +
+    "\n\n[학생 표시]\n" + (args.marksText || "(없음)") +
+    "\n\n[학생 말]\n" + (args.studentMessage || "(없음)") +
+    "\n\n[코치 말]\n" + args.agentMessage;
+  try {
+    const res = await getOpenAI().chat.completions.create({
+      model: MODEL_DEFAULT(),
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: user },
+      ],
+      temperature: 0,
+      max_tokens: 20,
+      response_format: { type: "json_object" },
+    });
+    const p = JSON.parse(res.choices[0]?.message?.content ?? "{}");
+    const a = String(p.area ?? "").trim();
+    return ["key_info", "inference", "viewpoint", "relation"].includes(a)
+      ? a
+      : null;
+  } catch {
+    return null;
+  }
+}
