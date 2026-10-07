@@ -276,31 +276,27 @@ export async function sendCoachMessage(input: {
     });
   }
 
-  // 2) 컨텍스트 수집
-  const { data: session } = await supabase
-    .from("sessions")
-    .select("passage_id")
-    .eq("id", input.sessionId)
-    .single();
-  const { data: passage } = await supabase
-    .from("passages")
-    .select("title")
-    .eq("id", session?.passage_id ?? "")
-    .single();
-  const { data: paragraphs } = await supabase
-    .from("passage_paragraphs")
-    .select("id, seq, text")
-    .eq("passage_id", session?.passage_id ?? "")
-    .order("seq", { ascending: true });
-  const { data: annos } = await supabase
-    .from("annotations")
-    .select("id, paragraph_id, type, span_start, span_end, target_ref, from_ref, relation_type")
-    .eq("session_id", input.sessionId);
-  const { data: history } = await supabase
-    .from("agent_messages")
-    .select("role, content, created_at")
-    .eq("session_id", input.sessionId)
-    .order("created_at", { ascending: true });
+  // 2) 컨텍스트 수집 — session-독립 쿼리는 먼저 병렬로, passage 의존 쿼리는 그다음 병렬로
+  const [{ data: session }, { data: annos }, { data: history }] = await Promise.all([
+    supabase.from("sessions").select("passage_id").eq("id", input.sessionId).single(),
+    supabase
+      .from("annotations")
+      .select("id, paragraph_id, type, span_start, span_end, target_ref, from_ref, relation_type")
+      .eq("session_id", input.sessionId),
+    supabase
+      .from("agent_messages")
+      .select("role, content, created_at")
+      .eq("session_id", input.sessionId)
+      .order("created_at", { ascending: true }),
+  ]);
+  const [{ data: passage }, { data: paragraphs }] = await Promise.all([
+    supabase.from("passages").select("title").eq("id", session?.passage_id ?? "").single(),
+    supabase
+      .from("passage_paragraphs")
+      .select("id, seq, text")
+      .eq("passage_id", session?.passage_id ?? "")
+      .order("seq", { ascending: true }),
+  ]);
 
   const paraText = new Map<string, string>();
   for (const p of paragraphs ?? []) paraText.set(p.id, p.text);
@@ -754,6 +750,4 @@ export async function deleteFreehand(
   id: string,
   sessionId: string,
 ): Promise<void> {
-  const { supabase } = await requireOwnedSession(sessionId);
-  await supabase.from("freehand_strokes").delete().eq("id", id);
-}
+  const { supabase } = await requir
