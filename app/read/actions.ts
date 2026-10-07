@@ -432,6 +432,9 @@ export async function sendCoachMessage(input: {
   // 2.5) 독해 확인: 교사 문항을 '한 문항씩 그대로' 결정적으로 제시(모든 학생 동일)
   if (input.mode === "check" && checkItems.length > 0) {
     const NL = String.fromCharCode(10);
+    const total = checkItems.length;
+    const numbered = (i: number) =>
+      "(" + (i + 1) + "/" + total + ") " + checkItems[i].q;
     const agentMsgs = (history ?? [])
       .filter((h) => h.role === "agent")
       .map((h) => h.content ?? "");
@@ -442,8 +445,8 @@ export async function sendCoachMessage(input: {
 
     let agentText: string;
     if (askedMax < 0) {
-      // 시작: 첫 문항 그대로
-      agentText = checkItems[0].q;
+      // 시작: 첫 문항(번호 붙여 그대로)
+      agentText = numbered(0);
     } else {
       // 학생이 방금 askedMax 문항에 답함 → 피드백만 생성(문항 텍스트는 교사 것 그대로)
       let fb = "";
@@ -472,11 +475,11 @@ export async function sendCoachMessage(input: {
         const next = askedMax + 1;
         agentText =
           next < checkItems.length
-            ? pre + checkItems[next].q
+            ? pre + numbered(next)
             : pre + "독해 확인 문항을 모두 마쳤어요. 아래 ‘독해 확인 완료 → 결과’를 눌러 결과를 확인해요.";
       } else {
         // 오답 1회차 → 같은 교사 문항을 다시(힌트 포함)
-        agentText = pre + "다시 한 번 생각해 볼까요?" + NL + NL + checkItems[askedMax].q;
+        agentText = pre + "다시 한 번 생각해 볼까요?" + NL + NL + numbered(askedMax);
       }
     }
     await supabase.from("agent_messages").insert({

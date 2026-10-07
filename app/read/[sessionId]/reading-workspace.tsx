@@ -533,6 +533,8 @@ export function ReadingWorkspace({
     | "done"
   >(null);
   const [showBody, setShowBody] = useState(false);
+  // 확인/관점 각 단계 대화만 보여주기 위한 시작 인덱스(단계 전환 시 갱신)
+  const [convStart, setConvStart] = useState(0);
   const [scores, setScores] = useState<{
     fact?: number;
     inference?: number;
@@ -917,6 +919,7 @@ export function ReadingWorkspace({
 
   function askCritique() {
     setCoachNote(null);
+    setConvStart(messages.length);
     startCoach(async () => {
       const res = await sendCoachMessage({
         sessionId,
@@ -930,6 +933,7 @@ export function ReadingWorkspace({
 
   function askCheck() {
     setCoachNote(null);
+    setConvStart(messages.length);
     startCoach(async () => {
       const res = await sendCoachMessage({
         sessionId,
@@ -1635,12 +1639,12 @@ export function ReadingWorkspace({
 
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-              {messages.length === 0 && !coachPending && (
+              {messages.slice(convStart).length === 0 && !coachPending && (
                 <p className="text-sm text-gray-400">
                   코치가 곧 질문을 띄울 거예요…
                 </p>
               )}
-              {messages.slice(-12).map((m) => (
+              {messages.slice(convStart).slice(-12).map((m) => (
                 <div
                   key={m.id}
                   className={m.role === "agent" ? "flex" : "flex flex-row-reverse"}
@@ -2593,20 +2597,15 @@ function RelationArrows({
         const tx = tr.x + tr.w / 2 - wr.left;
         const ty = tr.y - wr.top;
         const mx = (fx + tx) / 2;
-        const my = (fy + ty) / 2;
         const dx = tx - fx;
         const dy = ty - fy;
         const len = Math.hypot(dx, dy) || 1;
-        const off = Math.min(48, len * 0.35) + 10;
-        let px = -dy / len;
-        let py = dx / len;
-        if (py > 0) {
-          px = -px;
-          py = -py;
-        }
-        const cx = mx + px * off;
-        const cy = my + py * off;
-        const d = `M ${fx.toFixed(1)} ${(fy - 3).toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${tx.toFixed(1)} ${(ty - 3).toFixed(1)}`;
+        // 두 표시 윗부분을 완만한 호로 잇는다(항상 위로, 높이는 거리에 비례하되 과하지 않게)
+        const topY = Math.min(fy, ty);
+        const bow = Math.max(12, Math.min(34, len * 0.2));
+        const cx = mx;
+        const cy = topY - bow;
+        const d = `M ${fx.toFixed(1)} ${(fy - 2).toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${tx.toFixed(1)} ${(ty - 2).toFixed(1)}`;
         const rt = r.relation_type;
         const dir: ArrowDir =
           rt === "cause_effect" || rt === "process"
