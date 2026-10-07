@@ -23,6 +23,7 @@ import {
   reopenSession,
   scoreSessionAction,
 } from "../actions";
+import { signout } from "@/app/login/actions";
 
 export type ParagraphData = { id: string; seq: number; text: string };
 export type CoachTurn = {
@@ -529,6 +530,7 @@ export function ReadingWorkspace({
     | "check_score"
     | "critique"
     | "critique_score"
+    | "done"
   >(null);
   const [showBody, setShowBody] = useState(false);
   const [scores, setScores] = useState<{
@@ -1491,22 +1493,36 @@ export function ReadingWorkspace({
                     관점 평가 시작 →
                   </button>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setPhase(null)}
-                      className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                    >
-                      ← 읽기로
-                    </button>
-                    <Link
-                      href="/read"
-                      className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
-                    >
-                      목록으로
-                    </Link>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => setPhase("done")}
+                    className="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-rose-700"
+                  >
+                    학습 완료 →
+                  </button>
                 )}
+              </div>
+            </div>
+          )}
+          {phase === "done" && (
+            <div className="mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-6 px-6 py-10 text-center">
+              <span className="grid h-20 w-20 place-items-center rounded-full bg-emerald-100 text-4xl dark:bg-emerald-950">🎉</span>
+              <div>
+                <h2 className="text-2xl font-bold">학습을 모두 마쳤어요!</h2>
+                <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                  표시 · 독해 확인 · 관점 평가까지 모두 끝냈어요.
+                  <br />오늘도 수고 많았어요!
+                </p>
+              </div>
+              <div className="flex w-full flex-col gap-2">
+                <Link href="/dashboard" className="rounded-xl bg-amber-700 px-5 py-3 text-sm font-medium text-white hover:bg-amber-800">
+                  홈으로 돌아가기
+                </Link>
+                <form action={signout} className="w-full">
+                  <button type="submit" className="w-full rounded-xl border border-gray-300 px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                    종료하기
+                  </button>
+                </form>
               </div>
             </div>
           )}
