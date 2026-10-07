@@ -72,16 +72,13 @@ export type CoachContext = {
   attempt?: number;
 };
 
-export async function runCoach(
-  ctx: CoachContext,
-): Promise<
-  | { message: string; area: string | null; model: string; tokens: number }
-  | { error: string }
-> {
-  if (!process.env.OPENAI_API_KEY) {
-    return { error: "no_key" };
-  }
+type ChatMsg = { role: "system" | "user" | "assistant"; content: string };
 
+// 프롬프트(messages)와 모델만 만든다 — 스트리밍/비스트리밍이 공유
+export function buildCoachPrompt(ctx: CoachContext): {
+  messages: ChatMsg[];
+  model: string;
+} {
   const activity = ctx.mode === "activity";
   const critique = ctx.mode === "critique";
   const check = ctx.mode === "check";
@@ -209,6 +206,20 @@ ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
     step: check || critique || (!activity && ctx.relations.length > 0) ? "S2" : "S1",
     attempt: ctx.attempt ?? 0,
   });
+
+  return { messages, model };
+}
+
+export async function runCoach(
+  ctx: CoachContext,
+): Promise<
+  | { message: string; area: string | null; model: string; tokens: number }
+  | { error: string }
+> {
+  if (!process.env.OPENAI_API_KEY) {
+    return { error: "no_key" };
+  }
+  const { messages, model } = buildCoachPrompt(ctx);
 
   try {
     const res = await getOpenAI().chat.completions.create({
