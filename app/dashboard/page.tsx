@@ -231,7 +231,7 @@ export default async function DashboardPage() {
           >
             <span className="text-base">✏️</span>
             <span>
-              처음이신가요? <b>표시(밑줄·동그라미) 연습</b>을 먼저 해보세요
+              처음이신가요? <b>읽기 도구(밑줄·관계·예측) 사용법</b>을 먼저 익혀 보세요
             </span>
             <span className="ml-auto">&rarr;</span>
           </Link>
