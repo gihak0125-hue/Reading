@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getOpenAI, pickModel } from "@/lib/openai";
+import { getOpenAI, pickModel, MODEL_DEFAULT } from "@/lib/openai";
 
 /**
  * AI 읽기 코치. 설계원리.md(교육학 헌법)를 시스템 프롬프트로 이식한다.
@@ -234,5 +234,47 @@ ${ctx.hintRequested ? "[학생이 힌트를 요청했습니다]" : ""}`;
     return { message, area, model, tokens: res.usage?.total_tokens ?? 0 };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "coach_failed" };
+  }
+}
+
+/**
+ * 독해 확인 — 학생 답에 대한 짧은 피드백/정오 판정만 생성한다.
+ * 질문 텍스트는 교사 문항을 그대로 쓰므로(모든 학생 동일) 여기서 만들지 않는다.
+ */
+export async function checkFeedback(args: {
+  passageText: string;
+  question: string;
+  modelAnswer: string;
+  studentAnswer: string;
+}): Promise<{ correct: boolean; feedback: string } | { error: string }> {
+  if (!process.env.OPENAI_API_KEY) return { error: "no_key" };
+  const sys =
+    "당신은 고등학교 독해 확인 문항의 채점·피드백 도우미입니다. 학생의 답을 모범답안 가이드와 비교해 간단히 피드백하세요.\n" +
+    "- 정답(모범답안)을 그대로 알려주지 마세요. 2문장 이내, 따뜻한 말투.\n" +
+    "- 맞았으면 짧게 확인해 주고, 틀렸거나 부족하면 어느 부분·문장을 다시 보면 좋을지 단서 하나만 주세요.\n" +
+    'JSON으로만 출력: {"correct": true|false, "feedback": "..."}';
+  const user =
+    "[지문]\n" + args.passageText + "\n\n[문항]\n" + args.question +
+    "\n[모범답안 가이드 — 비공개]\n" + (args.modelAnswer || "(없음)") +
+    "\n\n[학생 답]\n" + args.studentAnswer;
+  try {
+    const res = await getOpenAI().chat.completions.create({
+      model: MODEL_DEFAULT(),
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: user },
+      ],
+      temperature: 0.3,
+      max_tokens: 200,
+      response_format: { type: "json_object" },
+    });
+    const p = JSON.parse(res.choices[0]?.message?.content ?? "{}");
+    const feedback =
+      typeof p.feedback === "string" && p.feedback.trim()
+        ? p.feedback.trim()
+        : "좋아요, 다음으로 가볼게요.";
+    return { correct: !!p.correct, feedback };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "check_feedback_failed" };
   }
 }

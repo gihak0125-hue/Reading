@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSessionProfile } from "@/lib/auth";
-import { runCoach } from "@/lib/agent/coach";
+import { runCoach, checkFeedback } from "@/lib/agent/coach";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const REL_KO: Record<string, string> = {
@@ -426,6 +426,65 @@ export async function sendCoachMessage(input: {
 
   // 활동 기반 피드백인데 표시·관계가 하나도 없으면 조용히 넘어간다
   if (input.mode === "activity" && marks.length === 0 && relations.length === 0) {
+    return {};
+  }
+
+  // 2.5) 독해 확인: 교사 문항을 '한 문항씩 그대로' 결정적으로 제시(모든 학생 동일)
+  if (input.mode === "check" && checkItems.length > 0) {
+    const NL = String.fromCharCode(10);
+    const agentMsgs = (history ?? [])
+      .filter((h) => h.role === "agent")
+      .map((h) => h.content ?? "");
+    const occ = (q: string) => agentMsgs.filter((m) => m.includes(q)).length;
+    let askedMax = -1;
+    for (let i = 0; i < checkItems.length; i++)
+      if (occ(checkItems[i].q) > 0) askedMax = i;
+
+    let agentText: string;
+    if (askedMax < 0) {
+      // 시작: 첫 문항 그대로
+      agentText = checkItems[0].q;
+    } else {
+      // 학생이 방금 askedMax 문항에 답함 → 피드백만 생성(문항 텍스트는 교사 것 그대로)
+      let fb = "";
+      let correct = true;
+      if (text) {
+        const r = await checkFeedback({
+          passageText,
+          question: checkItems[askedMax].q,
+          modelAnswer: checkItems[askedMax].a,
+          studentAnswer: text,
+        });
+        if ("error" in r) {
+          if (r.error === "no_key") {
+            revalidatePath(`/read/${input.sessionId}`);
+            return { needsKey: true };
+          }
+        } else {
+          fb = r.feedback;
+          correct = r.correct;
+        }
+      }
+      const attempts = occ(checkItems[askedMax].q); // 현재 문항을 몇 번 제시했는지
+      const advance = correct || attempts >= 2 || !text;
+      const pre = fb ? fb + NL + NL : "";
+      if (advance) {
+        const next = askedMax + 1;
+        agentText =
+          next < checkItems.length
+            ? pre + checkItems[next].q
+            : pre + "독해 확인 문항을 모두 마쳤어요. 아래 ‘독해 확인 완료 → 결과’를 눌러 결과를 확인해요.";
+      } else {
+        // 오답 1회차 → 같은 교사 문항을 다시(힌트 포함)
+        agentText = pre + "다시 한 번 생각해 볼까요?" + NL + NL + checkItems[askedMax].q;
+      }
+    }
+    await supabase.from("agent_messages").insert({
+      session_id: input.sessionId,
+      role: "agent",
+      content: agentText,
+    });
+    revalidatePath(`/read/${input.sessionId}`);
     return {};
   }
 
