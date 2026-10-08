@@ -113,13 +113,6 @@ const TOOLS: { id: ToolId; label: string; glyph: string }[] = [
   { id: "erase", label: "지우기", glyph: "⌫" },
 ];
 
-const TOP_IDS: ToolId[] = [
-  "underline",
-  "circle",
-  "predictcue",
-  "freehand",
-  "erase",
-];
 const REL_IDS: ToolId[] = [
   "cause",
   "effect",
@@ -132,14 +125,19 @@ const REL_IDS: ToolId[] = [
   "contrast",
   "listing",
 ];
-// 관계 도구를 '짝/묶음'으로 그룹화 — 역할이 한눈에 보이도록
+// 상단(핵심) 도구 그룹
+const TOP_GROUPS: { label: string; ids: ToolId[] }[] = [
+  { label: "핵심 표시", ids: ["underline", "circle"] },
+  { label: "예측·필기", ids: ["predictcue", "freehand"] },
+];
+// 관계 도구: 짝(대응)끼리 묶고, 짝 없는 과정·나열은 '그 외'로 분리
 const REL_GROUPS: { label: string; ids: ToolId[] }[] = [
   { label: "인과", ids: ["cause", "effect"] },
   { label: "문제·해결", ids: ["problem", "solution"] },
   { label: "문답", ids: ["question", "answer"] },
   { label: "비교·대조", ids: ["similar", "contrast"] },
-  { label: "전개", ids: ["process", "listing"] },
 ];
+const REL_SINGLES: ToolId[] = ["process", "listing"];
 const PEN_COLORS = ["#1d4ed8", "#dc2626", "#111827", "#059669"];
 
 const REL_LABEL: Record<RelationType, string> = {
@@ -1937,37 +1935,73 @@ export function ReadingWorkspace({
 
           {showTools && (
             <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
-              <div className="flex flex-wrap gap-2">
-                {TOOLS.filter((t) => TOP_IDS.includes(t.id)).map((t) => {
-                  const active = tool === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => selectTool(t.id)}
-                      className={`flex min-w-[60px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
-                        active
-                          ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      <span className="text-base leading-none">{t.glyph}</span>
-                      {t.label}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => setShowRel((v) => !v)}
-                  className={`flex min-w-[60px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
-                    showRel || (!!tool && REL_IDS.includes(tool))
-                      ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
-                  }`}
-                >
-                  <span className="text-base leading-none">🔗</span>
-                  관계
-                </button>
+              {/* 상단: 핵심 도구를 묶음으로, 지우개는 유틸리티로 분리 */}
+              <div className="flex flex-wrap items-start gap-2">
+                {TOP_GROUPS.map((g) => (
+                  <div
+                    key={g.label}
+                    className="flex flex-col gap-1 rounded-xl bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
+                  >
+                    <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
+                      {g.label}
+                    </span>
+                    <div className="flex gap-1">
+                      {g.ids.map((id) => {
+                        const t = TOOLS.find((x) => x.id === id)!;
+                        const active = tool === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => selectTool(t.id)}
+                            className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg border px-2.5 py-2 text-xs ${
+                              active
+                                ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+                            }`}
+                          >
+                            <span className="text-base leading-none">{t.glyph}</span>
+                            {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div className="flex flex-col gap-1 rounded-xl bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900">
+                  <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
+                    연결
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowRel((v) => !v)}
+                    className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg border px-2.5 py-2 text-xs ${
+                      showRel || (!!tool && REL_IDS.includes(tool))
+                        ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    <span className="text-base leading-none">🔗</span>
+                    관계
+                  </button>
+                </div>
+                <div className="ml-auto flex flex-col gap-1 rounded-xl p-1.5">
+                  <span className="px-1 text-[10px] font-medium text-gray-400">
+                    지우기
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => selectTool("erase")}
+                    className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg border px-2.5 py-2 text-xs ${
+                      tool === "erase"
+                        ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    <span className="text-base leading-none">⌫</span>
+                    지우개
+                  </button>
+                </div>
               </div>
               {showRel && (
                 <div className="mt-2 border-t border-gray-200 pt-3 dark:border-gray-700">
@@ -2006,6 +2040,32 @@ export function ReadingWorkspace({
                         </div>
                       </div>
                     ))}
+                    <div className="flex flex-col gap-1 rounded-xl bg-white/50 p-1.5 ring-1 ring-gray-200 dark:bg-gray-950/30 dark:ring-gray-800">
+                      <span className="px-1 text-[10px] font-medium text-gray-400">
+                        그 외
+                      </span>
+                      <div className="flex gap-1">
+                        {REL_SINGLES.map((id) => {
+                          const t = TOOLS.find((x) => x.id === id)!;
+                          const active = tool === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => selectTool(t.id)}
+                              className={`flex min-w-[52px] flex-col items-center gap-1 rounded-lg border px-2.5 py-2 text-xs ${
+                                active
+                                  ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+                              }`}
+                            >
+                              <span className="text-base leading-none">{t.glyph}</span>
+                              {t.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
