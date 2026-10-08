@@ -132,6 +132,14 @@ const REL_IDS: ToolId[] = [
   "contrast",
   "listing",
 ];
+// 관계 도구를 '짝/묶음'으로 그룹화 — 역할이 한눈에 보이도록
+const REL_GROUPS: { label: string; ids: ToolId[] }[] = [
+  { label: "인과", ids: ["cause", "effect"] },
+  { label: "문제·해결", ids: ["problem", "solution"] },
+  { label: "문답", ids: ["question", "answer"] },
+  { label: "비교·대조", ids: ["similar", "contrast"] },
+  { label: "전개", ids: ["process", "listing"] },
+];
 const PEN_COLORS = ["#1d4ed8", "#dc2626", "#111827", "#059669"];
 
 const REL_LABEL: Record<RelationType, string> = {
@@ -1962,25 +1970,43 @@ export function ReadingWorkspace({
                 </button>
               </div>
               {showRel && (
-                <div className="mt-2 flex flex-wrap gap-2 border-t border-gray-200 pt-2 dark:border-gray-700">
-                  {TOOLS.filter((t) => REL_IDS.includes(t.id)).map((t) => {
-                    const active = tool === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => selectTool(t.id)}
-                        className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs ${
-                          active
-                            ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
-                        }`}
+                <div className="mt-2 border-t border-gray-200 pt-3 dark:border-gray-700">
+                  <p className="mb-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    짝지어 이해해요 · <b>표시 두 개를 이어 그으면</b> 관계가 연결돼요.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {REL_GROUPS.map((g) => (
+                      <div
+                        key={g.label}
+                        className="flex flex-col gap-1 rounded-xl bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
                       >
-                        <span className="text-base leading-none">{t.glyph}</span>
-                        {t.label}
-                      </button>
-                    );
-                  })}
+                        <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
+                          {g.label}
+                        </span>
+                        <div className="flex gap-1">
+                          {g.ids.map((id) => {
+                            const t = TOOLS.find((x) => x.id === id)!;
+                            const active = tool === t.id;
+                            return (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => selectTool(t.id)}
+                                className={`flex min-w-[52px] flex-col items-center gap-1 rounded-lg border px-2.5 py-2 text-xs ${
+                                  active
+                                    ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
+                                }`}
+                              >
+                                <span className="text-base leading-none">{t.glyph}</span>
+                                {t.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {tool === "freehand" && (
