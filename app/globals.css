@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* 다크 변형을 .dark 클래스 기반으로 고정 → .dark를 절대 붙이지 않으므로 항상 라이트(크림) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f6f1e6;
   --foreground: #3e382e;
@@ -35,15 +38,9 @@
   --color-amber-950: #2a2018;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #221e18;
-    --foreground: #ede6d8;
-  }
-}
-
 /* 일러스트 배경이 로드되기 전/뒤를 받쳐 주는 기본 바탕(웜 크림) */
 html {
+  color-scheme: light;
   background: linear-gradient(180deg, #f3ecdd 0%, #efe7d6 50%, #f6f1e6 100%);
 }
 
@@ -52,12 +49,6 @@ body {
   color: var(--foreground);
   font-family: var(--font-noto-sans-kr), var(--font-geist-sans),
     "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    background: linear-gradient(180deg, #221e18 0%, #1c1814 52%, #16120e 100%);
-  }
 }
 
 /* 지문 등 세리프 */
