@@ -130,14 +130,15 @@ const TOP_GROUPS: { label: string; ids: ToolId[] }[] = [
   { label: "핵심 표시", ids: ["underline", "circle"] },
   { label: "예측·필기", ids: ["predictcue", "freehand"] },
 ];
-// 관계 도구: 짝(대응)끼리 묶고, 짝 없는 과정·나열은 '그 외'로 분리
+// 관계 도구: 짝(대응)끼리 묶고, 나열은 독립 묶음, 짝 없는 과정은 '그 외'로 분리
 const REL_GROUPS: { label: string; ids: ToolId[] }[] = [
   { label: "인과", ids: ["cause", "effect"] },
   { label: "문제·해결", ids: ["problem", "solution"] },
   { label: "문답", ids: ["question", "answer"] },
   { label: "비교·대조", ids: ["similar", "contrast"] },
+  { label: "나열", ids: ["listing"] },
 ];
-const REL_SINGLES: ToolId[] = ["process", "listing"];
+const REL_SINGLES: ToolId[] = ["process"];
 const PEN_COLORS = ["#1d4ed8", "#dc2626", "#111827", "#059669"];
 
 const REL_LABEL: Record<RelationType, string> = {
@@ -188,7 +189,7 @@ const REL_COLOR: Record<RelationType, { box: string; accent: string }> = {
 };
 
 type PadTab = "key" | "structure" | "explain";
-type Badge = { text: string; tone: string };
+type Badge = { text: string; tone: string; relId: string };
 const TONE: Record<string, string> = {
   amber: "bg-amber-200 text-amber-900",
   green: "bg-emerald-200 text-emerald-900",
@@ -489,6 +490,28 @@ function erasedByPara(
     res.set(para, ivs);
   }
   return res;
+}
+
+/** 지우개 획이 지나간 관계 뱃지(data-rel)의 관계 id 집합. 뱃지를 문지르면 그 관계가 지워진다. */
+function relsErasedByStroke(
+  wrap: HTMLElement,
+  pts: Pt[],
+  r: number,
+): Set<string> {
+  const ids = new Set<string>();
+  const badges = [...wrap.querySelectorAll<HTMLElement>("[data-rel]")].map(
+    (el) => ({ id: el.getAttribute("data-rel")!, rect: el.getBoundingClientRect() }),
+  );
+  if (!badges.length) return ids;
+  for (const p of densifyPts(pts)) {
+    for (const b of badges) {
+      if (!b.id) continue;
+      const dx = Math.max(b.rect.left - p.x, 0, p.x - b.rect.right);
+      const dy = Math.max(b.rect.top - p.y, 0, p.y - b.rect.bottom);
+      if (Math.hypot(dx, dy) <= r) ids.add(b.id);
+    }
+  }
+  return ids;
 }
 
 /** [s,e)에서 지운 구간들을 빼고 남는 구간들을 반환. */
@@ -804,36 +827,37 @@ export function ReadingWorkspace({
       const rt = r.relation_type;
       const from = r.from_ref;
       const to = r.target_ref;
+      const rid = r.id;
       if (rt === "listing") continue;
       if (rt === "problem_solution") {
-        push(from, { text: "P", tone: "amber" });
-        push(to, { text: "S", tone: "amber" });
+        push(from, { text: "P", tone: "amber", relId: rid });
+        push(to, { text: "S", tone: "amber", relId: rid });
       } else if (rt === "question_answer") {
-        push(from, { text: "Q", tone: "green" });
-        push(to, { text: "A", tone: "green" });
+        push(from, { text: "Q", tone: "green", relId: rid });
+        push(to, { text: "A", tone: "green", relId: rid });
       } else if (rt === "cause_effect") {
-        push(from, { text: "c", tone: "blue" });
-        push(to, { text: "e", tone: "blue" });
+        push(from, { text: "c", tone: "blue", relId: rid });
+        push(to, { text: "e", tone: "blue", relId: rid });
       } else if (rt === "process") {
         n++;
-        push(from, { text: `${n}→`, tone: "blue" });
-        push(to, { text: `→${n}`, tone: "blue" });
+        push(from, { text: `${n}→`, tone: "blue", relId: rid });
+        push(to, { text: `→${n}`, tone: "blue", relId: rid });
       } else if (rt === "similarity") {
         if (!from || !to) {
-          push(from ?? to, { text: "=", tone: "sky" });
+          push(from ?? to, { text: "=", tone: "sky", relId: rid });
         } else {
           n++;
-          push(from, { text: `${n}=`, tone: "sky" });
-          push(to, { text: `${n}=`, tone: "sky" });
+          push(from, { text: `${n}=`, tone: "sky", relId: rid });
+          push(to, { text: `${n}=`, tone: "sky", relId: rid });
         }
       } else if (rt === "compare_contrast") {
         n++;
-        push(from, { text: `${n}↔`, tone: "violet" });
-        push(to, { text: `${n}↔`, tone: "violet" });
+        push(from, { text: `${n}↔`, tone: "violet", relId: rid });
+        push(to, { text: `${n}↔`, tone: "violet", relId: rid });
       } else if (rt === "elaboration") {
         n++;
-        push(from, { text: `${n}▸`, tone: "teal" });
-        push(to, { text: `▸${n}`, tone: "teal" });
+        push(from, { text: `${n}▸`, tone: "teal", relId: rid });
+        push(to, { text: `▸${n}`, tone: "teal", relId: rid });
       }
     }
     const listing = relations.filter(
@@ -842,10 +866,13 @@ export function ReadingWorkspace({
     if (listing.length) {
       const pred = new Map<string, string>();
       const nodes = new Set<string>();
+      const nodeRel = new Map<string, string>();
       for (const r of listing) {
         pred.set(r.target_ref!, r.from_ref!);
         nodes.add(r.from_ref!);
         nodes.add(r.target_ref!);
+        if (!nodeRel.has(r.from_ref!)) nodeRel.set(r.from_ref!, r.id);
+        nodeRel.set(r.target_ref!, r.id);
       }
       const orderOf = (start: string) => {
         let o = 1;
@@ -858,7 +885,12 @@ export function ReadingWorkspace({
         }
         return o;
       };
-      for (const id of nodes) push(id, { text: `${orderOf(id)}`, tone: "gray" });
+      for (const id of nodes)
+        push(id, {
+          text: `${orderOf(id)}`,
+          tone: "gray",
+          relId: nodeRel.get(id) ?? "",
+        });
     }
     return map;
   }, [relations]);
@@ -989,7 +1021,9 @@ export function ReadingWorkspace({
       setTempPath("");
       setEraser(null);
     }
-    articleRef.current?.setPointerCapture?.(e.pointerId);
+    try {
+      articleRef.current?.setPointerCapture?.(e.pointerId);
+    } catch {}
     stroke.current = {
       active: true,
       pts: [{ x: e.clientX, y: e.clientY }],
@@ -1257,11 +1291,13 @@ export function ReadingWorkspace({
         return { cx: (x1 + x2) / 2 - erect.left, top: y1 - erect.top, cy: (y1 + y2) / 2 - erect.top };
       };
       const nearPt = (ax: number, ay: number) => epts.some((e) => Math.hypot(ax - e.x, ay - e.y) <= ERASER_R + 7);
+      // 뱃지(P·S·Q·A·나열 숫자 등) 위를 지나가면 그 관계를 바로 지운다.
+      const badgeRelIds = relsErasedByStroke(wrap, pts, ERASER_R + 4);
       for (const a of annos) {
         if (a.type !== "arrow") continue;
         const fr = rectOfMark(a.from_ref);
         const tr = rectOfMark(a.target_ref);
-        let hit = false;
+        let hit = badgeRelIds.has(a.id);
         if (fr && tr) {
           const fx = fr.cx, fy = fr.top - 3, tx = tr.cx, ty = tr.top - 3;
           const mx = (fx + tx) / 2, my = (fy + ty) / 2;
@@ -2713,7 +2749,8 @@ function AnnotatedParagraph({
               <sup
                 key={k}
                 data-badge
-                className={`mx-0.5 select-none rounded px-1 text-[10px] font-bold ${
+                data-rel={b.relId || undefined}
+                className={`mx-0.5 inline-block select-none rounded px-1.5 py-0.5 text-[15px] font-bold leading-none ${
                   TONE[b.tone] ?? TONE.gray
                 }`}
               >
