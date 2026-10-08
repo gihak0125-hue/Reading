@@ -385,6 +385,32 @@ export async function saveCritiqueNote(
   return { ok: true };
 }
 
+/** 지문의 '표시 채점 루브릭'(교사 작성, 학생 비노출) 저장.
+ * 학생 표시(밑줄·동그라미·관계)를 교사 정답 기준과 비교해 채점할 때 AI가 적용. */
+export async function saveMarkingRubric(
+  passageId: string,
+  rubric: string = "",
+): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("created_by")
+    .eq("id", passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+
+  const { error } = await supabase.from("passage_marking").upsert({
+    passage_id: passageId,
+    rubric: rubric.trim() || null,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { error: `저장 실패: ${error.message}` };
+
+  revalidatePath(`/teacher/${passageId}`);
+  return { ok: true };
+}
+
 export type CheckQuestionsInput = {
   detail_q: string;
   detail_a: string;

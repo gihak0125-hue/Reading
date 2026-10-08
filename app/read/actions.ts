@@ -631,7 +631,7 @@ export async function scoreSessionAction(
   let rubric = "";
   const paraIds = (paragraphs ?? []).map((p) => p.id);
   if (svc && session.passage_id && paraIds.length) {
-    const [{ data: ki }, { data: kr }, { data: cn }, { data: pcr }] =
+    const [{ data: ki }, { data: kr }, { data: cn }, { data: pcr }, { data: pmr }] =
       await Promise.all([
       svc
         .from("passage_key_info")
@@ -653,6 +653,11 @@ export async function scoreSessionAction(
         .select("rubric")
         .eq("passage_id", session.passage_id)
         .maybeSingle(),
+      svc
+        .from("passage_marking")
+        .select("rubric")
+        .eq("passage_id", session.passage_id)
+        .maybeSingle(),
     ]);
     keyInfos = (ki ?? [])
       .map((k) => {
@@ -670,7 +675,13 @@ export async function scoreSessionAction(
     const cnr = cn as { note?: string; rubric?: string } | null;
     critiqueNote = (cnr?.note ?? "").trim();
     const checkRubric = ((pcr as { rubric?: string } | null)?.rubric ?? "").trim();
-    rubric = stage === "critique" ? (cnr?.rubric ?? "").trim() : checkRubric;
+    const markingRubric = ((pmr as { rubric?: string } | null)?.rubric ?? "").trim();
+    rubric =
+      stage === "critique"
+        ? (cnr?.rubric ?? "").trim()
+        : stage === "reading"
+          ? markingRubric
+          : checkRubric;
   }
 
   const passageText = (paragraphs ?? []).map((p) => p.text).join("\n\n");
