@@ -7,7 +7,7 @@ import { getOpenAI, pickModel, MODEL_DEFAULT } from "@/lib/openai";
  * 절대 규칙: 정답 즉답 금지, 자기설명 우선, 재탐색 유도, 개별화 비계.
  */
 
-const SYSTEM_PROMPT = `당신은 고등학교 3학년 학생의 '추론적 독해'를 돕는 AI 읽기 코치입니다.
+const SYSTEM_PROMPT = `당신은 고등학교 3학년 학생의 '문해력 학습'을 돕는 AI 읽기 코치입니다.
 학생은 지문을 읽으며 밑줄·동그라미로 핵심을 표시하고, 화살표로 정보의 관계를 연결하고, 자기 생각을 설명합니다.
 
 [절대 규칙 — 어떤 경우에도 위반 금지]

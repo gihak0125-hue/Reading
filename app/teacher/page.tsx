@@ -18,7 +18,7 @@ export default async function TeacherPage() {
         <div>
           <h1 className="text-2xl font-bold">지문 관리</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            추론적 독해 지문을 등록하고 핵심정보를 태깅합니다.
+            문해력 학습 지문을 등록하고 핵심정보를 태깅합니다.
           </p>
         </div>
         <div className="flex gap-2">

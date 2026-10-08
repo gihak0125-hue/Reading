@@ -45,7 +45,7 @@ export default function Home() {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-10 px-6 py-12 sm:py-16">
       <header className="flex min-h-[52vh] max-w-xl flex-col justify-center gap-5">
         <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-medium text-sky-800 shadow-sm backdrop-blur-sm dark:bg-gray-950/70 dark:text-sky-300">
-          고등학교 3학년 · 추론적 독해 AI 코치
+          고등학교 3학년 · 문해력 학습 AI 코치
         </p>
         <h1 className="text-4xl font-bold leading-tight tracking-tight text-gray-800 drop-shadow-sm dark:text-gray-100 sm:text-5xl">
           읽고 생각하는 힘,
