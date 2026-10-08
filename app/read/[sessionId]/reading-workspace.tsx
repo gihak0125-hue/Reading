@@ -452,18 +452,22 @@ function erasedByPara(
   r: number,
 ): Map<string, [number, number][]> {
   const byPara = new Map<string, Set<number>>();
+  // 지우개 원(반경 r, 포인터 중심)이 실제로 덮는 영역을 원형 격자로 촘촘히 훑는다.
+  const probes: Pt[] = [];
+  const step = r / 3;
+  for (let dy = -r; dy <= r + 0.001; dy += step)
+    for (let dx = -r; dx <= r + 0.001; dx += step)
+      if (dx * dx + dy * dy <= r * r) probes.push({ x: dx, y: dy });
   for (const p of densifyPts(pts)) {
-    for (const dy of [0, -8, -14]) {
-      for (const dx of [-r, -r * 0.5, 0, r * 0.5, r]) {
-        const h = paraOffsetAtPoint(wrap, p.x + dx, p.y + dy);
-        if (!h) continue;
-        let set = byPara.get(h.paraId);
-        if (!set) {
-          set = new Set();
-          byPara.set(h.paraId, set);
-        }
-        set.add(h.offset);
+    for (const o of probes) {
+      const h = paraOffsetAtPoint(wrap, p.x + o.x, p.y + o.y);
+      if (!h) continue;
+      let set = byPara.get(h.paraId);
+      if (!set) {
+        set = new Set();
+        byPara.set(h.paraId, set);
       }
+      set.add(h.offset);
     }
   }
   const res = new Map<string, [number, number][]>();
@@ -606,9 +610,16 @@ export function ReadingWorkspace({
   const seRef = useRef({ predict: false, hidden: false, at: 0, off: false });
 
   const articleRef = useRef<HTMLDivElement>(null);
-  const stroke = useRef<{ active: boolean; pts: Pt[] }>({
+  const stroke = useRef<{
+    active: boolean;
+    pts: Pt[];
+    pointerId: number;
+    pointerType: string;
+  }>({
     active: false,
     pts: [],
+    pointerId: -1,
+    pointerType: "",
   });
   const [tempPath, setTempPath] = useState("");
   const [eraser, setEraser] = useState<{ x: number; y: number } | null>(null);
@@ -962,13 +973,35 @@ export function ReadingWorkspace({
 
   function onPointerDown(e: React.PointerEvent) {
     if (!tool) return;
+    const s = stroke.current;
+    // 이미 획을 그리는 중이면 손바닥·두 번째 손가락은 무시한다.
+    // 단, 펜이 들어오면 진행 중이던 손가락/손바닥 획을 버리고 펜을 우선한다.
+    if (s.active) {
+      const penPreemptsTouch =
+        e.pointerType === "pen" && s.pointerType !== "pen";
+      if (!penPreemptsTouch) {
+        e.preventDefault();
+        return;
+      }
+      try {
+        articleRef.current?.releasePointerCapture?.(s.pointerId);
+      } catch {}
+      setTempPath("");
+      setEraser(null);
+    }
     articleRef.current?.setPointerCapture?.(e.pointerId);
-    stroke.current = { active: true, pts: [{ x: e.clientX, y: e.clientY }] };
+    stroke.current = {
+      active: true,
+      pts: [{ x: e.clientX, y: e.clientY }],
+      pointerId: e.pointerId,
+      pointerType: e.pointerType,
+    };
     setMsg(null);
     e.preventDefault();
   }
   function onPointerMove(e: React.PointerEvent) {
-    if (!stroke.current.active) return;
+    if (!stroke.current.active || e.pointerId !== stroke.current.pointerId)
+      return;
     stroke.current.pts.push({ x: e.clientX, y: e.clientY });
     const wr = articleRef.current?.getBoundingClientRect();
     if (!wr) return;
@@ -984,10 +1017,11 @@ export function ReadingWorkspace({
       .join(" ");
     setTempPath(d);
   }
-  function onPointerUp() {
-    if (!stroke.current.active) return;
+  function onPointerUp(e: React.PointerEvent) {
+    if (!stroke.current.active || e.pointerId !== stroke.current.pointerId)
+      return;
     const pts = stroke.current.pts;
-    stroke.current = { active: false, pts: [] };
+    stroke.current = { active: false, pts: [], pointerId: -1, pointerType: "" };
     setTempPath("");
     setEraser(null);
     handleStroke(pts);
