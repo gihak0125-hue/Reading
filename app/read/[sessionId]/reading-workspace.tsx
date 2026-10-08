@@ -1673,7 +1673,7 @@ export function ReadingWorkspace({
                   <p className="mb-2 text-xs font-semibold text-gray-400">본문</p>
                   <div className="space-y-3 text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">
                     {paragraphs.map((p) => (
-                      <p key={p.id} className="whitespace-pre-wrap">
+                      <p key={p.id} className="font-serif-kr whitespace-pre-wrap">
                         {p.text}
                       </p>
                     ))}
@@ -2559,7 +2559,7 @@ function AnnotatedParagraph({
   return (
     <p
       data-para-id={paragraphId}
-      className="whitespace-pre-wrap text-[17px] leading-9 text-gray-800 dark:text-gray-100"
+      className="font-serif-kr whitespace-pre-wrap text-[17px] leading-9 text-gray-800 dark:text-gray-100"
     >
       {runs.map((r, i) => {
         const cls = [

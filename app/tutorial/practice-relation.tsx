@@ -367,7 +367,7 @@ export function PracticeRelation() {
         style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none", cursor: "crosshair" }}
         className="relative rounded-2xl border border-gray-200 bg-white p-6 text-lg leading-loose text-gray-800 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100"
       >
-        <p data-para className="whitespace-pre-wrap">{segs}</p>
+        <p data-para className="font-serif-kr whitespace-pre-wrap">{segs}</p>
         <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
           {geo.map((g) => (
             <g key={g.id}>

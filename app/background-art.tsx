@@ -15,7 +15,7 @@ export function BackgroundArt() {
       className="pointer-events-none fixed inset-0 -z-10 select-none"
     >
       {/* 폴백: 포근한 톤 */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#e7eef4] via-[#eef0ea] to-[#f4ede1] dark:from-[#0b1120] dark:via-[#0a0f1a] dark:to-[#0a0e16]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#f3ecdd] via-[#efe7d6] to-[#f6f1e6] dark:from-[#221e18] dark:via-[#1c1814] dark:to-[#16120e]" />
       {/* 배경 그림 (public/bg.webp) — 데이터 화면에서는 흐리게 */}
       <div
         className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500 ${
@@ -27,8 +27,8 @@ export function BackgroundArt() {
       <div
         className={`absolute inset-0 transition-colors duration-500 ${
           showcase
-            ? "bg-white/35 dark:bg-gray-950/55"
-            : "bg-white/75 dark:bg-gray-950/80"
+            ? "bg-[#f6f1e6]/30 dark:bg-[#1c1814]/55"
+            : "bg-[#efe7d6]/82 dark:bg-[#1c1814]/82"
         }`}
       />
     </div>

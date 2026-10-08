@@ -271,7 +271,7 @@ export function PracticePredict() {
         style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none", cursor: phase === "mark" ? "crosshair" : "default" }}
         className="relative rounded-2xl border border-gray-200 bg-white p-6 text-lg leading-loose text-gray-800 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100"
       >
-        <p data-para className="whitespace-pre-wrap">{segs}</p>
+        <p data-para className="font-serif-kr whitespace-pre-wrap">{segs}</p>
         {path && (
           <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
             <path d={path} fill="none" stroke={tool === "erase" ? "#9ca3af" : "#8b5cf6"} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.6} />

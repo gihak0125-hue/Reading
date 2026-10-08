@@ -341,7 +341,7 @@ export function PracticeMarking() {
         style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none", cursor: "crosshair" }}
         className="relative rounded-2xl border border-gray-200 bg-white p-6 text-lg leading-loose text-gray-800 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100"
       >
-        <p data-para className="whitespace-pre-wrap">
+        <p data-para className="font-serif-kr whitespace-pre-wrap">
           {segs}
         </p>
         {path && (
