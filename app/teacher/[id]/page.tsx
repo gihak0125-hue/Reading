@@ -88,8 +88,6 @@ export default async function PassageDetailPage({
         </div>
       </header>
 
-      <AiSuggest passageId={passage.id} />
-
       <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
         각 문단에서 <b>중심화제</b>·<b>핵심문장</b>을 드래그로 선택하고 버튼을
         누르면, 학생 진단의 <b>정답 기준</b>으로 저장됩니다. (AI 분석으로 자동
@@ -108,6 +106,8 @@ export default async function PassageDetailPage({
           />
         ))}
       </div>
+
+      <AiSuggest passageId={passage.id} />
 
       <MarkingRubric
         passageId={passage.id}
