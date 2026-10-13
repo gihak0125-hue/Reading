@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getOpenAI, MODEL_TEACHER } from "@/lib/openai";
+import { getOpenAI, MODEL_TEACHER, tokenParams } from "@/lib/openai";
 
 /**
  * 지문 분석: 문단별 핵심문장·중심화제와 문장 간 관계를 추천한다.
@@ -84,12 +84,12 @@ export async function analyzePassage(
   }
   messages.push({ role: "user", content: `제목: ${title}\n\n${body}` });
   try {
+    const teacherModel = MODEL_TEACHER(); // 교사 보조는 교사 전용(최상위) 모델
     const res = await getOpenAI().chat.completions.create({
-      model: MODEL_TEACHER(), // 교사 보조는 교사 전용(최상위) 모델
+      model: teacherModel,
       messages,
-      temperature: 0.2,
       response_format: { type: "json_object" },
-      max_tokens: 1500,
+      ...tokenParams(teacherModel, 1500, 0.2),
     });
     const raw = res.choices[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw) as {
@@ -145,15 +145,15 @@ async function runJsonAnalysis(
   if (!process.env.OPENAI_API_KEY) return { error: "no_key" };
   const body = paragraphs.map((p) => `[${p.seq}문단] ${p.text}`).join("\n\n");
   try {
+    const teacherModel = MODEL_TEACHER();
     const res = await getOpenAI().chat.completions.create({
-      model: MODEL_TEACHER(),
+      model: teacherModel,
       messages: [
         { role: "system", content: system },
         { role: "user", content: `제목: ${title}\n\n${body}` },
       ],
-      temperature: 0.3,
       response_format: { type: "json_object" },
-      max_tokens: maxTokens,
+      ...tokenParams(teacherModel, maxTokens, 0.3),
     });
     return JSON.parse(res.choices[0]?.message?.content ?? "{}") as Record<
       string,

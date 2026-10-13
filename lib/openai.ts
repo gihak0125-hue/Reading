@@ -41,6 +41,22 @@ export const MODEL_TEACHER = () =>
   (process.env.OPENAI_MODEL_TEACHER || "").trim() || MODEL_ESCALATION();
 
 /**
+ * 모델별 토큰·온도 파라미터를 맞춰준다(스프레드해서 사용).
+ * GPT-5·o 계열은 `max_tokens` 대신 `max_completion_tokens`만 받고, temperature는 기본값(1)만 허용.
+ * 그 외(gpt-4o 등)는 기존대로 `max_tokens` + 커스텀 temperature.
+ */
+export function tokenParams(
+  model: string,
+  maxTokens: number,
+  temperature = 1,
+): Record<string, number> {
+  const restricted = /^(gpt-5|o[0-9])/i.test(model);
+  return restricted
+    ? { max_completion_tokens: maxTokens }
+    : { max_tokens: maxTokens, temperature };
+}
+
+/**
  * 승급 여부 판단.
  * 복잡한 추론 진단(S2 관계 연결 / S3 구조 추론) 또는 반복 실패 시 상위 모델 사용.
  */
