@@ -435,32 +435,57 @@ export function PracticeMarking() {
       )}
       {showIntro && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <style>{`@keyframes introUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}`}</style>
+          <style>{`
+            @keyframes introUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+            @keyframes introDraw{0%{stroke-dashoffset:var(--l);opacity:0}16%{opacity:1}52%{stroke-dashoffset:0;opacity:1}86%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+            @keyframes introDot{0%,100%{opacity:.25}50%{opacity:1}}
+            @keyframes introBar{0%{transform:scaleY(.18)}45%{transform:scaleY(1)}78%{transform:scaleY(1)}100%{transform:scaleY(.18)}}
+            @keyframes introBob{0%,100%{transform:translate(0,0) rotate(-8deg)}50%{transform:translate(2px,-2px) rotate(-8deg)}}
+          `}</style>
           <div className="coach-pop flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-gray-900">
             <div>
               <p className="text-xs font-medium text-amber-700 dark:text-amber-300">AI 문해력 코치</p>
               <h2 className="mt-1 text-xl font-bold text-gray-800 dark:text-gray-100">읽기, 이렇게 해요</h2>
             </div>
             <ol className="flex flex-col gap-3 text-left">
-              {[
-                { n: "①", t: "읽으며 표시", d: "밑줄·동그라미·관계로 핵심을 손으로 짚어요", bg: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300" },
-                { n: "②", t: "AI 코치의 도움", d: "막히면 정답 대신 질문과 힌트로 도와줘요", bg: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" },
-                { n: "③", t: "점수로 성장 확인", d: "사실·추론·비판 점수로 내 읽기를 돌아봐요", bg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300" },
-              ].map((s, i) => (
-                <li
-                  key={s.n}
-                  className="flex items-start gap-3"
-                  style={{ animation: "introUp .4s ease-out both", animationDelay: `${i * 0.12}s` }}
-                >
-                  <span className={"grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold " + s.bg}>
-                    {s.n}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100">{s.t}</span>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">{s.d}</span>
-                  </span>
-                </li>
-              ))}
+              <li className="flex items-center gap-3" style={{ animation: "introUp .4s ease-out both" }}>
+                <svg viewBox="0 0 44 44" className="h-12 w-12 shrink-0 rounded-xl bg-rose-50 dark:bg-rose-950/50" aria-hidden>
+                  <line x1="9" y1="19" x2="35" y2="19" stroke="#fb7185" strokeWidth="3" strokeLinecap="round" strokeDasharray="26" style={{ ["--l"]: 26, animation: "introDraw 2.8s ease-in-out infinite" } as React.CSSProperties} />
+                  <line x1="9" y1="28" x2="27" y2="28" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeDasharray="18" style={{ ["--l"]: 18, animation: "introDraw 2.8s ease-in-out infinite", animationDelay: ".5s" } as React.CSSProperties} />
+                  <g style={{ transformOrigin: "33px 14px", animation: "introBob 1.1s ease-in-out infinite" }}>
+                    <path d="M31 10l4 4-9 9-5 1 1-5z" fill="#f59e0b" stroke="#b9770f" strokeWidth="1.3" strokeLinejoin="round" />
+                  </g>
+                </svg>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100">읽으며 표시</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">밑줄·동그라미·관계로 핵심을 손으로 짚어요</span>
+                </span>
+              </li>
+              <li className="flex items-center gap-3" style={{ animation: "introUp .4s ease-out both", animationDelay: ".12s" }}>
+                <svg viewBox="0 0 44 44" className="h-12 w-12 shrink-0 rounded-xl bg-amber-50 dark:bg-amber-950/50" aria-hidden>
+                  <rect x="7" y="12" width="30" height="18" rx="7" fill="#fffbeb" stroke="#f59e0b" strokeWidth="2" />
+                  <path d="M14 30l-2 5 7-4z" fill="#fffbeb" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round" />
+                  <circle cx="16" cy="21" r="2.2" fill="#f59e0b" style={{ animation: "introDot 1.2s ease-in-out infinite" }} />
+                  <circle cx="22" cy="21" r="2.2" fill="#f59e0b" style={{ animation: "introDot 1.2s ease-in-out infinite", animationDelay: ".2s" }} />
+                  <circle cx="28" cy="21" r="2.2" fill="#f59e0b" style={{ animation: "introDot 1.2s ease-in-out infinite", animationDelay: ".4s" }} />
+                </svg>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100">AI 코치의 도움</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">막히면 정답 대신 질문과 힌트로 도와줘요</span>
+                </span>
+              </li>
+              <li className="flex items-center gap-3" style={{ animation: "introUp .4s ease-out both", animationDelay: ".24s" }}>
+                <svg viewBox="0 0 44 44" className="h-12 w-12 shrink-0 rounded-xl bg-emerald-50 dark:bg-emerald-950/50" aria-hidden>
+                  <line x1="8" y1="34" x2="36" y2="34" stroke="#a7f3d0" strokeWidth="1.5" />
+                  <rect x="11" y="14" width="6" height="19" rx="2" fill="#34d399" style={{ transformBox: "fill-box", transformOrigin: "bottom", animation: "introBar 2.6s ease-in-out infinite" }} />
+                  <rect x="20" y="14" width="6" height="19" rx="2" fill="#10b981" style={{ transformBox: "fill-box", transformOrigin: "bottom", animation: "introBar 2.6s ease-in-out infinite", animationDelay: ".25s" }} />
+                  <rect x="29" y="14" width="6" height="19" rx="2" fill="#059669" style={{ transformBox: "fill-box", transformOrigin: "bottom", animation: "introBar 2.6s ease-in-out infinite", animationDelay: ".5s" }} />
+                </svg>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100">점수로 성장 확인</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">사실·추론·비판 점수로 내 읽기를 돌아봐요</span>
+                </span>
+              </li>
             </ol>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               먼저 <b>표시하는 법</b>부터 3단계로 연습해 볼게요.
