@@ -674,6 +674,7 @@ export function ReadingWorkspace({
   const seRef = useRef({ predict: false, hidden: false, at: 0, off: false });
 
   const articleRef = useRef<HTMLDivElement>(null);
+  const reviewBodyRef = useRef<HTMLDivElement>(null);
   const stroke = useRef<{
     active: boolean;
     pts: Pt[];
@@ -1794,7 +1795,12 @@ export function ReadingWorkspace({
                   <p className="mb-2 text-xs font-semibold text-gray-400">
                     본문 · 내가 표시한 그대로
                   </p>
-                  <div className="space-y-4">
+                  <div ref={reviewBodyRef} className="relative space-y-4">
+                    <RelationArrows
+                      containerRef={reviewBodyRef}
+                      relations={arrowRelations}
+                      depKey={arrowDepKey + "|review|" + (showBody ? "1" : "0")}
+                    />
                     {paragraphs.map((p) => (
                       <AnnotatedParagraph
                         key={p.id}
