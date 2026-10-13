@@ -1791,12 +1791,18 @@ export function ReadingWorkspace({
             <div className="flex min-h-0 flex-1 flex-col md:flex-row">
               {showBody && (
                 <div className="min-h-0 flex-1 overflow-y-auto border-b border-gray-200 px-5 py-4 md:border-b-0 md:border-r dark:border-gray-800">
-                  <p className="mb-2 text-xs font-semibold text-gray-400">본문</p>
-                  <div className="space-y-3 text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">
+                  <p className="mb-2 text-xs font-semibold text-gray-400">
+                    본문 · 내가 표시한 그대로
+                  </p>
+                  <div className="space-y-4">
                     {paragraphs.map((p) => (
-                      <p key={p.id} className="font-serif-kr whitespace-pre-wrap">
-                        {p.text}
-                      </p>
+                      <AnnotatedParagraph
+                        key={p.id}
+                        paragraphId={p.id}
+                        text={p.text}
+                        annos={renderMarks.filter((a) => a.paragraph_id === p.id)}
+                        badgesByMark={badgesByMark}
+                      />
                     ))}
                   </div>
                 </div>
