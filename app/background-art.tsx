@@ -14,21 +14,21 @@ export function BackgroundArt() {
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-10 select-none"
     >
-      {/* 폴백: 포근한 톤 */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#f3ecdd] via-[#efe7d6] to-[#f6f1e6] dark:from-[#221e18] dark:via-[#1c1814] dark:to-[#16120e]" />
-      {/* 배경 그림 (public/bg.webp) — 데이터 화면에서는 흐리게 */}
+      {/* 폴백: 밝은 크림(레퍼런스 톤) */}
+      <div className="absolute inset-0 bg-[#faf9f4] dark:bg-[#16120e]" />
+      {/* 배경 그림 (public/bg.webp) — 랜딩·로그인에서만, 데이터 화면은 깔끔한 크림 */}
       <div
         className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500 ${
-          showcase ? "opacity-100" : "opacity-20"
+          showcase ? "opacity-100" : "opacity-0"
         }`}
         style={{ backgroundImage: "url('/bg.webp')" }}
       />
-      {/* 가독성 레이어: 데이터 화면은 더 진하게 */}
+      {/* 가독성 레이어: 랜딩은 은은한 스크림, 데이터 화면은 크림 유지 */}
       <div
         className={`absolute inset-0 transition-colors duration-500 ${
           showcase
-            ? "bg-[#f6f1e6]/30 dark:bg-[#1c1814]/55"
-            : "bg-[#efe7d6]/82 dark:bg-[#1c1814]/82"
+            ? "bg-[#faf9f4]/25 dark:bg-[#1c1814]/55"
+            : "bg-transparent"
         }`}
       />
     </div>

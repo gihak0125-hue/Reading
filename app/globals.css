@@ -4,17 +4,17 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f6f1e6;
-  --foreground: #3e382e;
+  --background: #faf9f4;
+  --foreground: #1f2925;
 
-  /* 시안 팔레트 (warm neutral / cream + clay) */
-  --cream: #f6f1e6;
-  --cream-soft: #fbf7ed;
-  --sand: #ece3d0;
-  --warm-border: #e2d9c6;
-  --clay: #c2694a;
-  --clay-ink: #9a4e30;
-  --warm-sub: #7a7161;
+  /* 시안 팔레트 (크림 + 세이지그린, 레퍼런스 기준) */
+  --cream: #faf9f4;
+  --cream-soft: #fff4e5;
+  --sand: #f1efe6;
+  --warm-border: #eae9e3;
+  --clay: #286b55;
+  --clay-ink: #1f5544;
+  --warm-sub: #767d78;
 }
 
 @theme inline {
@@ -24,24 +24,24 @@
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-noto-serif-kr), Georgia, serif;
 
-  /* amber 스케일을 웜 크림 → 클레이로 리맵: 앱 전역 포인트색을 한 번에 전환 */
-  --color-amber-50: #fbf7ed;
-  --color-amber-100: #ece3d0;
-  --color-amber-200: #e2d9c6;
-  --color-amber-300: #d8cdb6;
-  --color-amber-400: #d69b72;
-  --color-amber-500: #c2694a;
-  --color-amber-600: #b05b3e;
-  --color-amber-700: #9a4e30;
-  --color-amber-800: #7e3f27;
-  --color-amber-900: #3a2e22;
-  --color-amber-950: #2a2018;
+  /* amber 스케일을 세이지그린으로 리맵: 앱 전역 포인트색을 한 번에 전환(#286B55) */
+  --color-amber-50: #eef5f0;
+  --color-amber-100: #ddefe6;
+  --color-amber-200: #c9e4d5;
+  --color-amber-300: #a6d1bd;
+  --color-amber-400: #6cb195;
+  --color-amber-500: #3d8f6e;
+  --color-amber-600: #286b55;
+  --color-amber-700: #1f5544;
+  --color-amber-800: #1a4537;
+  --color-amber-900: #16362b;
+  --color-amber-950: #0f241d;
 }
 
-/* 일러스트 배경이 로드되기 전/뒤를 받쳐 주는 기본 바탕(웜 크림) */
+/* 기본 바탕(크림) — 레퍼런스의 밝은 크림 톤 */
 html {
   color-scheme: light;
-  background: linear-gradient(180deg, #f3ecdd 0%, #efe7d6 50%, #f6f1e6 100%);
+  background: #faf9f4;
 }
 
 body {
