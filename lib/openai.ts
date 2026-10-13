@@ -42,17 +42,23 @@ export const MODEL_TEACHER = () =>
 
 /**
  * 모델별 토큰·온도 파라미터를 맞춰준다(스프레드해서 사용).
- * GPT-5·o 계열은 `max_tokens` 대신 `max_completion_tokens`만 받고, temperature는 기본값(1)만 허용.
+ * GPT-5·o 계열은:
+ *  - `max_tokens` 대신 `max_completion_tokens`만 받고, temperature는 기본값(1)만 허용.
+ *  - 내부 '추론 토큰'이 출력 예산을 잠식하므로 한도를 넉넉히 주고(reasoning가 먹어도 출력이 남게),
+ *    구조적 추출 작업엔 reasoning_effort를 'low'로 낮춰 추론 토큰 낭비·비용을 줄인다.
  * 그 외(gpt-4o 등)는 기존대로 `max_tokens` + 커스텀 temperature.
  */
 export function tokenParams(
   model: string,
   maxTokens: number,
   temperature = 1,
-): Record<string, number> {
+): Record<string, number | string> {
   const restricted = /^(gpt-5|o[0-9])/i.test(model);
   return restricted
-    ? { max_completion_tokens: maxTokens }
+    ? {
+        max_completion_tokens: Math.max(maxTokens * 4, 8000),
+        reasoning_effort: "low",
+      }
     : { max_tokens: maxTokens, temperature };
 }
 
