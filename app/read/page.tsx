@@ -3,6 +3,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { startSession } from "./actions";
 import { StartButton } from "./start-button";
 import { CATEGORIES, CATEGORY_IDS } from "@/lib/categories";
+import { StudentSidebar } from "@/app/dashboard/student-sidebar";
 
 const CAT_STYLE: Record<string, { bar: string; chip: string }> = {
   humanities: {
@@ -102,7 +103,9 @@ export default async function ReadListPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-5 py-10">
+    <div className="flex min-h-full w-full flex-1">
+      <StudentSidebar />
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-5 py-10">
       <header className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">읽을 지문 고르기</h1>
@@ -175,6 +178,7 @@ export default async function ReadListPage() {
           </ul>
         </section>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
