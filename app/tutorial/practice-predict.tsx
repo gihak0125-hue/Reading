@@ -110,6 +110,7 @@ export function PracticePredict() {
   const idRef = useRef(0);
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({ active: false, pts: [] });
   const [path, setPath] = useState("");
+  const [showDemo, setShowDemo] = useState(true);
 
   function say(next: string | null) { setMsg(next); setChangeKey((v) => v + 1); }
   function reset() {
@@ -249,6 +250,13 @@ export function PracticePredict() {
         <div className="flex flex-wrap gap-2">
           {toolBtn("cue", "예측단서", "🔮")}
           {toolBtn("erase", "지우개", "⌫")}
+          <button
+            type="button"
+            onClick={() => setShowDemo(true)}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            ▶ 예시 다시 보기
+          </button>
           <button type="button" onClick={reset} className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
             다시 하기
           </button>
@@ -303,6 +311,44 @@ export function PracticePredict() {
         </Link>
       </div>
 
+      {showDemo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowDemo(false)}
+        >
+          <style>{`
+            @keyframes gdCue {0%{stroke-dashoffset:210;opacity:1}40%{stroke-dashoffset:0}85%{stroke-dashoffset:0;opacity:1}100%{opacity:0}}
+            @keyframes gdQ {0%,55%{opacity:0;transform:scale(0.6)}70%{opacity:1;transform:scale(1)}90%{opacity:1}100%{opacity:0}}
+          `}</style>
+          <div
+            className="coach-pop flex w-full max-w-sm flex-col items-center gap-3 rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+              이렇게 단서를 찾아요
+            </p>
+            <svg viewBox="0 0 280 130" className="w-full max-w-[260px]" aria-hidden>
+              <text x="24" y="44" fontSize="14" fill="#9ca3af" className="font-serif-kr">… 다만 그 양상은 차이가 있었다.</text>
+              <line x1="24" y1="52" x2="232" y2="52" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="210" style={{ animation: "gdCue 3.8s ease-in-out infinite" }} />
+              <g style={{ transformOrigin: "150px 92px", animation: "gdQ 3.8s ease-in-out infinite" }}>
+                <rect x="96" y="76" width="108" height="30" rx="15" fill="#f5f3ff" stroke="#8b5cf6" strokeWidth="1.5" />
+                <text x="150" y="96" textAnchor="middle" fontSize="13" fill="#7c3aed">다음 내용은?</text>
+              </g>
+            </svg>
+            <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+              다음 내용을 <b className="text-violet-500">예고하는 단서</b>(흐름을 바꾸는 말 ‘다만’, 예고 표현 ‘차이가 있었다’)에{" "}
+              <b className="text-violet-500">🔮 예측단서</b>로 밑줄 → <b>다음 내용</b>을 예측해요.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDemo(false)}
+              className="mt-1 w-full rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+            >
+              직접 해볼게요 &rarr;
+            </button>
+          </div>
+        </div>
+      )}
       {celebrate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="coach-pop flex w-full max-w-xs flex-col items-center gap-3 rounded-3xl bg-white p-7 text-center shadow-2xl dark:bg-gray-900">

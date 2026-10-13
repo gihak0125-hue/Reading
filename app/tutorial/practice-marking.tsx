@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Pt = { x: number; y: number };
 type Mark = { id: number; type: "underline" | "circle"; start: number; end: number };
@@ -120,6 +120,18 @@ export function PracticeMarking() {
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({ active: false, pts: [] });
   const [path, setPath] = useState("");
   const [showDemo, setShowDemo] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("tutorial_intro_v1")) setShowIntro(true);
+    } catch {}
+  }, []);
+  function closeIntro() {
+    setShowIntro(false);
+    try {
+      localStorage.setItem("tutorial_intro_v1", "1");
+    } catch {}
+  }
 
   function down(e: React.PointerEvent) {
     ref.current?.setPointerCapture?.(e.pointerId);
@@ -417,6 +429,48 @@ export function PracticeMarking() {
               className="mt-1 w-full rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
             >
               직접 해볼게요 &rarr;
+            </button>
+          </div>
+        </div>
+      )}
+      {showIntro && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <style>{`@keyframes introUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}`}</style>
+          <div className="coach-pop flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-gray-900">
+            <div>
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-300">AI 문해력 코치</p>
+              <h2 className="mt-1 text-xl font-bold text-gray-800 dark:text-gray-100">읽기, 이렇게 해요</h2>
+            </div>
+            <ol className="flex flex-col gap-3 text-left">
+              {[
+                { n: "①", t: "읽으며 표시", d: "밑줄·동그라미·관계로 핵심을 손으로 짚어요", bg: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300" },
+                { n: "②", t: "AI 코치의 도움", d: "막히면 정답 대신 질문과 힌트로 도와줘요", bg: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" },
+                { n: "③", t: "점수로 성장 확인", d: "사실·추론·비판 점수로 내 읽기를 돌아봐요", bg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300" },
+              ].map((s, i) => (
+                <li
+                  key={s.n}
+                  className="flex items-start gap-3"
+                  style={{ animation: "introUp .4s ease-out both", animationDelay: `${i * 0.12}s` }}
+                >
+                  <span className={"grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold " + s.bg}>
+                    {s.n}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100">{s.t}</span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">{s.d}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              먼저 <b>표시하는 법</b>부터 3단계로 연습해 볼게요.
+            </p>
+            <button
+              type="button"
+              onClick={closeIntro}
+              className="w-full rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+            >
+              시작하기 &rarr;
             </button>
           </div>
         </div>

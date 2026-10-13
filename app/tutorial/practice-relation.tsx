@@ -143,6 +143,8 @@ export function PracticeRelation() {
   const idRef = useRef(0);
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({ active: false, pts: [] });
   const [path, setPath] = useState("");
+  const [showDemo, setShowDemo] = useState(true);
+  const [showRel, setShowRel] = useState(false);
 
   const contrastDone = relations.length > 0;
   const commonDone = commonMarkId != null;
@@ -153,7 +155,7 @@ export function PracticeRelation() {
   }
   function reset() {
     setMarks([]); setRelations([]); setCommonMarkId(null);
-    setCelebrate(null); setTool("underline"); say(null);
+    setCelebrate(null); setTool("underline"); setShowRel(false); say(null);
   }
 
   function measure() {
@@ -235,8 +237,8 @@ export function PracticeRelation() {
       setMarks(next);
       const hasSg = next.some((x) => markRegion(x) === "sg");
       const hasJd = next.some((x) => markRegion(x) === "jd");
-      if (hasSg && hasJd && !contrastDone) say("좋아요! 이제 ‘↔ 차이점’ 도구로 밑줄 친 두 부분(측생 쪽 ↔ 정단 쪽)을 이어 보세요.");
-      else if (markRegion(m) === "cm" && !commonDone) say("좋아요! 공통점은 ‘= 공통점’ 도구로 그 문장을 눌러 표시해요.");
+      if (hasSg && hasJd && !contrastDone) { setShowRel(true); say("좋아요! 이제 ‘🔗 관계 → ↔ 차이점’ 도구로 밑줄 친 두 부분(측생 쪽 ↔ 정단 쪽)을 이어 보세요."); }
+      else if (markRegion(m) === "cm" && !commonDone) { setShowRel(true); say("좋아요! 공통점은 ‘🔗 관계 → = 공통점’ 도구로 그 문장을 눌러 표시해요."); }
       else say("비교할 부분에 밑줄을 그어요. 두 조직의 다른 점(위치·하는 일)을 찾아 밑줄!");
       return;
     }
@@ -348,14 +350,37 @@ export function PracticeRelation() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {toolBtn("underline", "밑줄", "▁")}
-        {toolBtn("contrast", "차이점(↔)", "↔")}
-        {toolBtn("similar", "공통점(=)", "=")}
-        {toolBtn("erase", "지우개", "⌫")}
-        <button type="button" onClick={reset} className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-          다시 하기
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2">
+          {toolBtn("underline", "밑줄", "▁")}
+          <button
+            type="button"
+            onClick={() => setShowRel((v) => !v)}
+            className={"flex min-w-[88px] flex-col items-center gap-0.5 rounded-lg border px-3 py-2 text-xs " + (showRel || tool === "contrast" || tool === "similar" ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-950")}
+          >
+            <span className="text-base leading-none">🔗</span>관계
+          </button>
+          {toolBtn("erase", "지우개", "⌫")}
+          <button
+            type="button"
+            onClick={() => setShowDemo(true)}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            ▶ 예시 다시 보기
+          </button>
+          <button type="button" onClick={reset} className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+            다시 하기
+          </button>
+        </div>
+        {showRel && (
+          <div className="flex flex-wrap gap-2 rounded-xl bg-amber-50/60 p-2 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900">
+            <span className="w-full px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
+              관계 — 두 밑줄을 이어요
+            </span>
+            {toolBtn("contrast", "차이점(↔)", "↔")}
+            {toolBtn("similar", "공통점(=)", "=")}
+          </div>
+        )}
       </div>
 
       <div
@@ -395,6 +420,49 @@ export function PracticeRelation() {
         </Link>
       </div>
 
+      {showDemo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowDemo(false)}
+        >
+          <style>{`
+            @keyframes gdU1 {0%{stroke-dashoffset:120;opacity:1}22%{stroke-dashoffset:0}86%{stroke-dashoffset:0;opacity:1}100%{opacity:0}}
+            @keyframes gdU2 {0%{stroke-dashoffset:120;opacity:1}24%{stroke-dashoffset:120}46%{stroke-dashoffset:0}86%{stroke-dashoffset:0;opacity:1}100%{opacity:0}}
+            @keyframes gdConn {0%{stroke-dashoffset:140;opacity:1}48%{stroke-dashoffset:140}80%{stroke-dashoffset:0}90%{opacity:1}100%{opacity:0}}
+            @keyframes gdBadge {0%,62%{opacity:0}78%{opacity:1}92%{opacity:1}100%{opacity:0}}
+          `}</style>
+          <div
+            className="coach-pop flex w-full max-w-sm flex-col items-center gap-3 rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+              이렇게 두 곳을 이어요
+            </p>
+            <svg viewBox="0 0 280 150" className="w-full max-w-[260px]" aria-hidden>
+              <text x="24" y="40" fontSize="14" fill="#9ca3af" className="font-serif-kr">측생 분열 조직 — 부피 생장</text>
+              <line x1="24" y1="48" x2="140" y2="48" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="120" style={{ animation: "gdU1 4s ease-in-out infinite" }} />
+              <text x="24" y="116" fontSize="14" fill="#9ca3af" className="font-serif-kr">정단 분열 조직 — 길이 생장</text>
+              <line x1="24" y1="124" x2="140" y2="124" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="120" style={{ animation: "gdU2 4s ease-in-out infinite" }} />
+              <path d="M140 48 Q194 86 140 124" fill="none" stroke="#f43f5e" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="140" style={{ animation: "gdConn 4s ease-in-out infinite" }} />
+              <g style={{ animation: "gdBadge 4s ease-in-out infinite" }}>
+                <circle cx="176" cy="86" r="12" fill="#fff" stroke="#f43f5e" strokeWidth="1.5" />
+                <text x="176" y="91" textAnchor="middle" fontSize="14" fontWeight="700" fill="#e11d48">↔</text>
+              </g>
+            </svg>
+            <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+              비교할 두 곳에 <b className="text-blue-500">▁ 밑줄</b>을 긋고,{" "}
+              <b className="text-amber-600">🔗 관계</b>에서 <b className="text-rose-500">↔ 차이점</b>으로 두 밑줄을 이어요. 공통점은 <b className="text-emerald-500">=</b>.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDemo(false)}
+              className="mt-1 w-full rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+            >
+              직접 해볼게요 &rarr;
+            </button>
+          </div>
+        </div>
+      )}
       {celebrate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="coach-pop flex w-full max-w-xs flex-col items-center gap-3 rounded-3xl bg-white p-7 text-center shadow-2xl dark:bg-gray-900">
