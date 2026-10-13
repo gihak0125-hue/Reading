@@ -605,19 +605,32 @@ export function ReadingWorkspace({
     return Math.max(180, Math.round((needed * 1.5) / 10) * 10); // ×1.5, 최소 3분, 10초 단위
   }, [paragraphs, difficulty]);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
+  const [paused, setPaused] = useState(false);
+  const dKey = `reading_deadline_${sessionId}`;
+  const pKey = `reading_paused_${sessionId}`;
   useEffect(() => {
     if (status === "completed") {
       setRemainingSec(null);
       return;
     }
-    const key = `reading_deadline_${sessionId}`;
+    // 정지 상태(현 세션 또는 저장된 값)면 카운트다운 멈추고 남은 시간만 표시
+    let frozen: number | null = null;
+    try {
+      const pv = localStorage.getItem(pKey);
+      if (pv != null && !Number.isNaN(Number(pv))) frozen = Number(pv);
+    } catch {}
+    if (paused || frozen != null) {
+      if (!paused) setPaused(true);
+      if (frozen != null) setRemainingSec(Math.max(0, frozen));
+      return;
+    }
     let deadline = 0;
     try {
-      const saved = localStorage.getItem(key);
+      const saved = localStorage.getItem(dKey);
       deadline = saved ? Number(saved) : 0;
       if (!deadline || Number.isNaN(deadline)) {
         deadline = Date.now() + budgetSec * 1000;
-        localStorage.setItem(key, String(deadline));
+        localStorage.setItem(dKey, String(deadline));
       }
     } catch {
       deadline = Date.now() + budgetSec * 1000;
@@ -627,7 +640,24 @@ export function ReadingWorkspace({
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [sessionId, budgetSec, status]);
+  }, [sessionId, budgetSec, status, paused, dKey, pKey]);
+  function toggleTimer() {
+    if (!paused) {
+      // 정지: 남은 시간 저장
+      try {
+        localStorage.setItem(pKey, String(remainingSec ?? budgetSec));
+      } catch {}
+      setPaused(true);
+    } else {
+      // 다시시작: 남은 시간으로 마감시각 재설정
+      const rem = remainingSec ?? budgetSec;
+      try {
+        localStorage.removeItem(pKey);
+        localStorage.setItem(dKey, String(Date.now() + rem * 1000));
+      } catch {}
+      setPaused(false);
+    }
+  }
   const timeFrac =
     remainingSec == null ? 1 : Math.max(0, Math.min(1, remainingSec / budgetSec));
   const timeBarColor =
@@ -1484,10 +1514,12 @@ export function ReadingWorkspace({
     fetchScore("reading");
   }
   function handleReopen() {
-    // 다시 읽기: 시간 제한을 새로 시작하도록 저장된 마감시각 제거
+    // 다시 읽기: 시간 제한을 새로 시작하도록 저장된 마감시각·정지 상태 제거
     try {
       localStorage.removeItem(`reading_deadline_${sessionId}`);
+      localStorage.removeItem(`reading_paused_${sessionId}`);
     } catch {}
+    setPaused(false);
     startTransition(async () => {
       await reopenSession(sessionId);
     });
@@ -2066,7 +2098,7 @@ export function ReadingWorkspace({
         <div className="flex shrink-0 items-center gap-2">
           {status !== "completed" && remainingSec != null && (
             <div
-              className="flex items-center gap-1.5"
+              className={`flex items-center gap-1.5 ${paused ? "opacity-50" : ""}`}
               title="난이도·분량에 맞춘 권장 시간"
             >
               <span
@@ -2076,7 +2108,7 @@ export function ReadingWorkspace({
                     : "text-red-600 dark:text-red-400"
                 }`}
               >
-                ⏱ {fmtTime(remainingSec)}
+                {paused ? "⏸" : "⏱"} {fmtTime(remainingSec)}
               </span>
               <div className="h-2 w-14 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800 sm:w-24">
                 <div
@@ -2085,6 +2117,16 @@ export function ReadingWorkspace({
                 />
               </div>
             </div>
+          )}
+          {status !== "completed" && remainingSec != null && (
+            <button
+              type="button"
+              onClick={toggleTimer}
+              title={paused ? "타이머 다시 시작" : "타이머 정지"}
+              className="rounded-full border border-gray-300 px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              {paused ? "▶ 다시시작" : "⏸ 정지"}
+            </button>
           )}
           {status === "completed" ? (
             <button
