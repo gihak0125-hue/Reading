@@ -172,7 +172,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[80vh] w-full max-w-2xl flex-1 flex-col justify-center gap-8 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-10">
       <header className="flex items-start justify-between gap-4">
         <div>
           <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
@@ -232,7 +232,9 @@ export default async function DashboardPage() {
           ))}
         </section>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
+          <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
+          <div className="flex flex-col gap-5 lg:col-span-2">
           <Link
             href="/tutorial"
             className="group flex items-center gap-4 rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-amber-100 to-amber-50 px-5 py-4 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-600 dark:from-amber-950 dark:to-amber-950/50"
@@ -277,7 +279,8 @@ export default async function DashboardPage() {
             </Link>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          </div>
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-3 rounded-2xl border border-white/70 bg-white/85 p-5 shadow-sm dark:border-white/10 dark:bg-gray-950/80">
               <span className="text-xs font-medium text-gray-400">오늘의 지문</span>
               {recommend ? (
@@ -354,6 +357,7 @@ export default async function DashboardPage() {
                 완료한 읽기 {doneCount}개
               </p>
             </div>
+          </div>
           </div>
 
           <Link
