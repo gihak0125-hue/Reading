@@ -2086,6 +2086,40 @@ export function ReadingWorkspace({
         </div>
       </header>
 
+      {/* 전체 학습 흐름 안내(순서 강제 아님, 길잡이) */}
+      <div className="border-b border-gray-100 bg-white/80 dark:border-gray-900 dark:bg-gray-950/80">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-1.5 gap-y-1 px-4 py-2">
+          {[
+            { label: "읽으며 표시", active: status !== "completed", done: status === "completed" },
+            { label: "독해 확인", active: false, done: false },
+            { label: "관점 평가", active: false, done: false },
+          ].map((s, i, arr) => (
+            <div key={s.label} className="flex items-center gap-1.5">
+              <span
+                className={
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium " +
+                  (s.active
+                    ? "bg-amber-600 text-white"
+                    : s.done
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500")
+                }
+              >
+                <span className="text-[11px] opacity-80">{i + 1}</span>
+                {s.label}
+                {s.done && " ✓"}
+              </span>
+              {i < arr.length - 1 && (
+                <span className="text-gray-300 dark:text-gray-600">→</span>
+              )}
+            </div>
+          ))}
+          <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-500">
+            순서는 자유예요 · 길잡이
+          </span>
+        </div>
+      </div>
+
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row lg:items-start">
         <section className="relative flex-1 rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           {pending && (
