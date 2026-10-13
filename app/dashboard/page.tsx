@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signout } from "@/app/login/actions";
 import { startSession } from "@/app/read/actions";
 import { SubmitButton } from "@/app/submit-button";
-import { ADMIN_EMAIL } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
 import { CATEGORY_LABEL } from "@/lib/categories";
 
 function Svg({ children }: { children: ReactNode }) {
@@ -88,7 +88,7 @@ export default async function DashboardPage() {
   const role = profile?.role ?? "student";
   const name = profile?.display_name ?? user.email;
   const isTeacher = role === "teacher";
-  const isAdmin = (user.email ?? "").toLowerCase() === ADMIN_EMAIL;
+  const isAdmin = isAdminEmail(user.email);
   const isPendingTeacher = !isTeacher && profile?.teacher_status === "pending";
 
   const cards: CardDef[] = isTeacher
