@@ -57,6 +57,14 @@ const IconClass = (
     <path d="M20 20a5 5 0 0 0-4-4.9" />
   </Svg>
 );
+// 튜토리얼(읽기 도구 연습) — 펜 + 밑줄(앱의 핵심 동작) 아이콘
+const IconLearn = (
+  <Svg>
+    <path d="M16.5 3a2.12 2.12 0 0 1 3 3L9 16.5 4.5 18 6 13.5 16.5 3Z" />
+    <path d="M14 5.5l4.5 4.5" />
+    <path d="M4 21h11" />
+  </Svg>
+);
 
 const CAT_BAR: Record<string, string> = {
   humanities: "bg-rose-400",
@@ -229,8 +237,8 @@ export default async function DashboardPage() {
             href="/tutorial"
             className="group flex items-center gap-4 rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-amber-100 to-amber-50 px-5 py-4 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-600 dark:from-amber-950 dark:to-amber-950/50"
           >
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-amber-500 text-2xl text-white shadow">
-              ✏️
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-amber-500 text-white shadow">
+              {IconLearn}
             </span>
             <span className="min-w-0">
               <span className="flex flex-wrap items-center gap-2 text-base font-bold text-amber-900 dark:text-amber-100">
