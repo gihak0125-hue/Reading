@@ -192,3 +192,37 @@ export async function suggestCheckQuestions(
     },
   };
 }
+
+// ===== 채점 루브릭 AI 추천 (교사 보조) =====
+
+export type RubricKind = "marking" | "critique" | "check";
+
+const RUBRIC_SYSTEM: Record<RubricKind, string> = {
+  marking: `당신은 고등학교 문해력 학습의 '표시 채점 루브릭'을 제안하는 교사 보조입니다.
+학생이 지문을 읽으며 남긴 표시(밑줄=핵심문장, 동그라미=중심화제, 화살표=문장·문단 관계)를 교사의 정답 기준과 비교해 0~100점으로 채점할 때 쓸 간결한 루브릭을 제안하세요.
+- 배점 항목 3~5개로 나누고 배점 합이 100이 되게 하세요. (예: 중심화제 동그라미 정확 30 · 핵심문장 밑줄 40 · 문단 간 관계 연결 30)
+- 이 지문에서 특히 중요한 관계 유형(인과·대조·문제해결 등)이 있으면 항목에 반영하세요.
+- 표시 '개수'가 아니라 '중요한 핵심을 정확히 짚고 적절히 연결했는지'로 평가하도록 쓰세요.
+한국어 개조식 3~6줄. JSON으로만: {"rubric":"..."}`,
+  critique: `당신은 고등학교 '비판적 독해(관점 평가)' 채점 루브릭을 제안하는 교사 보조입니다.
+학생이 읽은 뒤 나눈 '관점 평가' 대화를 0~100점으로 채점할 기준을 제안하세요.
+- 배점 항목 3~4개, 합 100. (예: 판단 기준의 명료성 40 · 한 관점으로 다른 관점 비판 40 · 글의 근거 인용 20)
+- '어느 쪽이 옳다'가 아니라 '기준을 분명히 세우고 근거에 일관되게 적용했는지'를 평가하도록.
+한국어 개조식 3~5줄. JSON으로만: {"rubric":"..."}`,
+  check: `당신은 고등학교 문해력 '독해 확인(세부·중심·추론)' 채점 루브릭을 제안하는 교사 보조입니다.
+학생의 세부·중심·추론 문답 답변을 0~100점으로 채점할 기준을 제안하세요.
+- 세부/중심/추론 세 영역의 배점과 각 영역에서 '무엇을 맞혀야 득점인지'를 간결히.
+- 배점 합 100. (예: 세부 정확 30 · 중심 요지 파악 40 · 추론 타당성 30)
+한국어 개조식 3~5줄. JSON으로만: {"rubric":"..."}`,
+};
+
+export async function suggestRubric(
+  kind: RubricKind,
+  title: string,
+  paragraphs: { seq: number; text: string }[],
+): Promise<{ rubric: string } | { error: string }> {
+  const r = await runJsonAnalysis(RUBRIC_SYSTEM[kind], title, paragraphs, 1200);
+  if ("error" in r) return r as { error: string };
+  const rubric = typeof r.rubric === "string" ? r.rubric.trim() : "";
+  return { rubric };
+}

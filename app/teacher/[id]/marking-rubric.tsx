@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveMarkingRubric } from "../actions";
+import { saveMarkingRubric, suggestRubricAction } from "../actions";
 
 export function MarkingRubric({
   passageId,
@@ -12,16 +12,39 @@ export function MarkingRubric({
 }) {
   const [rubric, setRubric] = useState(initialRubric);
   const [pending, start] = useTransition();
+  const [suggesting, startSuggest] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+
+  function suggest() {
+    setMsg(null);
+    startSuggest(async () => {
+      const r = await suggestRubricAction(passageId, "marking");
+      if (r.error) setMsg(r.error);
+      else if (r.rubric) {
+        setRubric(r.rubric);
+        setMsg("AI 추천을 넣었어요. 확인·수정 후 저장하세요.");
+      } else setMsg("추천 결과가 비었어요.");
+    });
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
-      <h2 className="font-semibold">
-        표시 채점 루브릭{" "}
-        <span className="text-xs font-normal text-gray-400">
-          (선택 · 학생에게 노출 안 됨)
-        </span>
-      </h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="font-semibold">
+          표시 채점 루브릭{" "}
+          <span className="text-xs font-normal text-gray-400">
+            (선택 · 학생에게 노출 안 됨)
+          </span>
+        </h2>
+        <button
+          type="button"
+          onClick={suggest}
+          disabled={suggesting}
+          className="shrink-0 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+        >
+          {suggesting ? "AI 추천 중…" : "✨ AI 추천"}
+        </button>
+      </div>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         학생이 읽으며 남긴 <b>표시(밑줄·동그라미·관계)</b>를 아래 문단별 정답
         기준과 비교해 점수를 낼 때, AI가 이 루브릭의 배점·기준을 최우선으로

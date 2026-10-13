@@ -524,3 +524,36 @@ export async function suggestChecksAction(
     };
   return { checks: r.checks };
 }
+
+/** 채점 루브릭 AI 추천 (교사 보조) — kind: marking(표시)/critique(관점)/check(독해확인) */
+export async function suggestRubricAction(
+  passageId: string,
+  kind: "marking" | "critique" | "check",
+): Promise<{ rubric?: string; error?: string }> {
+  const { supabase, user } = await requireTeacher();
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("title, created_by")
+    .eq("id", passageId)
+    .single();
+  if (!passage || passage.created_by !== user.id)
+    return { error: "권한이 없습니다." };
+  const { data: paras } = await supabase
+    .from("passage_paragraphs")
+    .select("seq, text")
+    .eq("passage_id", passageId)
+    .order("seq", { ascending: true });
+  if (!paras || paras.length === 0) return { error: "문단이 없습니다." };
+
+  const { suggestRubric } = await import("@/lib/agent/analyze");
+  const r = await suggestRubric(
+    kind,
+    passage.title,
+    paras.map((p) => ({ seq: p.seq, text: p.text })),
+  );
+  if ("error" in r)
+    return {
+      error: r.error === "no_key" ? "AI 키가 필요해요." : "추천에 실패했어요.",
+    };
+  return { rubric: r.rubric };
+}

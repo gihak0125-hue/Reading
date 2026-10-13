@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveCritiqueNote, suggestCritiqueAction } from "../actions";
+import {
+  saveCritiqueNote,
+  suggestCritiqueAction,
+  suggestRubricAction,
+} from "../actions";
 
 export function CritiqueNote({
   passageId,
@@ -16,6 +20,7 @@ export function CritiqueNote({
   const [rubric, setRubric] = useState(initialRubric);
   const [pending, start] = useTransition();
   const [suggesting, startSuggest] = useTransition();
+  const [suggestingRubric, startSuggestRubric] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
   function suggest() {
@@ -26,6 +31,18 @@ export function CritiqueNote({
       else if (r.note) {
         setNote(r.note);
         setMsg("AI 추천을 넣었어요. 확인·수정 후 저장하세요.");
+      } else setMsg("추천 결과가 비었어요.");
+    });
+  }
+
+  function suggestRubric() {
+    setMsg(null);
+    startSuggestRubric(async () => {
+      const r = await suggestRubricAction(passageId, "critique");
+      if (r.error) setMsg(r.error);
+      else if (r.rubric) {
+        setRubric(r.rubric);
+        setMsg("루브릭 AI 추천을 넣었어요. 확인·수정 후 저장하세요.");
       } else setMsg("추천 결과가 비었어요.");
     });
   }
@@ -64,11 +81,21 @@ export function CritiqueNote({
         className="mt-2 w-full resize-y rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
       />
       <label className="mt-3 flex flex-col gap-1 text-sm">
-        <span className="font-medium">
-          채점 루브릭{" "}
-          <span className="text-xs font-normal text-gray-400">
-            (선택 · 비판 채점 기준·배점. 있으면 AI가 이 기준으로 채점)
+        <span className="flex items-center justify-between gap-2">
+          <span className="font-medium">
+            채점 루브릭{" "}
+            <span className="text-xs font-normal text-gray-400">
+              (선택 · 비판 채점 기준·배점. 있으면 AI가 이 기준으로 채점)
+            </span>
           </span>
+          <button
+            type="button"
+            onClick={suggestRubric}
+            disabled={suggestingRubric}
+            className="shrink-0 rounded-md bg-violet-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+          >
+            {suggestingRubric ? "추천 중…" : "✨ AI 추천"}
+          </button>
         </span>
         <textarea
           value={rubric}
