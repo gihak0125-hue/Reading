@@ -1984,7 +1984,7 @@ export function ReadingWorkspace({
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row lg:items-start">
         <section className="relative flex-1 rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           {pending && (
             <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full bg-amber-600/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
@@ -2300,7 +2300,110 @@ export function ReadingWorkspace({
           </div>
         </section>
 
-        <aside className="rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:w-[340px] lg:shrink-0">
+        {/* 오른쪽 열: 위=AI 코치, 아래=사고 패드 (가로 태블릿에서 본문 옆에 고정) */}
+        <div className="flex w-full flex-col gap-4 lg:w-[380px] lg:shrink-0 lg:sticky lg:top-20">
+          <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+            <h2 className="mb-3 font-semibold">🤖 AI 읽기 코치</h2>
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-lg dark:bg-amber-950">
+                🤖
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="rounded-2xl rounded-tl-sm bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                  {coachPending
+                    ? "생각 중이에요…"
+                    : (lastAgent ??
+                      "읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 궁금한 점이나 내 생각을 아래에 적어줘요.")}
+                </div>
+                {coachNote && (
+                  <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
+                )}
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => sendCoach(true)}
+                    disabled={coachPending}
+                    className="rounded-md px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:hover:bg-amber-950"
+                  >
+                    💡 힌트
+                  </button>
+                  <button
+                    type="button"
+                    onClick={askFeedback}
+                    disabled={coachPending}
+                    className="rounded-md px-2 py-1 text-xs text-violet-600 hover:bg-violet-50 disabled:opacity-50 dark:hover:bg-violet-950"
+                  >
+                    🔎 내 표시 봐주기
+                  </button>
+                  {status !== "completed" && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => askSelfExplain("predict")}
+                        disabled={coachPending}
+                        className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950 dark:text-indigo-300"
+                      >
+                        🔮 예측
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => askSelfExplain("hidden")}
+                        disabled={coachPending}
+                        className="rounded-md bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 disabled:opacity-50 dark:bg-teal-950 dark:text-teal-300"
+                      >
+                        🧩 숨은 뜻
+                      </button>
+                    </>
+                  )}
+                  {status === "completed" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhase("check");
+                        askCheck();
+                      }}
+                      disabled={coachPending}
+                      className="rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-950 dark:text-amber-300"
+                    >
+                      📝 마무리하기(독해 확인·관점 평가)
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="relative mt-3 flex items-end gap-2">
+              {seCue && (
+                <div className="absolute -top-8 right-0 z-10 flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-lg">
+                  <span className="animate-bounce">✍️</span>
+                  여기에 네 생각을 적어 보내줘!
+                </div>
+              )}
+              <textarea
+                rows={2}
+                maxLength={300}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendCoach(false);
+                  }
+                }}
+                placeholder="내 설명 입력 (예: … 때문에 … 라고 생각합니다.)"
+                className={`w-full resize-none rounded-xl border px-3 py-2 text-base dark:bg-gray-900 ${seCue ? "border-indigo-400 ring-2 ring-indigo-300 dark:border-indigo-500" : "border-gray-300 dark:border-gray-700"}`}
+              />
+              <button
+                type="button"
+                onClick={() => sendCoach(false)}
+                disabled={coachPending || !draft.trim()}
+                className="shrink-0 rounded-xl bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+              >
+                보내기
+              </button>
+            </div>
+          </section>
+
+          <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           <h2 className="mb-3 font-semibold">📝 사고 패드</h2>
           <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1 text-sm dark:bg-gray-800">
             {(
@@ -2557,107 +2660,6 @@ export function ReadingWorkspace({
             </div>
           )}
         </aside>
-      </div>
-
-      <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 p-4 md:flex-row md:items-end">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-lg dark:bg-amber-950">
-              🤖
-            </div>
-            <div className="min-w-0">
-              <div className="rounded-2xl rounded-tl-sm bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                {coachPending
-                  ? "생각 중이에요…"
-                  : (lastAgent ??
-                    "읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 궁금한 점이나 내 생각을 아래에 적어줘요.")}
-              </div>
-              {coachNote && (
-                <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
-              )}
-              <div className="mt-1 flex flex-wrap gap-1">
-                <button
-                  type="button"
-                  onClick={() => sendCoach(true)}
-                  disabled={coachPending}
-                  className="rounded-md px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:hover:bg-amber-950"
-                >
-                  💡 힌트
-                </button>
-                <button
-                  type="button"
-                  onClick={askFeedback}
-                  disabled={coachPending}
-                  className="rounded-md px-2 py-1 text-xs text-violet-600 hover:bg-violet-50 disabled:opacity-50 dark:hover:bg-violet-950"
-                >
-                  🔎 내 표시 봐주기
-                </button>
-                {status !== "completed" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => askSelfExplain("predict")}
-                      disabled={coachPending}
-                      className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950 dark:text-indigo-300"
-                    >
-                      🔮 예측
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => askSelfExplain("hidden")}
-                      disabled={coachPending}
-                      className="rounded-md bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 disabled:opacity-50 dark:bg-teal-950 dark:text-teal-300"
-                    >
-                      🧩 숨은 뜻
-                    </button>
-                  </>
-                )}
-                {status === "completed" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPhase("check");
-                      askCheck();
-                    }}
-                    disabled={coachPending}
-                    className="rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-950 dark:text-amber-300"
-                  >
-                    📝 마무리하기(독해 확인·관점 평가)
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="relative flex items-end gap-2">
-            {seCue && (
-              <div className="absolute -top-8 right-0 z-10 flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-lg">
-                <span className="animate-bounce">✍️</span>
-                여기에 네 생각을 적어 보내줘!
-              </div>
-            )}
-            <textarea
-              rows={2}
-              maxLength={300}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendCoach(false);
-                }
-              }}
-              placeholder="내 설명 입력 (예: … 때문에 … 라고 생각합니다.)"
-              className={`w-full resize-none rounded-xl border px-3 py-2 text-base dark:bg-gray-900 md:w-72 ${seCue ? "border-indigo-400 ring-2 ring-indigo-300 dark:border-indigo-500" : "border-gray-300 dark:border-gray-700"}`}
-            />
-            <button
-              type="button"
-              onClick={() => sendCoach(false)}
-              disabled={coachPending || !draft.trim()}
-              className="rounded-xl bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
-            >
-              보내기
-            </button>
-          </div>
         </div>
       </div>
     </div>
