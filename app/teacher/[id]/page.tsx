@@ -90,6 +90,25 @@ export default async function PassageDetailPage({
 
       <AiSuggest passageId={passage.id} />
 
+      <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+        각 문단에서 <b>중심화제</b>·<b>핵심문장</b>을 드래그로 선택하고 버튼을
+        누르면, 학생 진단의 <b>정답 기준</b>으로 저장됩니다. (AI 분석으로 자동
+        추천받아 검토할 수도 있어요. 학생에게는 직접 노출되지 않습니다)
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {(paragraphs ?? []).map((p) => (
+          <ParagraphTagger
+            key={p.id}
+            passageId={passage.id}
+            paragraphId={p.id}
+            seq={p.seq}
+            text={p.text}
+            keyInfos={byParagraph.get(p.id) ?? []}
+          />
+        ))}
+      </div>
+
       <MarkingRubric
         passageId={passage.id}
         initialRubric={marking?.rubric ?? ""}
@@ -113,25 +132,6 @@ export default async function PassageDetailPage({
           rubric: checks?.rubric ?? "",
         }}
       />
-
-      <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-        각 문단에서 <b>중심화제</b>·<b>핵심문장</b>을 드래그로 선택하고 버튼을
-        누르면, 학생 진단의 <b>정답 기준</b>으로 저장됩니다. (AI 분석으로 자동
-        추천받아 검토할 수도 있어요. 학생에게는 직접 노출되지 않습니다)
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {(paragraphs ?? []).map((p) => (
-          <ParagraphTagger
-            key={p.id}
-            passageId={passage.id}
-            paragraphId={p.id}
-            seq={p.seq}
-            text={p.text}
-            keyInfos={byParagraph.get(p.id) ?? []}
-          />
-        ))}
-      </div>
     </main>
   );
 }
