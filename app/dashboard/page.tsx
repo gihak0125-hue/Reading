@@ -7,6 +7,7 @@ import { startSession } from "@/app/read/actions";
 import { SubmitButton } from "@/app/submit-button";
 import { isAdminEmail } from "@/lib/admin";
 import { CATEGORY_LABEL } from "@/lib/categories";
+import { StudentSidebar } from "./student-sidebar";
 
 function Svg({ children }: { children: ReactNode }) {
   return (
@@ -172,7 +173,9 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-10">
+    <div className="flex min-h-full w-full flex-1">
+      {!isTeacher && <StudentSidebar />}
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-10">
       <header className="flex items-start justify-between gap-4">
         <div>
           <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
@@ -393,6 +396,7 @@ export default async function DashboardPage() {
           </Link>
         </p>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
