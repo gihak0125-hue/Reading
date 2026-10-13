@@ -90,6 +90,11 @@ export default async function PassageDetailPage({
 
       <AiSuggest passageId={passage.id} />
 
+      <MarkingRubric
+        passageId={passage.id}
+        initialRubric={marking?.rubric ?? ""}
+      />
+
       <CritiqueNote
         passageId={passage.id}
         initial={critique?.note ?? ""}
@@ -114,11 +119,6 @@ export default async function PassageDetailPage({
         누르면, 학생 진단의 <b>정답 기준</b>으로 저장됩니다. (AI 분석으로 자동
         추천받아 검토할 수도 있어요. 학생에게는 직접 노출되지 않습니다)
       </div>
-
-      <MarkingRubric
-        passageId={passage.id}
-        initialRubric={marking?.rubric ?? ""}
-      />
 
       <div className="flex flex-col gap-3">
         {(paragraphs ?? []).map((p) => (
