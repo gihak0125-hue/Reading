@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getOpenAI, MODEL_ESCALATION } from "@/lib/openai";
+import { getOpenAI, MODEL_TEACHER } from "@/lib/openai";
 
 /**
  * 지문 분석: 문단별 핵심문장·중심화제와 문장 간 관계를 추천한다.
@@ -85,7 +85,7 @@ export async function analyzePassage(
   messages.push({ role: "user", content: `제목: ${title}\n\n${body}` });
   try {
     const res = await getOpenAI().chat.completions.create({
-      model: MODEL_ESCALATION(), // 분석은 상위 모델
+      model: MODEL_TEACHER(), // 교사 보조는 교사 전용(최상위) 모델
       messages,
       temperature: 0.2,
       response_format: { type: "json_object" },
@@ -146,7 +146,7 @@ async function runJsonAnalysis(
   const body = paragraphs.map((p) => `[${p.seq}문단] ${p.text}`).join("\n\n");
   try {
     const res = await getOpenAI().chat.completions.create({
-      model: MODEL_ESCALATION(),
+      model: MODEL_TEACHER(),
       messages: [
         { role: "system", content: system },
         { role: "user", content: `제목: ${title}\n\n${body}` },

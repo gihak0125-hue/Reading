@@ -32,6 +32,13 @@ export const MODEL_DEFAULT = () =>
   (process.env.OPENAI_MODEL_DEFAULT || "").trim() || "gpt-4o-mini";
 export const MODEL_ESCALATION = () =>
   (process.env.OPENAI_MODEL_ESCALATION || "").trim() || MODEL_DEFAULT();
+/**
+ * 교사 보조 전용 모델(지문 분석·관점/문항 추천 등). 교사 세팅 때만 가끔 호출되므로
+ * 최상위 모델을 써도 총비용이 작다. 학생 코치 비용(MODEL_ESCALATION)과 분리하기 위한 변수.
+ * 미설정 시 MODEL_ESCALATION 으로 폴백.
+ */
+export const MODEL_TEACHER = () =>
+  (process.env.OPENAI_MODEL_TEACHER || "").trim() || MODEL_ESCALATION();
 
 /**
  * 승급 여부 판단.
