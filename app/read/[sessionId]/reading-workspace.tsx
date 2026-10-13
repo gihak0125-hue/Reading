@@ -2072,6 +2072,7 @@ export function ReadingWorkspace({
                 {TOP_GROUPS.map((g) => (
                   <div
                     key={g.label}
+                    style={{ order: g.label === "핵심 표시" ? 1 : 3 }}
                     className="flex flex-col gap-1 rounded-xl bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
                   >
                     <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
@@ -2100,7 +2101,10 @@ export function ReadingWorkspace({
                     </div>
                   </div>
                 ))}
-                <div className="flex flex-col gap-1 rounded-xl bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900">
+                <div
+                  style={{ order: 2 }}
+                  className="flex flex-col gap-1 rounded-xl bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
+                >
                   <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
                     연결
                   </span>
@@ -2117,7 +2121,10 @@ export function ReadingWorkspace({
                     관계
                   </button>
                 </div>
-                <div className="ml-auto flex flex-col gap-1 rounded-xl p-1.5">
+                <div
+                  style={{ order: 9 }}
+                  className="ml-auto flex flex-col gap-1 rounded-xl p-1.5"
+                >
                   <span className="px-1 text-[10px] font-medium text-gray-400">
                     지우기
                   </span>
