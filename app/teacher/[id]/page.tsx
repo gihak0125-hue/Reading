@@ -114,12 +114,6 @@ export default async function PassageDetailPage({
         initialRubric={marking?.rubric ?? ""}
       />
 
-      <CritiqueNote
-        passageId={passage.id}
-        initial={critique?.note ?? ""}
-        initialRubric={critique?.rubric ?? ""}
-      />
-
       <CheckQuestions
         passageId={passage.id}
         initial={{
@@ -131,6 +125,12 @@ export default async function PassageDetailPage({
           inference_a: checks?.inference_a ?? "",
           rubric: checks?.rubric ?? "",
         }}
+      />
+
+      <CritiqueNote
+        passageId={passage.id}
+        initial={critique?.note ?? ""}
+        initialRubric={critique?.rubric ?? ""}
       />
     </main>
   );
