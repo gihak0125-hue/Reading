@@ -1999,9 +1999,9 @@ export function ReadingWorkspace({
               title="난이도·분량에 맞춘 권장 시간"
             >
               <span
-                className={`text-xs font-semibold tabular-nums ${
+                className={`text-base font-bold tabular-nums sm:text-lg ${
                   timeFrac > 0.2
-                    ? "text-gray-500 dark:text-gray-400"
+                    ? "text-gray-600 dark:text-gray-300"
                     : "text-red-600 dark:text-red-400"
                 }`}
               >
@@ -2029,7 +2029,8 @@ export function ReadingWorkspace({
               type="button"
               onClick={handleComplete}
               disabled={pending}
-              className="rounded-full bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm ring-2 ring-amber-300/60 hover:bg-amber-700 disabled:opacity-60 dark:ring-amber-700/50"
+              style={{ animationDuration: `${(0.4 + timeFrac * 1.8).toFixed(2)}s` }}
+              className="animate-pulse rounded-full bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm ring-2 ring-amber-300/60 hover:bg-amber-700 disabled:opacity-60 dark:ring-amber-700/50"
             >
               ✓ 읽기 마치기
             </button>
