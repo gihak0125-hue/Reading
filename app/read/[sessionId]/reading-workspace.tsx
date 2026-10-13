@@ -691,6 +691,7 @@ export function ReadingWorkspace({
   const [showRel, setShowRel] = useState(false);
   const [fhStrokes, setFhStrokes] = useState<FreehandStroke[]>(freehand);
   const [artW, setArtW] = useState(0);
+  const [reviewW, setReviewW] = useState(0);
   const [penColor, setPenColor] = useState(PEN_COLORS[0]);
   const ptrRef = useRef({ x: 0, y: 0 });
   useEffect(() => {
@@ -713,6 +714,16 @@ export function ReadingWorkspace({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // 리뷰(독해확인·관점) 본문 폭 측정 — 자유 필기 스케일용
+  useEffect(() => {
+    const el = reviewBodyRef.current;
+    if (!el) return;
+    const update = () => setReviewW(el.getBoundingClientRect().width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [phase, showBody]);
 
   const marks = useMemo(
     () =>
@@ -1801,6 +1812,24 @@ export function ReadingWorkspace({
                       relations={arrowRelations}
                       depKey={arrowDepKey + "|review|" + (showBody ? "1" : "0")}
                     />
+                    {fhStrokes.length > 0 && reviewW > 0 && (
+                      <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
+                        <g transform={`scale(${reviewW})`}>
+                          {fhStrokes.map((f) => (
+                            <path
+                              key={f.id}
+                              d={f.d}
+                              fill="none"
+                              stroke={f.color}
+                              strokeWidth={2.5}
+                              vectorEffect="non-scaling-stroke"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          ))}
+                        </g>
+                      </svg>
+                    )}
                     {paragraphs.map((p) => (
                       <AnnotatedParagraph
                         key={p.id}
