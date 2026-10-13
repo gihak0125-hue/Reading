@@ -186,7 +186,7 @@ export function PracticePredict() {
     }
   }
 
-  const cutSet = new Set<number>([0, PARA.length]);
+  const cutSet = new Set<number>([0, PARA.length, CUE0]);
   marks.forEach((m) => { cutSet.add(Math.max(0, m.start)); cutSet.add(Math.min(PARA.length, m.end)); });
   const cuts = [...cutSet].sort((a, b) => a - b);
   const segs: ReactNode[] = [];
@@ -194,8 +194,13 @@ export function PracticePredict() {
     const s = cuts[i], e = cuts[i + 1];
     if (e <= s) continue;
     const marked = marks.some((m) => m.start <= s && m.end >= e);
+    // 예측단서가 담긴 마지막 문장에 은은한 형광펜 배경(어느 문장을 볼지 안내)
+    const inCue = s >= CUE0;
+    const cls =
+      (marked ? "underline decoration-violet-500 decoration-2 underline-offset-4 " : "") +
+      (inCue ? "bg-yellow-100/60 rounded dark:bg-yellow-900/25" : "");
     segs.push(
-      <span key={i} className={marked ? "underline decoration-violet-500 decoration-2 underline-offset-4" : undefined}>
+      <span key={i} className={cls.trim() || undefined}>
         {PARA.slice(s, e)}
       </span>,
     );

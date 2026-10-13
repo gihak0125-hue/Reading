@@ -394,13 +394,24 @@ export function PracticeRelation() {
       >
         <p data-para className="font-serif-kr whitespace-pre-wrap">{segs}</p>
         <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible">
-          {geo.map((g) => (
-            <g key={g.id}>
-              <path d={"M " + g.x1 + " " + g.y1 + " Q " + g.mx + " " + (g.my - 34) + " " + g.x2 + " " + g.y2} fill="none" stroke="#f43f5e" strokeWidth={2.5} strokeOpacity={0.85} strokeLinecap="round" />
-              <circle cx={g.mx} cy={g.my - 17} r={11} fill="#fff" stroke="#f43f5e" strokeWidth={1.5} />
-              <text x={g.mx} y={g.my - 12} textAnchor="middle" fontSize="14" fontWeight="700" fill="#e11d48">↔</text>
-            </g>
-          ))}
+          {geo.map((g) => {
+            const dx = g.x2 - g.x1, dy = g.y2 - g.y1;
+            const len = Math.hypot(dx, dy) || 1;
+            let px = -dy / len, py = dx / len; // 선분에 수직
+            if (py > 0) { px = -px; py = -py; } // 항상 위쪽으로 완만하게
+            const off = Math.min(42, len * 0.3) + 12;
+            const cx = g.mx + px * off, cy = g.my + py * off;
+            // 곡선(2차 베지어)의 중점 t=0.5 — 배지를 곡선 위에 정확히 올림
+            const bx = 0.25 * g.x1 + 0.5 * cx + 0.25 * g.x2;
+            const by = 0.25 * g.y1 + 0.5 * cy + 0.25 * g.y2;
+            return (
+              <g key={g.id}>
+                <path d={`M ${g.x1} ${g.y1} Q ${cx} ${cy} ${g.x2} ${g.y2}`} fill="none" stroke="#f43f5e" strokeWidth={2.5} strokeOpacity={0.85} strokeLinecap="round" />
+                <circle cx={bx} cy={by} r={11} fill="#fff" stroke="#f43f5e" strokeWidth={1.5} />
+                <text x={bx} y={by + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill="#e11d48">↔</text>
+              </g>
+            );
+          })}
           {commonPt && (
             <g>
               <circle cx={commonPt.x} cy={commonPt.y - 20} r={11} fill="#fff" stroke="#10b981" strokeWidth={1.5} />
