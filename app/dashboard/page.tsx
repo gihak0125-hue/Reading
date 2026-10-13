@@ -227,13 +227,25 @@ export default async function DashboardPage() {
         <div className="flex flex-col gap-4">
           <Link
             href="/tutorial"
-            className="flex items-center gap-3 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 px-5 py-3 text-sm text-amber-900 transition hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+            className="group flex items-center gap-4 rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-amber-100 to-amber-50 px-5 py-4 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-600 dark:from-amber-950 dark:to-amber-950/50"
           >
-            <span className="text-base">✏️</span>
-            <span>
-              처음이신가요? <b>읽기 도구(밑줄·관계·예측) 사용법</b>을 먼저 익혀 보세요
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-amber-500 text-2xl text-white shadow">
+              ✏️
             </span>
-            <span className="ml-auto">&rarr;</span>
+            <span className="min-w-0">
+              <span className="flex flex-wrap items-center gap-2 text-base font-bold text-amber-900 dark:text-amber-100">
+                처음이라면 여기부터!
+                <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white motion-safe:animate-pulse">
+                  추천
+                </span>
+              </span>
+              <span className="mt-0.5 block text-sm text-amber-800/80 dark:text-amber-200/80">
+                밑줄·관계·예측 <b>읽기 도구 사용법</b>을 2~3분이면 익혀요
+              </span>
+            </span>
+            <span className="ml-auto text-2xl text-amber-600 transition group-hover:translate-x-1 dark:text-amber-400">
+              &rarr;
+            </span>
           </Link>
           {resume && (
             <Link
