@@ -128,7 +128,8 @@ const REL_IDS: ToolId[] = [
 // 상단(핵심) 도구 그룹
 const TOP_GROUPS: { label: string; ids: ToolId[] }[] = [
   { label: "핵심 표시", ids: ["underline", "circle"] },
-  { label: "예측·필기", ids: ["predictcue", "freehand"] },
+  { label: "예측", ids: ["predictcue"] },
+  { label: "필기", ids: ["freehand"] },
 ];
 // 관계 도구: 짝(대응)끼리 묶고, 나열은 독립 묶음, 짝 없는 과정은 '그 외'로 분리
 const REL_GROUPS: { label: string; ids: ToolId[] }[] = [
@@ -1985,7 +1986,8 @@ export function ReadingWorkspace({
               표시하는 중…
             </div>
           )}
-          <div className="mb-4 flex items-center justify-between">
+          <div className="sticky top-14 z-10 -mx-5 -mt-5 mb-4 rounded-t-2xl border-b border-gray-100 bg-white px-5 pb-3 pt-5 dark:border-gray-800 dark:bg-gray-950">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">📖 본문</h2>
             <button
               type="button"
@@ -1997,7 +1999,7 @@ export function ReadingWorkspace({
           </div>
 
           {showTools && (
-            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
               {/* 상단: 핵심 도구를 묶음으로, 지우개는 유틸리티로 분리 */}
               <div className="flex flex-wrap items-start gap-2">
                 {TOP_GROUPS.map((g) => (
@@ -2208,6 +2210,7 @@ export function ReadingWorkspace({
               {msg && <p className="mt-1 text-xs text-red-600">{msg}</p>}
             </div>
           )}
+          </div>
 
           <div
             ref={articleRef}
