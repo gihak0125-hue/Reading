@@ -119,6 +119,7 @@ export function PracticeMarking() {
   const idRef = useRef(0);
   const stroke = useRef<{ active: boolean; pts: Pt[] }>({ active: false, pts: [] });
   const [path, setPath] = useState("");
+  const [showDemo, setShowDemo] = useState(true);
 
   function down(e: React.PointerEvent) {
     ref.current?.setPointerCapture?.(e.pointerId);
@@ -318,6 +319,13 @@ export function PracticeMarking() {
         </button>
         <button
           type="button"
+          onClick={() => setShowDemo(true)}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+        >
+          ▶ 예시 다시 보기
+        </button>
+        <button
+          type="button"
           onClick={() => {
             setMarks([]);
             setMsg(null);
@@ -362,6 +370,57 @@ export function PracticeMarking() {
           나중에 하기
         </Link>
       </div>
+      {showDemo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowDemo(false)}
+        >
+          <style>{`
+            @keyframes gdCircle {0%{stroke-dashoffset:185;opacity:1}35%{stroke-dashoffset:0;opacity:1}82%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+            @keyframes gdLine {0%{stroke-dashoffset:195;opacity:1}18%{stroke-dashoffset:195;opacity:1}55%{stroke-dashoffset:0;opacity:1}82%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+            @keyframes gdPen {0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+          `}</style>
+          <div
+            className="coach-pop flex w-full max-w-sm flex-col items-center gap-3 rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+              이렇게 손가락·펜으로 그어요
+            </p>
+            <svg viewBox="0 0 280 140" className="w-full max-w-[260px]" aria-hidden>
+              <text x="24" y="44" fontSize="15" fill="#9ca3af" className="font-serif-kr">법적 의제란 무엇일까?</text>
+              <ellipse
+                cx="52" cy="39" rx="36" ry="15"
+                fill="none" stroke="#fb7185" strokeWidth="2.5" strokeLinecap="round"
+                strokeDasharray="185"
+                style={{ animation: "gdCircle 3.6s ease-in-out infinite" }}
+              />
+              <text x="24" y="96" fontSize="15" fill="#9ca3af" className="font-serif-kr">사실이 아닌 것을 사실처럼 취급한다</text>
+              <line
+                x1="22" y1="104" x2="214" y2="104"
+                stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round"
+                strokeDasharray="195"
+                style={{ animation: "gdLine 3.6s ease-in-out infinite" }}
+              />
+              <g style={{ animation: "gdPen 1.2s ease-in-out infinite" }}>
+                <path d="M232 44l10 10-20 20-12 2 2-12z" fill="#f59e0b" stroke="#b9770f" strokeWidth="1.5" strokeLinejoin="round" />
+                <path d="M229 47l10 10" stroke="#b9770f" strokeWidth="1.5" />
+              </g>
+            </svg>
+            <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+              중심 낱말엔 <b className="text-rose-500">◯ 동그라미</b>, 중심 문장엔{" "}
+              <b className="text-blue-500">▁ 밑줄</b>을 글자 위로 쭉 그어요.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDemo(false)}
+              className="mt-1 w-full rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+            >
+              직접 해볼게요 &rarr;
+            </button>
+          </div>
+        </div>
+      )}
       {celebrate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="coach-pop flex w-full max-w-xs flex-col items-center gap-3 rounded-3xl bg-white p-7 text-center shadow-2xl dark:bg-gray-900">
