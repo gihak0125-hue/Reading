@@ -30,7 +30,7 @@ export default async function ReadingPage({
     { data: messages },
     { data: freehand },
   ] = await Promise.all([
-    supabase.from("passages").select("id, title").eq("id", session.passage_id).single(),
+    supabase.from("passages").select("id, title, difficulty").eq("id", session.passage_id).single(),
     supabase
       .from("passage_paragraphs")
       .select("id, seq, text")
@@ -58,6 +58,9 @@ export default async function ReadingPage({
     <ReadingWorkspace
       sessionId={session.id}
       title={passage.title}
+      difficulty={
+        (passage as { difficulty: number | null }).difficulty ?? 3
+      }
       status={session.status}
       paragraphs={(paragraphs ?? []) as ParagraphData[]}
       annotations={(annotations ?? []) as AnnotationData[]}

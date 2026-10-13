@@ -540,6 +540,7 @@ function subtractIntervals(
 export function ReadingWorkspace({
   sessionId,
   title,
+  difficulty,
   status,
   paragraphs,
   annotations,
@@ -548,6 +549,7 @@ export function ReadingWorkspace({
 }: {
   sessionId: string;
   title: string;
+  difficulty: number;
   status: string;
   paragraphs: ParagraphData[];
   annotations: AnnotationData[];
@@ -594,6 +596,44 @@ export function ReadingWorkspace({
   const [relFrom, setRelFrom] = useState<string | null>(null);
   const [listingLast, setListingLast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // ===== 읽기 시간 제한(난이도·분량 기반, 필요시간의 1.5배) =====
+  const budgetSec = useMemo(() => {
+    const chars = paragraphs.reduce((s, p) => s + (p.text?.length ?? 0), 0);
+    const d = Math.min(5, Math.max(1, difficulty || 3));
+    const needed = chars * (0.2 + d * 0.06); // 난이도·분량 기반 필요 시간 추정(초)
+    return Math.max(180, Math.round((needed * 1.5) / 10) * 10); // ×1.5, 최소 3분, 10초 단위
+  }, [paragraphs, difficulty]);
+  const [remainingSec, setRemainingSec] = useState<number | null>(null);
+  useEffect(() => {
+    if (status === "completed") {
+      setRemainingSec(null);
+      return;
+    }
+    const key = `reading_deadline_${sessionId}`;
+    let deadline = 0;
+    try {
+      const saved = localStorage.getItem(key);
+      deadline = saved ? Number(saved) : 0;
+      if (!deadline || Number.isNaN(deadline)) {
+        deadline = Date.now() + budgetSec * 1000;
+        localStorage.setItem(key, String(deadline));
+      }
+    } catch {
+      deadline = Date.now() + budgetSec * 1000;
+    }
+    const tick = () =>
+      setRemainingSec(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sessionId, budgetSec, status]);
+  const timeFrac =
+    remainingSec == null ? 1 : Math.max(0, Math.min(1, remainingSec / budgetSec));
+  const timeBarColor =
+    timeFrac > 0.5 ? "bg-green-500" : timeFrac > 0.2 ? "bg-amber-500" : "bg-red-500";
+  const fmtTime = (s: number) =>
+    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   // 낙관적 표시: 화면에 즉시 반영하고 서버 저장은 뒤에서(전체 새로고침 없음)
   const [annos, setAnnos] = useState<AnnotationData[]>(annotations);
@@ -1432,6 +1472,10 @@ export function ReadingWorkspace({
     fetchScore("reading");
   }
   function handleReopen() {
+    // 다시 읽기: 시간 제한을 새로 시작하도록 저장된 마감시각 제거
+    try {
+      localStorage.removeItem(`reading_deadline_${sessionId}`);
+    } catch {}
     startTransition(async () => {
       await reopenSession(sessionId);
     });
@@ -1949,6 +1993,28 @@ export function ReadingWorkspace({
           <span className="truncate font-semibold">📄 {title}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {status !== "completed" && remainingSec != null && (
+            <div
+              className="flex items-center gap-1.5"
+              title="난이도·분량에 맞춘 권장 시간"
+            >
+              <span
+                className={`text-xs font-semibold tabular-nums ${
+                  timeFrac > 0.2
+                    ? "text-gray-500 dark:text-gray-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
+              >
+                ⏱ {fmtTime(remainingSec)}
+              </span>
+              <div className="h-2 w-14 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800 sm:w-24">
+                <div
+                  className={`h-full rounded-full transition-all duration-1000 ${timeBarColor}`}
+                  style={{ width: `${timeFrac * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
           {status === "completed" ? (
             <button
               type="button"
@@ -1963,9 +2029,9 @@ export function ReadingWorkspace({
               type="button"
               onClick={handleComplete}
               disabled={pending}
-              className="rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-full bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm ring-2 ring-amber-300/60 hover:bg-amber-700 disabled:opacity-60 dark:ring-amber-700/50"
             >
-              읽기 마치기
+              ✓ 읽기 마치기
             </button>
           )}
           <button
