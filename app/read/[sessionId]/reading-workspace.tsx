@@ -2069,7 +2069,7 @@ export function ReadingWorkspace({
             title="순서는 강제되지 않아요 · 길잡이"
           >
             {[
-              { label: "표시", active: status !== "completed", done: status === "completed" },
+              { label: "읽기", active: status !== "completed", done: status === "completed" },
               { label: "독해 확인", active: false, done: false },
               { label: "관점 평가", active: false, done: false },
             ].map((s, i, arr) => (
