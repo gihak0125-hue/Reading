@@ -356,9 +356,13 @@ export default async function DashboardPage() {
                   아직 점수가 없어요. 지문을 읽고 확인해 보세요.
                 </p>
               )}
-              <p className="mt-auto text-[11px] text-gray-400">
-                완료한 읽기 {doneCount}개
-              </p>
+              <Link
+                href="/records"
+                className="mt-auto flex items-center justify-between text-[11px] text-gray-400 transition hover:text-amber-700 dark:hover:text-amber-400"
+              >
+                <span>완료한 읽기 {doneCount}개</span>
+                <span className="font-medium">학습 기록 &rarr;</span>
+              </Link>
             </div>
           </div>
           </div>
