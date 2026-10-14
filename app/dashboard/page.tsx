@@ -190,7 +190,7 @@ export default async function DashboardPage() {
               : "오늘도 즐겁게 읽어볼까요?"}
           </p>
         </div>
-        <form action={signout}>
+        <form action={signout} className={isTeacher ? undefined : "md:hidden"}>
           <SubmitButton
             pendingText="로그아웃 중…"
             className="rounded-full border border-gray-300 bg-white/80 px-3 py-1.5 text-sm text-gray-600 transition hover:bg-white disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950/70 dark:text-gray-300 dark:hover:bg-gray-950"
