@@ -36,6 +36,30 @@ const NAV: { href: string; label: string; icon: ReactNode; match: (p: string) =>
     ),
   },
   {
+    href: "/read",
+    label: "지문 읽기",
+    match: (p) => p.startsWith("/read"),
+    icon: (
+      <Svg>
+        <path d="M4 5a2 2 0 0 1 2-2h12v15H6a2 2 0 0 0-2 2z" />
+        <path d="M4 20a2 2 0 0 1 2-2h12" />
+        <path d="M9 7h6M9 11h5" />
+      </Svg>
+    ),
+  },
+  {
+    href: "/tutorial",
+    label: "읽기 연습",
+    match: (p) => p.startsWith("/tutorial"),
+    icon: (
+      <Svg>
+        <path d="M16.5 3a2.12 2.12 0 0 1 3 3L9 16.5 4.5 18 6 13.5 16.5 3Z" />
+        <path d="M14 5.5l4.5 4.5" />
+        <path d="M4 21h11" />
+      </Svg>
+    ),
+  },
+  {
     href: "/records",
     label: "학습 기록",
     match: (p) => p.startsWith("/records"),
