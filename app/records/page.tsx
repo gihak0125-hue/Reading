@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORY_LABEL } from "@/lib/categories";
-import { StudentSidebar } from "@/app/dashboard/student-sidebar";
 
 const CAT_BAR: Record<string, string> = {
   humanities: "bg-rose-400",
@@ -111,9 +110,7 @@ export default async function RecordsPage() {
     .join(" ");
 
   return (
-    <div className="flex min-h-full w-full flex-1">
-      <StudentSidebar />
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-10">
         <header className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
@@ -235,7 +232,6 @@ export default async function RecordsPage() {
             </ul>
           )}
         </section>
-      </main>
-    </div>
+    </main>
   );
 }
