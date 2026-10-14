@@ -149,7 +149,14 @@ export default async function ActivityDetailPage({
 
       {/* 표시된 지문 */}
       <section className="rounded-xl border border-gray-200 p-5 dark:border-gray-800">
-        <h2 className="mb-3 font-semibold">📖 학생이 표시한 지문</h2>
+        <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
+            <path d="M12 7v13" />
+            <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z" />
+            <path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5a2.5 2.5 0 0 1 2.5 2.5z" />
+          </svg>
+          학생이 표시한 지문
+        </h2>
         {fhStrokes.length > 0 && (
           <p className="mb-2 text-xs text-gray-400">
             ✍️ 학생 자유 필기 포함(위치는 대략)
@@ -173,7 +180,14 @@ export default async function ActivityDetailPage({
 
       {/* 관계 */}
       <section className="rounded-xl border border-gray-200 p-5 dark:border-gray-800">
-        <h2 className="mb-3 font-semibold">🔗 연결한 관계 ({relations.length})</h2>
+        <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
+            <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+            <path d="M15 7h2a5 5 0 0 1 0 10h-2" />
+            <path d="M8 12h8" />
+          </svg>
+          연결한 관계 ({relations.length})
+        </h2>
         {relations.length === 0 ? (
           <p className="text-sm text-gray-400">아직 없음</p>
         ) : (
