@@ -2166,7 +2166,7 @@ export function ReadingWorkspace({
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row lg:items-start">
-        <section className="relative flex-1 rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+        <section className="relative flex-1 rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-2 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           {pending && (
             <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full bg-amber-600/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -2497,25 +2497,46 @@ export function ReadingWorkspace({
           </div>
         </section>
 
-        {/* 오른쪽 열: 위=AI 코치, 아래=사고 패드 (가로 태블릿에서 본문 옆에 고정) */}
-        <div className="flex w-full flex-col gap-4 lg:w-[380px] lg:shrink-0 lg:sticky lg:top-20">
-          <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
-            <h2 className="mb-3 font-semibold">🤖 AI 읽기 코치</h2>
-            <div className="flex items-start gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-lg dark:bg-amber-950">
-                🤖
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="rounded-2xl rounded-tl-sm border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                  {coachPending
-                    ? "생각 중이에요…"
-                    : (lastAgent ??
-                      "읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 궁금한 점이나 내 생각을 아래에 적어줘요.")}
+        {/* 오른쪽: AI 코치(챗봇, 대화 누적) */}
+        <section className="flex w-full flex-col rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-3 lg:w-[330px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+            <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-amber-100 text-sm dark:bg-amber-950">🤖</span>
+              AI 읽기 코치
+            </h2>
+            <div className="flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto pr-1">
+              {localMsgs.length === 0 && !coachPending && (
+                <p className="text-sm text-gray-400">
+                  읽으면서 중요한 부분을 표시하고 관계를 이어보세요. 궁금한 점이나 내 생각을 아래에 적어줘요.
+                </p>
+              )}
+              {localMsgs.map((m) => (
+                <div
+                  key={m.id}
+                  className={m.role === "agent" ? "flex" : "flex flex-row-reverse"}
+                >
+                  <div
+                    className={
+                      m.role === "agent"
+                        ? "max-w-[85%] rounded-2xl rounded-tl-sm border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+                        : "max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2 text-sm leading-relaxed text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    }
+                  >
+                    {m.content}
+                  </div>
                 </div>
-                {coachNote && (
-                  <p className="mt-1 text-xs text-amber-600">{coachNote}</p>
-                )}
-                <div className="mt-1 flex flex-wrap gap-1">
+              ))}
+              {coachPending && (
+                <div className="flex">
+                  <div className="rounded-2xl rounded-tl-sm border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                    생각 중이에요…
+                  </div>
+                </div>
+              )}
+            </div>
+            {coachNote && (
+              <p className="mt-2 text-xs text-amber-600">{coachNote}</p>
+            )}
+                <div className="mt-2 flex flex-wrap gap-1">
                   <button
                     type="button"
                     onClick={() => sendCoach(true)}
@@ -2566,8 +2587,6 @@ export function ReadingWorkspace({
                     </button>
                   )}
                 </div>
-              </div>
-            </div>
             <div className="relative mt-3 flex items-end gap-2">
               {seCue && (
                 <div className="absolute -top-8 right-0 z-10 flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-lg">
@@ -2600,7 +2619,7 @@ export function ReadingWorkspace({
             </div>
           </section>
 
-          <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+          <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-1 lg:w-[260px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
               <path d="M16.5 3a2.12 2.12 0 0 1 3 3L8 17.5 3.5 19 5 14.5z" />
@@ -2863,7 +2882,6 @@ export function ReadingWorkspace({
             </div>
           )}
         </aside>
-        </div>
       </div>
     </div>
   );
