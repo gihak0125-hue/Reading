@@ -568,7 +568,7 @@ export function ReadingWorkspace({
     | "critique_score"
     | "done"
   >(null);
-  const [showBody, setShowBody] = useState(false);
+  const [showBody, setShowBody] = useState(true);
   // 확인/관점 각 단계 대화만 보여주기 위한 시작 인덱스(단계 전환 시 갱신)
   const [convStart, setConvStart] = useState(0);
   // 낙관적 표시: 메시지를 로컬 상태로 미러링(서버 갱신 시 동기화)

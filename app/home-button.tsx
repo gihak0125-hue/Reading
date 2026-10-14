@@ -30,9 +30,11 @@ export function HomeButton() {
     p === "/" ||
     p === "/login" ||
     p === "/dashboard" ||
+    p === "/records" ||
+    p === "/join" ||
     p === "/tutorial" ||
     p.startsWith("/tutorial/") ||
-    p.startsWith("/read/");
+    p.startsWith("/read");
   if (hide) return null;
   return (
     <Link
