@@ -77,6 +77,39 @@ export default async function RecordsPage() {
 
   const scored = sess.filter((s) => bySession.has(s.id));
 
+  // ===== 주별 점수 추이(최근 8주, 각 점수 행의 평균을 주 단위로 집계) =====
+  const WEEKS = 8;
+  const WEEK_MS = 7 * 24 * 3600 * 1000;
+  const now = Date.now();
+  const buckets = Array.from({ length: WEEKS }, () => ({ sum: 0, n: 0 }));
+  for (const r of scores) {
+    const vals = [r.fact, r.inference, r.critique].filter(
+      (v): v is number => v != null,
+    );
+    if (!vals.length) continue;
+    const overall = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const wi = Math.floor((now - new Date(r.updated_at).getTime()) / WEEK_MS);
+    if (wi >= 0 && wi < WEEKS) {
+      buckets[wi].sum += overall;
+      buckets[wi].n += 1;
+    }
+  }
+  // 오래된 주 → 최근 주 순서
+  const series = buckets
+    .map((b) => (b.n ? Math.round(b.sum / b.n) : null))
+    .reverse();
+  const hasTrend = series.some((v) => v != null);
+  // 라인 차트 좌표
+  const CW = 320, CH = 120, X0 = 22, X1 = 300, Y0 = 12, Y1 = 94;
+  const xAt = (i: number) => X0 + ((X1 - X0) * i) / (WEEKS - 1);
+  const yAt = (v: number) => Y1 - ((Y1 - Y0) * v) / 100;
+  const pts = series
+    .map((v, i) => (v == null ? null : { x: xAt(i), y: yAt(v), v, i }))
+    .filter((p): p is { x: number; y: number; v: number; i: number } => !!p);
+  const linePath = pts
+    .map((p, k) => `${k ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(" ");
+
   return (
     <div className="flex min-h-full w-full flex-1">
       <StudentSidebar />
@@ -109,6 +142,34 @@ export default async function RecordsPage() {
             <ScorePill label="비판" v={latest.critique} />
           </div>
         </section>
+
+        {hasTrend && (
+          <section className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-sm dark:border-white/10 dark:bg-gray-950/80">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-400">주별 점수 추이</span>
+              <span className="text-xs text-gray-400">최근 {WEEKS}주 · 종합 평균</span>
+            </div>
+            <svg viewBox={`0 0 ${CW} ${CH}`} className="mt-3 w-full" role="img" aria-label="주별 점수 추이">
+              {[0, 25, 50, 75, 100].map((g) => (
+                <g key={g}>
+                  <line x1={X0} y1={yAt(g)} x2={X1} y2={yAt(g)} stroke="#eae9e3" strokeWidth="1" />
+                  <text x={X0 - 4} y={yAt(g) + 3} textAnchor="end" fontSize="8" fill="#b7b3a8">{g}</text>
+                </g>
+              ))}
+              {pts.length > 1 && (
+                <path d={linePath} fill="none" stroke="#286b55" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              )}
+              {pts.map((p) => (
+                <g key={p.i}>
+                  <circle cx={p.x} cy={p.y} r="3.5" fill="#fff" stroke="#286b55" strokeWidth="2" />
+                  <text x={p.x} y={p.y - 7} textAnchor="middle" fontSize="9" fontWeight="700" fill="#286b55">{p.v}</text>
+                </g>
+              ))}
+              <text x={X0} y={112} textAnchor="start" fontSize="8" fill="#b7b3a8">{WEEKS}주 전</text>
+              <text x={X1} y={112} textAnchor="end" fontSize="8" fill="#b7b3a8">이번 주</text>
+            </svg>
+          </section>
+        )}
 
         <section className="flex flex-col gap-2">
           <h2 className="px-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
