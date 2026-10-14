@@ -2063,7 +2063,14 @@ export function ReadingWorkspace({
           >
             <HomeIcon className="h-4 w-4" />
           </Link>
-          <span className="min-w-0 truncate font-semibold">📄 {title}</span>
+          <span className="flex min-w-0 items-center gap-1.5 font-semibold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-gray-400" aria-hidden>
+              <path d="M7 3h7l4 4v14H7z" />
+              <path d="M14 3v4h4" />
+              <path d="M9 12h6M9 16h4" />
+            </svg>
+            <span className="truncate">{title}</span>
+          </span>
           <div
             className="ml-1 hidden shrink-0 items-center gap-1 border-l border-gray-200 pl-3 md:flex dark:border-gray-700"
             title="순서는 강제되지 않아요 · 길잡이"
@@ -2168,7 +2175,14 @@ export function ReadingWorkspace({
           )}
           <div className="sticky top-14 z-10 -mx-5 -mt-5 mb-4 rounded-t-2xl border-b border-gray-100 bg-white px-5 pb-3 pt-5 dark:border-gray-800 dark:bg-gray-950">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">📖 본문</h2>
+            <h2 className="flex items-center gap-1.5 font-semibold">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
+                <path d="M12 7v13" />
+                <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z" />
+                <path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5a2.5 2.5 0 0 1 2.5 2.5z" />
+              </svg>
+              본문
+            </h2>
             <button
               type="button"
               onClick={() => setShowTools((v) => !v)}
@@ -2587,7 +2601,13 @@ export function ReadingWorkspace({
           </section>
 
           <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
-          <h2 className="mb-3 font-semibold">📝 사고 패드</h2>
+          <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
+              <path d="M16.5 3a2.12 2.12 0 0 1 3 3L8 17.5 3.5 19 5 14.5z" />
+              <path d="M14 5.5l4.5 4.5" />
+            </svg>
+            사고 패드
+          </h2>
           <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1 text-sm dark:bg-gray-800">
             {(
               [
