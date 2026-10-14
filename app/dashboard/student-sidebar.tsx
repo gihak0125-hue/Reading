@@ -63,7 +63,7 @@ const NAV: { href: string; label: string; icon: ReactNode; match: (p: string) =>
 export function StudentSidebar() {
   const pathname = usePathname() ?? "";
   return (
-    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-[#eae9e3] bg-white/60 px-4 py-6 lg:flex dark:border-gray-800 dark:bg-gray-950/50">
+    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-[#eae9e3] bg-white/60 px-4 py-6 md:flex dark:border-gray-800 dark:bg-gray-950/50">
       <div className="flex items-center gap-2 px-2">
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-600 text-white">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
