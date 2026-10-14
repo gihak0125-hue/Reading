@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORY_LABEL } from "@/lib/categories";
+import { ScoreEmptyArt } from "@/app/empty-art";
 
 const CAT_BAR: Record<string, string> = {
   humanities: "bg-rose-400",
@@ -174,14 +175,7 @@ export default async function RecordsPage() {
           </h2>
           {scored.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-white/50 p-8 text-center dark:border-gray-700 dark:bg-gray-950/40">
-              <svg viewBox="0 0 120 80" className="h-20 w-auto" aria-hidden>
-                <ellipse cx="60" cy="72" rx="36" ry="4" fill="#286b55" opacity="0.1" />
-                <line x1="24" y1="60" x2="96" y2="60" stroke="#c9e4d5" strokeWidth="2" strokeLinecap="round" />
-                <rect x="34" y="44" width="12" height="16" rx="2" fill="#a6d1bd" />
-                <rect x="54" y="34" width="12" height="26" rx="2" fill="#6cb195" />
-                <rect x="74" y="24" width="12" height="36" rx="2" fill="#286b55" />
-                <path d="M92 16 l1.6 4.4 4.4 1.6 -4.4 1.6 -1.6 4.4 -1.6 -4.4 -4.4 -1.6 4.4 -1.6 z" fill="#f6b73c" />
-              </svg>
+              <ScoreEmptyArt className="h-24 w-auto" />
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 아직 점수가 없어요.{" "}
                 <Link href="/read" className="font-medium text-amber-700 hover:underline dark:text-amber-400">
