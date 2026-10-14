@@ -122,9 +122,22 @@ export default async function ReadListPage() {
       </header>
 
       {groups.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-gray-500 dark:border-gray-700">
-          아직 등록된 지문이 없어요. 선생님이 지문을 올리면 여기에 보여요.
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-10 text-center dark:border-gray-700">
+          <svg viewBox="0 0 120 90" className="h-24 w-auto" aria-hidden>
+            <ellipse cx="60" cy="80" rx="40" ry="5" fill="#286b55" opacity="0.1" />
+            <path d="M60 72 C50 64 30 62 16 66 V34 C30 30 50 32 60 40 Z" fill="#eef5f0" stroke="#286b55" strokeWidth="2" strokeLinejoin="round" />
+            <path d="M60 72 C70 64 90 62 104 66 V34 C90 30 70 32 60 40 Z" fill="#ddefe6" stroke="#286b55" strokeWidth="2" strokeLinejoin="round" />
+            <path d="M60 40 V72" stroke="#286b55" strokeWidth="2" />
+            <path d="M60 40 C60 30 60 24 60 20" fill="none" stroke="#3d8f6e" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M60 28 q-10 -8 -16 0 q10 8 16 0 Z" fill="#6cb195" stroke="#286b55" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M60 22 q10 -7 16 1 q-10 7 -16 -1 Z" fill="#a6d1bd" stroke="#286b55" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            아직 등록된 지문이 없어요.
+            <br />
+            선생님이 지문을 올리면 여기에 보여요.
+          </p>
+        </div>
       ) : (
         groups.map((g) => {
           const style = CAT_STYLE[g.id] ?? CAT_STYLE._none;
