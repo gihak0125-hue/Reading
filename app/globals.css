@@ -51,6 +51,9 @@ body {
   font-family: "Pretendard Variable", Pretendard, var(--font-noto-sans-kr),
     var(--font-geist-sans), "Apple SD Gothic Neo", "Malgun Gothic", Arial,
     sans-serif;
+  /* 한글은 단어 중간에서 줄바꿈하지 않도록(어절 단위) — 긴 영문/URL은 넘침 방지 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* 지문 등 세리프 */
