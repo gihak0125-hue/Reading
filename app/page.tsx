@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Wordmark } from "@/app/brand";
+import { Wordmark, BookdoiHero } from "@/app/brand";
 
 function Feature({
   icon,
@@ -44,7 +44,8 @@ function Ic({ children }: { children: ReactNode }) {
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-10 px-6 py-12 sm:py-16">
-      <header className="flex min-h-[52vh] max-w-xl flex-col justify-center gap-5">
+      <div className="flex min-h-[52vh] flex-col items-center gap-8 lg:flex-row lg:justify-between lg:gap-10">
+      <header className="flex max-w-xl flex-col justify-center gap-5">
         <Wordmark size="lg" />
         <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-medium text-sky-800 shadow-sm backdrop-blur-sm dark:bg-gray-950/70 dark:text-sky-300">
           고등학교 3학년 · 문해력 학습 AI 에이전트
@@ -74,6 +75,10 @@ export default function Home() {
           </Link>
         </div>
       </header>
+        <div className="shrink-0 overflow-hidden rounded-[2rem] bg-[#faf9f4]/70 p-2 shadow-xl shadow-emerald-900/10 ring-1 ring-white/70 backdrop-blur-sm">
+          <BookdoiHero className="w-52 rounded-[1.6rem] sm:w-64 lg:w-72" />
+        </div>
+      </div>
 
       <section className="grid gap-4 sm:grid-cols-3">
         <Feature

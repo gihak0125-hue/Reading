@@ -45,25 +45,28 @@ export function Wordmark({
   );
 }
 
-// 북돋이 마스코트 — 둥근 새싹 친구 얼굴. 코치 아바타에 사용.
+// 북돋이 마스코트 아바타(얼굴). 코치 패널 등 작은 자리에 원형으로 사용.
+// eslint-disable-next-line @next/next/no-img-element
 export function Bookdoi({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} aria-hidden>
-      {/* 머리 위 새싹 */}
-      <path d="M24 12V6" stroke="#3d8f6e" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M24 9c-4-.5-6.5-3.2-7-7 4 0 7 2.8 7 7Z" fill="#6cb195" />
-      <path d="M24 7c4-.5 6.5-3.2 7-7-4 0-7 2.8-7 7Z" fill="#a6d1bd" />
-      {/* 얼굴(둥근 몸) */}
-      <circle cx="24" cy="29" r="15" fill="#eef5f0" />
-      <circle cx="24" cy="29" r="15" fill="none" stroke="#6cb195" strokeWidth="1.6" />
-      {/* 볼 */}
-      <circle cx="16.5" cy="31" r="2.4" fill="#ffc9a3" opacity="0.8" />
-      <circle cx="31.5" cy="31" r="2.4" fill="#ffc9a3" opacity="0.8" />
-      {/* 눈 */}
-      <circle cx="19" cy="27" r="1.9" fill="#286b55" />
-      <circle cx="29" cy="27" r="1.9" fill="#286b55" />
-      {/* 웃는 입 */}
-      <path d="M20.5 33q3.5 3 7 0" stroke="#286b55" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-    </svg>
+    <img
+      src="/bookdoi-avatar.webp"
+      alt="AI 북돋이"
+      draggable={false}
+      className={`rounded-full object-cover ${className ?? ""}`}
+    />
+  );
+}
+
+// 북돋이 전신 마스코트(책 읽는 모습). 랜딩/히어로 등 크게 보여줄 때 사용.
+// eslint-disable-next-line @next/next/no-img-element
+export function BookdoiHero({ className }: { className?: string }) {
+  return (
+    <img
+      src="/bookdoi-hero.webp"
+      alt="책을 읽는 AI 북돋이"
+      draggable={false}
+      className={className}
+    />
   );
 }
