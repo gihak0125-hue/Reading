@@ -2165,15 +2165,15 @@ export function ReadingWorkspace({
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row lg:items-start">
-        <section className="relative flex-1 rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-2 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-3 p-4 lg:flex-row lg:items-start">
+        <section className="relative flex-1 rounded-2xl border border-white/60 bg-white px-4 py-5 shadow-xl shadow-blue-200/20 lg:order-2 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           {pending && (
             <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full bg-amber-600/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
               표시하는 중…
             </div>
           )}
-          <div className="sticky top-14 z-10 -mx-5 -mt-5 mb-4 rounded-t-2xl border-b border-gray-100 bg-white px-5 pb-3 pt-5 dark:border-gray-800 dark:bg-gray-950">
+          <div className="sticky top-14 z-10 -mx-4 -mt-5 mb-4 rounded-t-2xl border-b border-gray-100 bg-white px-4 pb-3 pt-5 dark:border-gray-800 dark:bg-gray-950">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="flex items-center gap-1.5 font-semibold">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
@@ -2498,7 +2498,7 @@ export function ReadingWorkspace({
         </section>
 
         {/* 오른쪽: AI 코치(챗봇, 대화 누적) */}
-        <section className="flex w-full flex-col rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-3 lg:w-[330px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+        <section className="flex w-full flex-col rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-3 lg:w-[300px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
             <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
               <span className="grid h-6 w-6 place-items-center rounded-full bg-amber-100 text-sm dark:bg-amber-950">🤖</span>
               AI 읽기 코치
@@ -2619,7 +2619,7 @@ export function ReadingWorkspace({
             </div>
           </section>
 
-          <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-1 lg:w-[260px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+          <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-1 lg:w-[220px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
               <path d="M16.5 3a2.12 2.12 0 0 1 3 3L8 17.5 3.5 19 5 14.5z" />
