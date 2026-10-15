@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { HomeIcon } from "@/app/home-button";
+import { Bookdoi } from "@/app/brand";
 import {
   addAnnotation,
   deleteAnnotation,
@@ -1620,7 +1621,7 @@ export function ReadingWorkspace({
     if (tool === "circle")
       return "'동그라미' — 중심화제(글의 중심이 되는 말)에 손으로 그으면 표시돼요.";
     if (tool === "predictcue")
-      return "'예측단서' — 1~2문단에서 다음 내용을 짐작하게 하는 단서(담화표지·구조 등)에 표시하면 코치가 예측을 물어봐요.";
+      return "'예측단서' — 1~2문단에서 다음 내용을 짐작하게 하는 단서(담화표지·구조 등)에 표시하면 북돋이가 예측을 물어봐요.";
     if (tool === "listing")
       return "'나열' — 항목(밑줄·동그라미)을 순서대로 탭하면 1·2·3 번호가 붙어요.";
     if (tool === "erase") return "'지우기' — 표시나 필기 위를 그으면 지워져요.";
@@ -1879,7 +1880,7 @@ export function ReadingWorkspace({
                 <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
               {localMsgs.slice(convStart).length === 0 && !coachPending && !coachStreaming && (
                 <p className="text-sm text-gray-400">
-                  코치가 곧 질문을 띄울 거예요…
+                  북돋이가 곧 질문을 띄울 거예요…
                 </p>
               )}
               {localMsgs.slice(convStart).slice(-12).map((m) => (
@@ -2013,7 +2014,7 @@ export function ReadingWorkspace({
           >
             <h2 className="text-lg font-bold">읽기 전에, 이렇게 해요 📖</h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              정답을 먼저 알려주지 않아요. 스스로 표시하고 설명하면 코치가 곁에서 도와줘요.
+              정답을 먼저 알려주지 않아요. 스스로 표시하고 설명하면 북돋이가 곁에서 도와줘요.
             </p>
             <ul className="mt-4 flex flex-col gap-3">
               {(
@@ -2021,7 +2022,7 @@ export function ReadingWorkspace({
                   ["✍️", "손으로 표시", "밑줄은 핵심문장, 동그라미는 중심화제에 그어요."],
                   ["🔗", "관계 잇기", "표시를 화살표로 이어 인과·비교·대조 같은 관계를 나타내요."],
                   ["💬", "자기설명", "정답 확인 전에 내 말로 먼저 설명해요."],
-                  ["🤖", "AI 읽기 코치", "막히면 정답 대신 질문과 힌트로 도와줘요."],
+                  ["🌱", "북돋이와 함께", "막히면 정답 대신 질문과 힌트로 북돋이가 도와줘요."],
                 ] as const
               ).map(([icon, title, desc]) => (
                 <li key={title} className="flex items-start gap-3">
@@ -2500,8 +2501,8 @@ export function ReadingWorkspace({
         {/* 오른쪽: AI 코치(챗봇, 대화 누적) */}
         <section className="flex w-full flex-col rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-3 lg:w-[300px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
             <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-amber-100 text-sm dark:bg-amber-950">🤖</span>
-              AI 읽기 코치
+              <Bookdoi className="h-7 w-7" />
+              북돋이
             </h2>
             <div className="flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto pr-1">
               {localMsgs.length === 0 && !coachPending && (

@@ -7,6 +7,7 @@ import { startSession } from "@/app/read/actions";
 import { SubmitButton } from "@/app/submit-button";
 import { isAdminEmail } from "@/lib/admin";
 import { CATEGORY_LABEL } from "@/lib/categories";
+import { Wordmark } from "@/app/brand";
 
 function Svg({ children }: { children: ReactNode }) {
   return (
@@ -175,9 +176,12 @@ export default async function DashboardPage() {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-10">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-            {isTeacher ? "교사" : "학생"}
-          </span>
+          <div className="flex items-center gap-2">
+            <Wordmark size="sm" />
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              {isTeacher ? "교사" : "학생"}
+            </span>
+          </div>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-800 dark:text-gray-100">
             안녕하세요, {name}님
           </h1>

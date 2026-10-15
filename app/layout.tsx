@@ -30,8 +30,8 @@ const notoSerifKr = Noto_Serif_KR({
 });
 
 export const metadata: Metadata = {
-  title: "AI 문해력 코치",
-  description: "읽고 생각하는 힘을 기르는 AI 문해력 코치",
+  title: "북돋움",
+  description: "읽는 힘이, 더 넓은 나를 만듭니다 — 북돋움은 학생의 문해력을 기르는 AI 리딩 에이전트입니다.",
 };
 
 export default function RootLayout({
