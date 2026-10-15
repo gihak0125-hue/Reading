@@ -2619,7 +2619,7 @@ export function ReadingWorkspace({
             </div>
           </section>
 
-          <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-1 lg:w-[220px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
+          <aside className="w-full rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-1 lg:w-[232px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
           <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" aria-hidden>
               <path d="M16.5 3a2.12 2.12 0 0 1 3 3L8 17.5 3.5 19 5 14.5z" />
@@ -2627,7 +2627,7 @@ export function ReadingWorkspace({
             </svg>
             사고 패드
           </h2>
-          <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1 text-sm dark:bg-gray-800">
+          <div className="mb-4 flex gap-0.5 rounded-lg bg-gray-100 p-1 text-xs dark:bg-gray-800">
             {(
               [
                 ["key", "핵심정보"],
@@ -2639,7 +2639,7 @@ export function ReadingWorkspace({
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`flex-1 rounded-md px-2 py-1.5 font-medium ${
+                className={`flex-1 whitespace-nowrap rounded-md px-1 py-1.5 font-medium ${
                   tab === id
                     ? "bg-white text-amber-800 shadow-sm dark:bg-gray-950 dark:text-amber-300"
                     : "text-gray-500"
