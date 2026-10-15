@@ -2022,7 +2022,7 @@ export function ReadingWorkspace({
                   ["✍️", "손으로 표시", "밑줄은 핵심문장, 동그라미는 중심화제에 그어요."],
                   ["🔗", "관계 잇기", "표시를 화살표로 이어 인과·비교·대조 같은 관계를 나타내요."],
                   ["💬", "자기설명", "정답 확인 전에 내 말로 먼저 설명해요."],
-                  ["🌱", "북돋이와 함께", "막히면 정답 대신 질문과 힌트로 북돋이가 도와줘요."],
+                  ["🌱", "AI 북돋이와 함께", "막히면 정답 대신 질문과 힌트로 북돋이가 도와줘요."],
                 ] as const
               ).map(([icon, title, desc]) => (
                 <li key={title} className="flex items-start gap-3">
@@ -2502,6 +2502,9 @@ export function ReadingWorkspace({
         <section className="flex w-full flex-col rounded-2xl border border-white/60 bg-white p-5 shadow-xl shadow-blue-200/20 lg:order-3 lg:w-[300px] lg:shrink-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30">
             <h2 className="mb-3 flex items-center gap-1.5 font-semibold">
               <Bookdoi className="h-7 w-7" />
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                AI
+              </span>
               북돋이
             </h2>
             <div className="flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto pr-1">

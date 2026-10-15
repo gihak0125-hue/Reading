@@ -444,7 +444,7 @@ export function PracticeMarking() {
           `}</style>
           <div className="coach-pop flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-white p-6 text-center shadow-2xl dark:bg-gray-900">
             <div>
-              <p className="text-xs font-medium text-amber-700 dark:text-amber-300">북돋이</p>
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-300">AI 북돋이</p>
               <h2 className="mt-1 text-xl font-bold text-gray-800 dark:text-gray-100">읽기, 이렇게 해요</h2>
             </div>
             <ol className="flex flex-col gap-3 text-left">
