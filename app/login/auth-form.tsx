@@ -6,35 +6,47 @@ import { authenticate, type AuthState } from "./actions";
 const initial: AuthState = {};
 
 export function AuthForm({ next }: { next: string }) {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  // null = 아직 선택 전(로그인/회원가입 버튼만), 선택하면 입력창이 열린다.
+  const [mode, setMode] = useState<"login" | "signup" | null>(null);
   const [role, setRole] = useState<"student" | "teacher">("student");
   const [state, formAction, pending] = useActionState(authenticate, initial);
 
-  return (
-    <div className="w-full max-w-sm rounded-2xl border border-white/70 bg-white/85 p-6 shadow-xl shadow-amber-900/10 dark:border-white/10 dark:bg-gray-950/90 dark:shadow-black/30">
-      <div className="mb-6 flex gap-2 text-sm font-medium">
+  // 선택 전: 큰 버튼 두 개만
+  if (mode === null) {
+    return (
+      <div className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-white/70 bg-white/85 p-6 shadow-xl shadow-amber-900/10 dark:border-white/10 dark:bg-gray-950/90 dark:shadow-black/30">
         <button
           type="button"
           onClick={() => setMode("login")}
-          className={`flex-1 rounded-md px-3 py-2 ${
-            mode === "login"
-              ? "bg-amber-700 text-white"
-              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-          }`}
+          className="rounded-xl bg-amber-700 px-4 py-3 font-medium text-white shadow-sm transition hover:bg-amber-800"
         >
           로그인
         </button>
         <button
           type="button"
           onClick={() => setMode("signup")}
-          className={`flex-1 rounded-md px-3 py-2 ${
-            mode === "signup"
-              ? "bg-amber-700 text-white"
-              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-          }`}
+          className="rounded-xl border border-amber-300 bg-white px-4 py-3 font-medium text-amber-800 transition hover:bg-amber-50 dark:border-amber-800 dark:bg-gray-950 dark:text-amber-300 dark:hover:bg-amber-950"
         >
           회원가입
         </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-sm rounded-2xl border border-white/70 bg-white/85 p-6 shadow-xl shadow-amber-900/10 dark:border-white/10 dark:bg-gray-950/90 dark:shadow-black/30">
+      <div className="mb-5 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setMode(null)}
+          aria-label="뒤로"
+          className="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          ←
+        </button>
+        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+          {mode === "login" ? "로그인" : "회원가입"}
+        </h2>
       </div>
 
       <form action={formAction} className="flex flex-col gap-4">
@@ -177,6 +189,17 @@ export function AuthForm({ next }: { next: string }) {
               ? "로그인"
               : "회원가입"}
         </button>
+
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+          {mode === "login" ? "계정이 없나요? " : "이미 계정이 있나요? "}
+          <button
+            type="button"
+            onClick={() => setMode(mode === "login" ? "signup" : "login")}
+            className="font-medium text-amber-700 hover:underline dark:text-amber-300"
+          >
+            {mode === "login" ? "회원가입" : "로그인"}
+          </button>
+        </p>
       </form>
     </div>
   );
