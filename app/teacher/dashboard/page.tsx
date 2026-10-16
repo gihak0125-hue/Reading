@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireTeacher } from "@/lib/auth";
 import { ExportCsv } from "./export-csv";
+import { MarkAnalysis } from "./mark-analysis";
 
 type Anno = {
   id: string;
@@ -177,28 +178,57 @@ export default async function TeacherDashboard() {
     areaCount.viewpoint +
     areaCount.relation;
 
-  // 독해 점수(형성 평가) 집계
-  const { data: scoreRows } = sessionIds.length
-    ? await supabase
+  // 독해 점수(형성 평가) 집계 — 표시량 컬럼(0026)은 있으면 함께, 없으면 폴백
+  type ScoreRow = {
+    session_id: string;
+    stage: string;
+    fact: number | null;
+    inference: number | null;
+    critique: number | null;
+    detail: number | null;
+    main: number | null;
+    mark_ratio?: number | null;
+    mark_precision?: number | null;
+    mark_recall?: number | null;
+  };
+  let sc: ScoreRow[] = [];
+  if (sessionIds.length) {
+    const withMarks = await supabase
+      .from("session_scores")
+      .select(
+        "session_id, stage, fact, inference, critique, detail, main, mark_ratio, mark_precision, mark_recall",
+      )
+      .in("session_id", sessionIds);
+    if (withMarks.error) {
+      const plain = await supabase
         .from("session_scores")
         .select("session_id, stage, fact, inference, critique, detail, main")
-        .in("session_id", sessionIds)
-    : {
-        data: [] as {
-          session_id: string;
-          stage: string;
-          fact: number | null;
-          inference: number | null;
-          critique: number | null;
-          detail: number | null;
-          main: number | null;
-        }[],
-      };
+        .in("session_id", sessionIds);
+      sc = (plain.data ?? []) as ScoreRow[];
+    } else {
+      sc = (withMarks.data ?? []) as ScoreRow[];
+    }
+  }
   const avgOf = (arr: (number | null)[]) => {
     const v = arr.filter((x): x is number => typeof x === "number");
     return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
   };
-  const sc = scoreRows ?? [];
+
+  // 표시량 vs 독해점수 분석용 점(읽기 단계, 표시량 수집된 세션만)
+  const markPoints = sc
+    .filter(
+      (r) =>
+        r.stage === "reading" &&
+        r.mark_ratio != null &&
+        (r.fact != null || r.inference != null),
+    )
+    .map((r) => ({
+      ratio: Math.round((r.mark_ratio as number) * 1000) / 10, // 본문 대비 표시 %
+      precision:
+        r.mark_precision != null ? Math.round(r.mark_precision * 1000) / 10 : null,
+      recall: r.mark_recall != null ? Math.round(r.mark_recall * 1000) / 10 : null,
+      score: avgOf([r.fact, r.inference]) ?? 0, // 읽기 종합(사실·추론 평균)
+    }));
   const byStage = (st: string) => sc.filter((r) => r.stage === st);
   const stageStats = [
     {
@@ -543,6 +573,8 @@ export default async function TeacherDashboard() {
           ))}
         </div>
       </section>
+
+      <MarkAnalysis points={markPoints} />
 
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:col-span-2">
         <div className="mb-1 flex items-center justify-between gap-2">
