@@ -121,7 +121,8 @@ export function ParagraphTagger({
       if (b <= a) continue;
       const seg = text.slice(a, b);
       const bgm = bg.find((m) => m.start <= a && m.end >= b);
-      const relm = rel.find((m) => m.start <= a && m.end >= b);
+      const relCovers = rel.filter((m) => m.start <= a && m.end >= b);
+      const relm = relCovers[0];
       if (!bgm && !relm) {
         out.push(seg);
         continue;
@@ -142,8 +143,17 @@ export function ParagraphTagger({
           ? "underline decoration-dashed decoration-violet-500 decoration-2 underline-offset-[3px] "
           : "underline decoration-violet-500 decoration-2 underline-offset-[3px] ";
       }
+      // 화살표 앵커: 이 구간을 덮는 모든 관계 양끝을 "idx:role"로 표기
+      const ep = relCovers.length
+        ? relCovers.map((m) => `${m.idx}:${m.role}`).join(" ")
+        : undefined;
       out.push(
-        <span key={a} className={cls} title={relm ? `관계: ${relm.label}` : undefined}>
+        <span
+          key={a}
+          className={cls}
+          data-ep={ep}
+          title={relm ? `관계: ${relm.label}` : undefined}
+        >
           {seg}
         </span>,
       );
