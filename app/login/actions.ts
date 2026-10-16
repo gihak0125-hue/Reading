@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export type AuthState = { error?: string; message?: string };
 
@@ -55,6 +56,19 @@ export async function authenticate(
     });
     if (error) return { error: `가입 실패: ${error.message}` };
 
+    // 이메일 확인 절차 없이 바로 쓰도록: 가입 즉시 서버(서비스 롤)에서 확인 처리.
+    // (Supabase 'Confirm email'이 켜져 있어도 학생이 링크 없이 로그인 가능)
+    const svc = createServiceClient();
+    if (svc && data.user?.id) {
+      try {
+        await svc.auth.admin.updateUserById(data.user.id, {
+          email_confirm: true,
+        });
+      } catch {
+        // 서비스 롤 없거나 실패 시 아래 폴백 안내로 처리
+      }
+    }
+
     // 교사는 승인 전까지 로그인하지 않도록 바로 로그아웃하고 안내만 보여준다.
     if (role === "teacher") {
       await supabase.auth.signOut();
@@ -64,11 +78,17 @@ export async function authenticate(
       };
     }
 
+    // 학생: 확인이 켜져 있어 세션이 없으면(위에서 확인 처리됨) 지금 바로 로그인시킨다.
     if (!data.session) {
-      return {
-        message:
-          "가입 완료! 이메일 확인이 켜져 있어요. 확인 링크를 누르거나, 설정에서 이메일 확인을 끄면 바로 로그인됩니다.",
-      };
+      const { error: siErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (siErr) {
+        return {
+          message: "가입이 완료됐어요. 로그인 화면에서 로그인해 주세요.",
+        };
+      }
     }
     const code = String(formData.get("join_code") ?? "")
       .trim()
