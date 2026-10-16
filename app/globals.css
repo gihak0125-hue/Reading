@@ -75,3 +75,32 @@ body {
 .coach-pop {
   animation: coach-pop 0.35s ease;
 }
+
+/* ===== 움직이는 배경(홈/로그인 쇼케이스) ===== */
+/* 동작 줄이기 설정이면 전부 정지(접근성). */
+@media (prefers-reduced-motion: no-preference) {
+  /* 햇살 번짐: 천천히 이동하며 밝기 명멸 */
+  @keyframes bd-shimmer {
+    0%   { transform: translate3d(-4%, -2%, 0) scale(1);    opacity: 0.35; }
+    50%  { transform: translate3d(3%, 2%, 0) scale(1.08);   opacity: 0.6; }
+    100% { transform: translate3d(-4%, -2%, 0) scale(1);    opacity: 0.35; }
+  }
+  .bd-shimmer { animation: bd-shimmer 9s ease-in-out infinite; }
+
+  /* 잎 흔들림: 좌우로 부드럽게 기울며 아주 살짝 상하 */
+  @keyframes bd-sway {
+    0%   { transform: rotate(-7deg) translateY(0); }
+    50%  { transform: rotate(7deg) translateY(-3px); }
+    100% { transform: rotate(-7deg) translateY(0); }
+  }
+  .bd-sway { animation: bd-sway 5.5s ease-in-out infinite; transform-origin: top center; }
+
+  /* 잎 드리프트: 넓게 떠다니며 회전 */
+  @keyframes bd-drift {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    33%  { transform: translate(10px, 14px) rotate(8deg); }
+    66%  { transform: translate(-6px, 26px) rotate(-6deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+  }
+  .bd-drift { animation: bd-drift 11s ease-in-out infinite; }
+}
