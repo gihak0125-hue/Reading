@@ -249,8 +249,40 @@ export default async function TeacherDashboard() {
       p.critique = r.critique;
     }
   }
-  // 표시 지표가 있는 세션만(표시량 수집된 읽기)
-  const markPoints = [...pxBySession.values()].filter((p) => p.ratio != null);
+  // 세션→지문·학급 매핑(필터용)
+  const sessPassage = new Map(sessionList.map((s) => [s.id, s.passage_id]));
+  const sessStudent = new Map(sessionList.map((s) => [s.id, s.student_id]));
+  const studentClass = new Map(studentList.map((s) => [s.id, s.class_id]));
+  const classNameById = new Map(classList.map((c) => [c.id, c.name]));
+  const passageTitleById = new Map<string, string>([
+    ...passageList.map((p) => [p.id, p.title] as [string, string]),
+    ...(sessPassages ?? []).map((p) => [p.id, p.title] as [string, string]),
+  ]);
+
+  // 표시 지표가 있는 세션만 + 지문·학급 태그
+  const markPoints = [...pxBySession.entries()]
+    .filter(([, p]) => p.ratio != null)
+    .map(([sid, p]) => {
+      const pid = sessPassage.get(sid) ?? null;
+      const cid = studentClass.get(sessStudent.get(sid) ?? "") ?? null;
+      return {
+        ...p,
+        passageId: pid,
+        passageTitle: pid ? passageTitleById.get(pid) ?? "지문" : "지문",
+        classId: cid,
+      };
+    });
+  // 필터 옵션(점이 있는 지문·학급만)
+  const markPassageOpts = [
+    ...new Map(
+      markPoints
+        .filter((p) => p.passageId)
+        .map((p) => [p.passageId as string, p.passageTitle]),
+    ).entries(),
+  ].map(([id, title]) => ({ id, title }));
+  const markClassOpts = [
+    ...new Set(markPoints.map((p) => p.classId).filter((c): c is string => !!c)),
+  ].map((id) => ({ id, name: classNameById.get(id) ?? "학급" }));
   const byStage = (st: string) => sc.filter((r) => r.stage === st);
   const stageStats = [
     {
@@ -596,7 +628,11 @@ export default async function TeacherDashboard() {
         </div>
       </section>
 
-      <MarkAnalysis points={markPoints} />
+      <MarkAnalysis
+        points={markPoints}
+        passages={markPassageOpts}
+        classes={markClassOpts}
+      />
 
       <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-lg shadow-blue-200/20 dark:border-white/10 dark:bg-gray-950 dark:shadow-black/30 lg:col-span-2">
         <div className="mb-1 flex items-center justify-between gap-2">

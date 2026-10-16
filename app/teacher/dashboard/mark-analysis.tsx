@@ -9,6 +9,9 @@ export type MarkPoint = {
   reading: number | null; // 읽기(표시) 점수 — 표시에서 산출(참고용)
   check: number | null; // 독해 확인 점수 — 독립 측정
   critique: number | null; // 관점 평가 점수 — 독립 측정
+  passageId: string | null;
+  passageTitle: string;
+  classId: string | null;
 };
 
 function pearson(xs: number[], ys: number[]): number | null {
@@ -48,18 +51,60 @@ const Y_LABEL: Record<YKey, string> = {
   reading: "읽기(표시) 점수",
 };
 
-export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
+export function MarkAnalysis({
+  points,
+  passages,
+  classes,
+}: {
+  points: MarkPoint[];
+  passages: { id: string; title: string }[];
+  classes: { id: string; name: string }[];
+}) {
   const [xKey, setXKey] = useState<XKey>("ratio");
   const [yKey, setYKey] = useState<YKey>("check");
+  const [passageId, setPassageId] = useState<string>("all");
+  const [classId, setClassId] = useState<string>("all");
 
   const xOf = (p: MarkPoint) => (xKey === "ratio" ? p.ratio : p.precision);
   const yOf = (p: MarkPoint) => p[yKey];
 
-  const valid = useMemo(
-    () => points.filter((p) => xOf(p) != null && yOf(p) != null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [points, xKey, yKey],
+  const filtered = useMemo(
+    () =>
+      points.filter(
+        (p) =>
+          (passageId === "all" || p.passageId === passageId) &&
+          (classId === "all" || p.classId === classId),
+      ),
+    [points, passageId, classId],
   );
+  const valid = useMemo(
+    () => filtered.filter((p) => xOf(p) != null && yOf(p) != null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered, xKey, yKey],
+  );
+
+  // 표시량 구간별(10%씩) 평균 세로축 점수 — '최적 구간' 확인용
+  const bins = useMemo(() => {
+    const B = Array.from({ length: 10 }, (_, i) => ({
+      lo: i * 10,
+      hi: i * 10 + 10,
+      sum: 0,
+      n: 0,
+    }));
+    for (const p of valid) {
+      const x = xOf(p) as number;
+      let idx = Math.floor(x / 10);
+      if (idx > 9) idx = 9;
+      if (idx < 0) idx = 0;
+      B[idx].sum += yOf(p) as number;
+      B[idx].n += 1;
+    }
+    return B.map((b) => ({ ...b, mean: b.n ? Math.round(b.sum / b.n) : null }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valid, xKey, yKey]);
+  const bestBin = bins
+    .filter((b) => b.n > 0)
+    .sort((a, b) => (b.mean ?? 0) - (a.mean ?? 0))[0];
   const xs = valid.map((p) => xOf(p) as number);
   const ys = valid.map((p) => yOf(p) as number);
   const r = pearson(xs, ys);
@@ -77,11 +122,12 @@ export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
   const py = (v: number) => T + (H - T - B) * (1 - Math.min(100, Math.max(0, v)) / 100);
 
   function exportCsv() {
+    const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
     const header =
-      "mark_ratio_pct,precision_pct,recall_pct,reading_score,check_score,critique_score";
-    const lines = points.map(
+      "passage,class,mark_ratio_pct,precision_pct,recall_pct,reading_score,check_score,critique_score";
+    const lines = filtered.map(
       (p) =>
-        `${p.ratio ?? ""},${p.precision ?? ""},${p.recall ?? ""},${p.reading ?? ""},${p.check ?? ""},${p.critique ?? ""}`,
+        `${esc(p.passageTitle)},${esc(p.classId ?? "")},${p.ratio ?? ""},${p.precision ?? ""},${p.recall ?? ""},${p.reading ?? ""},${p.check ?? ""},${p.critique ?? ""}`,
     );
     const csv = [header, ...lines].join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -132,6 +178,39 @@ export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
           </button>
         </div>
       </div>
+      {(passages.length > 1 || classes.length > 1) && (
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-gray-400">필터</span>
+          {classes.length > 1 && (
+            <select
+              value={classId}
+              onChange={(e) => setClassId(e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 dark:border-gray-700 dark:bg-gray-900"
+            >
+              <option value="all">전체 학급</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {passages.length > 1 && (
+            <select
+              value={passageId}
+              onChange={(e) => setPassageId(e.target.value)}
+              className="max-w-[220px] rounded-md border border-gray-300 bg-white px-2 py-1 dark:border-gray-700 dark:bg-gray-900"
+            >
+              <option value="all">전체 지문</option>
+              {passages.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-xs text-gray-400">세로축</span>
         <div className="flex rounded-lg bg-gray-100 p-0.5 text-xs dark:bg-gray-800">
@@ -157,7 +236,7 @@ export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
         {yKey === "reading"
           ? "※ 읽기(표시) 점수는 표시에서 산출돼 표시 지표와 순환이에요 — 참고용."
           : "독해 확인·관점 점수는 표시와 독립적으로 측정돼요(인과 추정에 적합)."}{" "}
-        점 {points.length}개.
+        점 {filtered.length}개.
       </p>
 
       {valid.length < 3 ? (
@@ -250,6 +329,48 @@ export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {valid.length >= 3 && (
+        <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              {xKey === "ratio" ? "표시량" : "정확도"} 구간별 평균 {Y_LABEL[yKey]}
+            </h3>
+            {bestBin && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                최고 구간 {bestBin.lo}–{bestBin.hi}% · 평균 {bestBin.mean}점
+              </span>
+            )}
+          </div>
+          <div className="flex items-end gap-1">
+            {bins.map((b) => (
+              <div key={b.lo} className="flex flex-1 flex-col items-center">
+                <span className="mb-1 text-[10px] tabular-nums text-gray-500 dark:text-gray-400">
+                  {b.mean == null ? "" : b.mean}
+                </span>
+                <div className="flex h-24 w-full items-end">
+                  <div
+                    className={`w-full rounded-t ${
+                      bestBin && b.lo === bestBin.lo ? "bg-emerald-500" : "bg-amber-400"
+                    }`}
+                    style={{ height: `${b.mean ?? 0}%`, opacity: b.n ? 1 : 0.15 }}
+                    title={b.n ? `${b.lo}–${b.hi}% · ${b.n}명 · 평균 ${b.mean}점` : `${b.lo}–${b.hi}% · 데이터 없음`}
+                  />
+                </div>
+                <span className="mt-1 text-[9px] text-gray-400">{b.lo}</span>
+                <span className="text-[9px] text-gray-300 dark:text-gray-600">
+                  {b.n ? `n${b.n}` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-gray-400">
+            가로 = {xKey === "ratio" ? "표시량" : "정확도"} 구간(%), 막대 높이 = 그
+            구간 학생들의 평균 {Y_LABEL[yKey]}. 어느 구간에서 점수가 가장 높은지(=
+            우리 데이터의 최적 구간)를 봐요.
+          </p>
         </div>
       )}
       <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
