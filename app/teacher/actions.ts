@@ -184,7 +184,7 @@ export type KeyInfoInput = {
   kind: "keyword" | "key_sentence";
 };
 
-/** 문단 텍스트의 일부 구간(span)을 중심화제/핵심문장으로 저장 */
+/** 문단 텍스트의 일부 구간(span)을 중심화제/중심문장으로 저장 */
 export async function addKeyInfo(
   input: KeyInfoInput,
 ): Promise<{ error?: string }> {
@@ -213,7 +213,7 @@ export async function deleteKeyInfo(
   revalidatePath(`/teacher/${passageId}`);
 }
 
-// ===== AI 지문 분석 (핵심문장·관계 추천 → 교사 검토) =====
+// ===== AI 지문 분석 (중심문장·관계 추천 → 교사 검토) =====
 
 export type KeyInfoSuggest = {
   paragraphId: string;
@@ -222,7 +222,7 @@ export type KeyInfoSuggest = {
   kind: "keyword" | "key_sentence";
   spanStart: number;
   spanEnd: number;
-  rank?: number; // 핵심문장 중요도 순위(문단 내 1=가장 중요). keyword엔 없음.
+  rank?: number; // 중심문장 중요도 순위(문단 내 1=가장 중요). keyword엔 없음.
 };
 export type RelationSuggest = {
   fromParagraphId: string;
@@ -276,7 +276,7 @@ export async function analyzePassageAction(
 
   const bySeq = new Map(paras.map((p) => [p.seq, p]));
   const keyInfos: KeyInfoSuggest[] = [];
-  // 핵심문장은 모델이 '중요도 순'으로 반환 → 문단 내 등장 순서를 순위(rank)로 매김
+  // 중심문장은 모델이 '중요도 순'으로 반환 → 문단 내 등장 순서를 순위(rank)로 매김
   const ksRank = new Map<string, number>();
   for (const k of result.keyInfos) {
     const p = bySeq.get(k.paragraphSeq);
@@ -346,7 +346,13 @@ export async function analyzePassageAction(
 /** 교사가 검토·선택한 추천을 정답 기준으로 저장 */
 export async function saveSuggestions(input: {
   passageId: string;
-  keyInfos: { paragraphId: string; spanStart: number; spanEnd: number; kind: string }[];
+  keyInfos: {
+    paragraphId: string;
+    spanStart: number;
+    spanEnd: number;
+    kind: string;
+    rank?: number;
+  }[];
   relations: RelationSuggest[];
 }): Promise<{ error?: string; ok?: boolean }> {
   const { supabase, user } = await requireTeacher();
@@ -387,15 +393,19 @@ export async function saveSuggestions(input: {
       if (!dupSaved && !dupBatch) kept.push(k);
     }
     if (kept.length) {
-      const { error } = await supabase.from("passage_key_info").insert(
-        kept.map((k) => ({
-          paragraph_id: k.paragraphId,
-          span_start: k.spanStart,
-          span_end: k.spanEnd,
-          kind: k.kind,
-        })),
-      );
-      if (error) return { error: `핵심정보 저장 실패: ${error.message}` };
+      const base = kept.map((k) => ({
+        paragraph_id: k.paragraphId,
+        span_start: k.spanStart,
+        span_end: k.spanEnd,
+        kind: k.kind,
+      }));
+      // rank 포함 저장 시도 → 컬럼(0025)이 없으면 rank 빼고 재시도
+      const withRank = base.map((b, i) => ({ ...b, rank: kept[i].rank ?? null }));
+      let { error } = await supabase.from("passage_key_info").insert(withRank);
+      if (error && /rank/i.test(error.message)) {
+        ({ error } = await supabase.from("passage_key_info").insert(base));
+      }
+      if (error) return { error: `중심정보 저장 실패: ${error.message}` };
     }
   }
   if (input.relations.length) {

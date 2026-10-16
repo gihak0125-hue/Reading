@@ -57,7 +57,7 @@ export function MarkingRubric({
           onChange={(e) => setRubric(e.target.value)}
           rows={4}
           maxLength={1000}
-          placeholder="예) 중심화제 동그라미 정확 30점 · 핵심문장 밑줄 40점 · 문단 간 관계 연결 30점. 핵심 누락/과잉 표시는 감점."
+          placeholder="예) 중심화제 동그라미 정확 30점 · 중심문장 밑줄 40점 · 문단 간 관계 연결 30점. 핵심 누락/과잉 표시는 감점."
           className="w-full resize-y rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
         />
       </label>

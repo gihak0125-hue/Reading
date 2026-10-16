@@ -80,6 +80,7 @@ export function AiSuggest({
         spanStart: k.spanStart,
         spanEnd: k.spanEnd,
         kind: k.kind,
+        rank: k.rank,
       }));
     const relations = data.relations.filter((_, i) => relChecked[i]);
     if (keyInfos.length + relations.length === 0) {
@@ -103,7 +104,7 @@ export function AiSuggest({
         <div>
           <h2 className="font-semibold">✨ AI 분석 (교사 보조)</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            핵심문장·중심화제와 문장 간 관계를 추천받아 검토 후 저장하세요.
+            중심문장·중심화제와 문장 간 관계를 추천받아 검토 후 저장하세요.
           </p>
         </div>
         <button
@@ -162,7 +163,7 @@ export function AiSuggest({
           </div>
           {data.keyInfos.length > 0 && (
             <div>
-              <p className="mb-1.5 text-sm font-medium">핵심문장 · 중심화제 추천</p>
+              <p className="mb-1.5 text-sm font-medium">중심문장 · 중심화제 추천</p>
               <ul className="flex flex-col gap-1.5">
                 {data.keyInfos.map((k, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
@@ -179,7 +180,7 @@ export function AiSuggest({
                     <span>
                       <span className="mr-1 rounded bg-gray-200 px-1.5 py-0.5 text-xs dark:bg-gray-700">
                         {k.paragraphSeq}문단 ·{" "}
-                        {k.kind === "keyword" ? "중심화제" : "핵심문장"}
+                        {k.kind === "keyword" ? "중심화제" : "중심문장"}
                       </span>
                       {k.kind === "key_sentence" && k.rank && (
                         <span

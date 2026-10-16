@@ -9,6 +9,7 @@ type KeyInfo = {
   span_start: number;
   span_end: number;
   kind: "keyword" | "key_sentence";
+  rank?: number | null;
 };
 
 export function ParagraphTagger({
@@ -96,7 +97,7 @@ export function ParagraphTagger({
         end: k.span_end,
         kind: k.kind,
         preview: false,
-        rank: undefined as number | undefined,
+        rank: (k.rank ?? undefined) as number | undefined,
       })),
       ...previewKeyInfos.map((k) => ({
         start: k.spanStart,
@@ -136,14 +137,23 @@ export function ParagraphTagger({
             ? "bg-amber-50 text-amber-900 border-b-2 border-dashed border-amber-500 dark:bg-amber-950/40 dark:text-amber-200 "
             : "bg-amber-200/80 text-amber-900 dark:bg-amber-800/60 dark:text-amber-100 ";
         else if (bgm.preview)
-          // 핵심문장 미리보기: 중요도 순위가 높을수록(1) 진하게
+          // 중심문장 미리보기: 중요도 순위가 높을수록(1) 진하게
           cls +=
             (bgm.rank ?? 9) <= 1
               ? "bg-sky-100 text-sky-900 border-b-2 border-dashed border-sky-600 dark:bg-sky-900/50 dark:text-sky-100 "
               : (bgm.rank ?? 9) === 2
                 ? "bg-sky-50 text-sky-900 border-b-2 border-dashed border-sky-400 dark:bg-sky-950/40 dark:text-sky-200 "
                 : "bg-sky-50/60 text-sky-800 border-b border-dashed border-sky-300 dark:bg-sky-950/25 dark:text-sky-300 ";
-        else cls += "bg-sky-200/80 text-sky-900 dark:bg-sky-800/60 dark:text-sky-100 ";
+        else
+          // 저장된 중심문장: 순위가 높을수록(1) 진하게. 순위 없으면(수동) 기본 중간톤.
+          cls +=
+            bgm.rank === 1
+              ? "bg-sky-300 text-sky-950 dark:bg-sky-700/70 dark:text-sky-50 "
+              : bgm.rank === 2
+                ? "bg-sky-200/80 text-sky-900 dark:bg-sky-800/60 dark:text-sky-100 "
+                : bgm.rank && bgm.rank >= 3
+                  ? "bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200 "
+                  : "bg-sky-200/80 text-sky-900 dark:bg-sky-800/60 dark:text-sky-100 ";
       }
       if (relm) {
         cls += relm.preview
@@ -196,7 +206,7 @@ export function ParagraphTagger({
             disabled={pending}
             className="rounded-md bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-800 hover:bg-sky-200 disabled:opacity-50 dark:bg-sky-900 dark:text-sky-200"
           >
-            + 핵심문장
+            + 중심문장
           </button>
         </div>
       </div>
@@ -221,8 +231,21 @@ export function ParagraphTagger({
                     : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200"
                 }`}
               >
-                {k.kind === "keyword" ? "중심화제" : "핵심문장"}
+                {k.kind === "keyword" ? "중심화제" : "중심문장"}
               </span>
+              {k.kind === "key_sentence" && k.rank ? (
+                <span
+                  className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+                    k.rank === 1
+                      ? "bg-sky-600 text-white"
+                      : k.rank === 2
+                        ? "bg-sky-200 text-sky-800 dark:bg-sky-800 dark:text-sky-100"
+                        : "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-200"
+                  }`}
+                >
+                  {k.rank}순위
+                </span>
+              ) : null}
               <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">
                 “{text.slice(k.span_start, k.span_end)}”
               </span>

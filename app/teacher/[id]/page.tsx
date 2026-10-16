@@ -29,12 +29,32 @@ export default async function PassageDetailPage({
     .order("seq", { ascending: true });
 
   const paraIds = (paragraphs ?? []).map((p) => p.id);
-  const { data: keyInfos } = paraIds.length
-    ? await supabase
+  // rank 컬럼(0025)이 아직 없을 수 있어 폴백 조회
+  let keyInfos:
+    | {
+        id: string;
+        paragraph_id: string;
+        span_start: number;
+        span_end: number;
+        kind: "keyword" | "key_sentence";
+        rank?: number | null;
+      }[]
+    | null = [];
+  if (paraIds.length) {
+    const withRank = await supabase
+      .from("passage_key_info")
+      .select("id, paragraph_id, span_start, span_end, kind, rank")
+      .in("paragraph_id", paraIds);
+    if (withRank.error) {
+      const plain = await supabase
         .from("passage_key_info")
         .select("id, paragraph_id, span_start, span_end, kind")
-        .in("paragraph_id", paraIds)
-    : { data: [] };
+        .in("paragraph_id", paraIds);
+      keyInfos = plain.data;
+    } else {
+      keyInfos = withRank.data;
+    }
+  }
 
   const { data: relations } = await supabase
     .from("passage_key_relations")
@@ -88,7 +108,7 @@ export default async function PassageDetailPage({
       </header>
 
       <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-        각 문단에서 <b>중심화제</b>·<b>핵심문장</b>을 드래그로 선택하고 버튼을
+        각 문단에서 <b>중심화제</b>·<b>중심문장</b>을 드래그로 선택하고 버튼을
         누르면, 학생 진단의 <b>정답 기준</b>으로 저장됩니다. 저장된 표시와 관계는
         본문에 색으로 비칩니다. (AI 분석을 누르면 추천이 본문에 점선으로 미리
         보여요. 학생에게는 직접 노출되지 않습니다)

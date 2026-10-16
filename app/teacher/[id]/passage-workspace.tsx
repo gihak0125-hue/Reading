@@ -36,6 +36,7 @@ type KeyInfo = {
   span_start: number;
   span_end: number;
   kind: "keyword" | "key_sentence";
+  rank?: number | null;
 };
 type Relation = {
   id: string;

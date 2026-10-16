@@ -1617,7 +1617,7 @@ export function ReadingWorkspace({
 
   const toolHint = () => {
     if (tool === "underline")
-      return "'밑줄' — 핵심문장(중요한 문장·구절)에 손으로 그으면 표시돼요.";
+      return "'밑줄' — 중심문장(중요한 문장·구절)에 손으로 그으면 표시돼요.";
     if (tool === "circle")
       return "'동그라미' — 중심화제(글의 중심이 되는 말)에 손으로 그으면 표시돼요.";
     if (tool === "predictcue")
@@ -1633,7 +1633,7 @@ export function ReadingWorkspace({
       return "'공통점' — 두 표시를 이어 그으면 두 대상의 공통점, 한 표시만 짚으면 그 문장 자체를 공통점으로 표시해요.";
     if (tool && REL_TOOL_TYPE[tool])
       return `'${TOOLS.find((t) => t.id === tool)?.label}' — 표시 두 개를(첫 표시 → 다음 표시) 이어 그으면 관계가 표시돼요. 먼저 밑줄·동그라미로 표시부터 하세요.`;
-    return "밑줄=핵심문장, 동그라미=중심화제. 도구를 고르면 손으로 표시해요. (도구를 끄면 읽기·스크롤)";
+    return "밑줄=중심문장, 동그라미=중심화제. 도구를 고르면 손으로 표시해요. (도구를 끄면 읽기·스크롤)";
   };
 
   useEffect(() => {
@@ -2019,7 +2019,7 @@ export function ReadingWorkspace({
             <ul className="mt-4 flex flex-col gap-3">
               {(
                 [
-                  ["✍️", "손으로 표시", "밑줄은 핵심문장, 동그라미는 중심화제에 그어요."],
+                  ["✍️", "손으로 표시", "밑줄은 중심문장, 동그라미는 중심화제에 그어요."],
                   ["🔗", "관계 잇기", "표시를 화살표로 이어 인과·비교·대조 같은 관계를 나타내요."],
                   ["💬", "자기설명", "정답 확인 전에 내 말로 먼저 설명해요."],
                   ["🌱", "AI 북돋이와 함께", "막히면 정답 대신 질문과 힌트로 북돋이가 도와줘요."],
@@ -2374,7 +2374,7 @@ export function ReadingWorkspace({
               {showGuide && (
                 <ul className="mt-2 flex flex-col gap-1 rounded-lg bg-white/70 p-3 text-xs leading-relaxed text-gray-600 dark:bg-gray-950/50 dark:text-gray-300">
                   <li>
-                    <b>▁ 밑줄</b> — 핵심문장(중요한 문장·구절)에 긋기
+                    <b>▁ 밑줄</b> — 중심문장(중요한 문장·구절)에 긋기
                   </li>
                   <li>
                     <b>◯ 동그라미</b> — 중심화제(글의 중심이 되는 말)에 치기
@@ -2657,7 +2657,7 @@ export function ReadingWorkspace({
           {tab === "key" && (
             <div>
               <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                핵심 문장 / 개념 {marks.length > 0 && `(${marks.length})`}
+                중심 문장 / 개념 {marks.length > 0 && `(${marks.length})`}
               </p>
               {marks.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-xs text-gray-400 dark:border-gray-700">
