@@ -40,7 +40,7 @@ export function BackgroundArt() {
         className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500 ${
           showcase ? "opacity-100" : "opacity-0"
         }`}
-        style={{ backgroundImage: "url('/bg.webp')" }}
+        style={{ backgroundImage: "url('/bg-poster.webp')" }}
       />
       {/* 배경 영상(선택): 파일이 있고 동작 허용일 때만. 준비되면 페이드인. */}
       {showVideo && (
@@ -54,7 +54,7 @@ export function BackgroundArt() {
           loop
           playsInline
           preload="auto"
-          poster="/bg.webp"
+          poster="/bg-poster.webp"
           onCanPlay={() => setVideoReady(true)}
         >
           <source src="/bg.webm" type="video/webm" />
