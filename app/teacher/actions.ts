@@ -280,16 +280,30 @@ export async function analyzePassageAction(
     if (!p || !k.text) continue;
     const span = findSpan(p.text, k.text);
     if (!span) continue;
+    const kind = k.kind === "keyword" ? "keyword" : "key_sentence";
+    // 중복 제거: 같은 문단·같은 종류에서 이미 뽑은 구간과 겹치면(포함·부분겹침) 건너뜀.
+    // (AI가 같은/겹치는 구절을 여러 번 제안하거나, findSpan이 같은 위치로 매핑되는 경우)
+    const overlaps = keyInfos.some(
+      (x) =>
+        x.paragraphId === p.id &&
+        x.kind === kind &&
+        x.spanStart < span.end &&
+        span.start < x.spanEnd,
+    );
+    if (overlaps) continue;
     keyInfos.push({
       paragraphId: p.id,
       paragraphSeq: p.seq,
       text: p.text.slice(span.start, span.end),
-      kind: k.kind === "keyword" ? "keyword" : "key_sentence",
+      kind,
       spanStart: span.start,
       spanEnd: span.end,
     });
   }
   const relations: RelationSuggest[] = [];
+  const seenRel = new Set<string>();
+  const symmetric = (t: string) =>
+    t === "similarity" || t === "contrast" || t === "compare_contrast";
   for (const r of result.relations) {
     const pf = bySeq.get(r.fromParagraphSeq);
     const pt = bySeq.get(r.toParagraphSeq);
@@ -297,6 +311,14 @@ export async function analyzePassageAction(
     const fspan = findSpan(pf.text, r.fromText);
     const tspan = findSpan(pt.text, r.toText);
     if (!fspan || !tspan) continue;
+    // 중복 제거: 같은 양끝·같은 유형(대칭 관계는 방향 무시)은 한 번만.
+    const a = `${pf.id}:${fspan.start}:${fspan.end}`;
+    const b = `${pt.id}:${tspan.start}:${tspan.end}`;
+    const sig = `${r.relationType}|${a}|${b}`;
+    const rev = `${r.relationType}|${b}|${a}`;
+    if (seenRel.has(sig) || (symmetric(r.relationType) && seenRel.has(rev)))
+      continue;
+    seenRel.add(sig);
     relations.push({
       fromParagraphId: pf.id,
       fromStart: fspan.start,
