@@ -48,7 +48,9 @@ export function MarkingRubric({
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         학생이 읽으며 남긴 <b>표시(밑줄·동그라미·관계)</b>를 아래 문단별 정답
         기준과 비교해 점수를 낼 때, AI가 이 루브릭의 배점·기준을 최우선으로
-        적용합니다. 비워 두면 기본 기준(핵심정보·관계 정확도)으로 채점합니다.
+        적용합니다. 비워 두면 기본 기준(핵심정보·관계 정확도 <b>+ 선택성</b>)으로
+        채점합니다. <span className="text-gray-400">표시가 너무 많아도(과잉)
+        너무 적어도(핵심 누락) 감점 — 많이 칠한다고 점수가 오르지 않아요.</span>
       </p>
       <label className="mt-3 flex flex-col gap-1 text-sm">
         <span className="font-medium">채점 기준·배점</span>
@@ -57,7 +59,7 @@ export function MarkingRubric({
           onChange={(e) => setRubric(e.target.value)}
           rows={4}
           maxLength={1000}
-          placeholder="예) 중심화제 동그라미 정확 30점 · 중심문장 밑줄 40점 · 문단 간 관계 연결 30점. 핵심 누락/과잉 표시는 감점."
+          placeholder="예) 중심화제 동그라미 정확 25점 · 중심문장 밑줄 35점 · 문단 간 관계 연결 25점 · 표시 선택성 15점(핵심만 가려 짚기). 과잉·과소 표시는 감점."
           className="w-full resize-y rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
         />
       </label>

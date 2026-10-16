@@ -629,6 +629,7 @@ export async function scoreSessionAction(
   let keyRelations: { from: string; to: string; relation: string }[] = [];
   let critiqueNote = "";
   let rubric = "";
+  let keyInfoSpans: { paragraph_id: string; span_start: number; span_end: number }[] = [];
   const paraIds = (paragraphs ?? []).map((p) => p.id);
   if (svc && session.passage_id && paraIds.length) {
     const [{ data: ki }, { data: kr }, { data: cn }, { data: pcr }, { data: pmr }] =
@@ -659,6 +660,11 @@ export async function scoreSessionAction(
         .eq("passage_id", session.passage_id)
         .maybeSingle(),
     ]);
+    keyInfoSpans = (ki ?? []).map((k) => ({
+      paragraph_id: k.paragraph_id,
+      span_start: k.span_start,
+      span_end: k.span_end,
+    }));
     keyInfos = (ki ?? [])
       .map((k) => {
         const t = (paraText.get(k.paragraph_id) ?? "").slice(k.span_start, k.span_end);
@@ -686,6 +692,61 @@ export async function scoreSessionAction(
 
   const passageText = (paragraphs ?? []).map((p) => p.text).join("\n\n");
 
+  // 표시 선택성 지표(reading): 학생 표시 구간 ↔ 교사 핵심정보 구간 글자 겹침
+  let markStats: {
+    markedRatio: number;
+    precision: number;
+    recall: number;
+    markCount: number;
+    keyCount: number;
+  } | undefined;
+  if (stage === "reading" && keyInfoSpans.length) {
+    const mergeIv = (iv: [number, number][]) => {
+      const s = iv.filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+      const out: [number, number][] = [];
+      for (const [a, b] of s) {
+        const last = out[out.length - 1];
+        if (last && a <= last[1]) last[1] = Math.max(last[1], b);
+        else out.push([a, b]);
+      }
+      return out;
+    };
+    const ovl = (a: number, b: number, merged: [number, number][]) => {
+      let sum = 0;
+      for (const [s, e] of merged) sum += Math.max(0, Math.min(b, e) - Math.max(a, s));
+      return sum;
+    };
+    const passageChars =
+      (paragraphs ?? []).reduce((s, p) => s + p.text.length, 0) || 1;
+    const markSpans = (annos ?? [])
+      .filter((a) => a.type === "underline" || a.type === "circle")
+      .map((a) => ({ pid: a.paragraph_id, s: a.span_start, e: a.span_end }));
+    const totalMarked = markSpans.reduce((s, m) => s + Math.max(0, m.e - m.s), 0);
+    const keyByPara = new Map<string, [number, number][]>();
+    for (const k of keyInfoSpans) {
+      const arr = keyByPara.get(k.paragraph_id) ?? [];
+      arr.push([k.span_start, k.span_end]);
+      keyByPara.set(k.paragraph_id, arr);
+    }
+    const mergedKey = new Map<string, [number, number][]>();
+    let keyChars = 0;
+    for (const [pid, iv] of keyByPara) {
+      const m = mergeIv(iv);
+      mergedKey.set(pid, m);
+      keyChars += m.reduce((s, [a, b]) => s + (b - a), 0);
+    }
+    let overlap = 0;
+    for (const m of markSpans)
+      overlap += ovl(m.s, m.e, mergedKey.get(m.pid) ?? []);
+    markStats = {
+      markedRatio: totalMarked / passageChars,
+      precision: totalMarked ? overlap / totalMarked : 0,
+      recall: keyChars ? overlap / keyChars : 0,
+      markCount: markSpans.length,
+      keyCount: keyInfoSpans.length,
+    };
+  }
+
   const { scoreSession } = await import("@/lib/agent/score");
   const result = await scoreSession({
     stage,
@@ -696,6 +757,7 @@ export async function scoreSessionAction(
     keyRelations,
     critiqueNote,
     rubric,
+    markStats,
     history: (history ?? []).map((h) => ({
       role: h.role === "agent" ? "agent" : "student",
       content: h.content,
