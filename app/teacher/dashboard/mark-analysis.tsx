@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 
 export type MarkPoint = {
-  ratio: number; // 본문 대비 표시 %
+  ratio: number | null; // 본문 대비 표시 %
   precision: number | null; // 정확도 %
   recall: number | null; // 포괄도 %
-  score: number; // 읽기 종합 점수(0~100)
+  reading: number | null; // 읽기(표시) 점수 — 표시에서 산출(참고용)
+  check: number | null; // 독해 확인 점수 — 독립 측정
+  critique: number | null; // 관점 평가 점수 — 독립 측정
 };
 
 function pearson(xs: number[], ys: number[]): number | null {
@@ -38,19 +40,28 @@ const strength = (r: number) => {
 };
 
 type XKey = "ratio" | "precision";
+type YKey = "check" | "critique" | "reading";
+
+const Y_LABEL: Record<YKey, string> = {
+  check: "독해 확인 점수",
+  critique: "관점 평가 점수",
+  reading: "읽기(표시) 점수",
+};
 
 export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
   const [xKey, setXKey] = useState<XKey>("ratio");
+  const [yKey, setYKey] = useState<YKey>("check");
+
+  const xOf = (p: MarkPoint) => (xKey === "ratio" ? p.ratio : p.precision);
+  const yOf = (p: MarkPoint) => p[yKey];
 
   const valid = useMemo(
-    () =>
-      points.filter((p) =>
-        xKey === "ratio" ? p.ratio != null : p.precision != null,
-      ),
-    [points, xKey],
+    () => points.filter((p) => xOf(p) != null && yOf(p) != null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [points, xKey, yKey],
   );
-  const xs = valid.map((p) => (xKey === "ratio" ? p.ratio : (p.precision as number)));
-  const ys = valid.map((p) => p.score);
+  const xs = valid.map((p) => xOf(p) as number);
+  const ys = valid.map((p) => yOf(p) as number);
   const r = pearson(xs, ys);
 
   const xLabel = xKey === "ratio" ? "표시량 (본문 대비 %)" : "표시 정확도 (%)";
@@ -66,10 +77,11 @@ export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
   const py = (v: number) => T + (H - T - B) * (1 - Math.min(100, Math.max(0, v)) / 100);
 
   function exportCsv() {
-    const header = "mark_ratio_pct,precision_pct,recall_pct,reading_score";
+    const header =
+      "mark_ratio_pct,precision_pct,recall_pct,reading_score,check_score,critique_score";
     const lines = points.map(
       (p) =>
-        `${p.ratio ?? ""},${p.precision ?? ""},${p.recall ?? ""},${p.score}`,
+        `${p.ratio ?? ""},${p.precision ?? ""},${p.recall ?? ""},${p.reading ?? ""},${p.check ?? ""},${p.critique ?? ""}`,
     );
     const csv = [header, ...lines].join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -120,14 +132,39 @@ export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
           </button>
         </div>
       </div>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-gray-400">세로축</span>
+        <div className="flex rounded-lg bg-gray-100 p-0.5 text-xs dark:bg-gray-800">
+          {(["check", "critique", "reading"] as YKey[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setYKey(k)}
+              className={`rounded-md px-2 py-1 font-medium ${
+                yKey === k
+                  ? "bg-white text-amber-800 shadow-sm dark:bg-gray-950 dark:text-amber-300"
+                  : "text-gray-500"
+              }`}
+            >
+              {k === "check" ? "독해 확인" : k === "critique" ? "관점 평가" : "읽기(표시)"}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-        가로축 = {xLabel}, 세로축 = 읽기 종합 점수(사실·추론 평균). 점수화엔 쓰지
-        않고 데이터로만 수집한 값이에요. 점 {points.length}개.
+        가로축 = {xLabel}, 세로축 = {Y_LABEL[yKey]}. 표시량은 점수화하지 않고
+        데이터로만 수집해요.{" "}
+        {yKey === "reading"
+          ? "※ 읽기(표시) 점수는 표시에서 산출돼 표시 지표와 순환이에요 — 참고용."
+          : "독해 확인·관점 점수는 표시와 독립적으로 측정돼요(인과 추정에 적합)."}{" "}
+        점 {points.length}개.
       </p>
 
       {valid.length < 3 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400 dark:border-gray-700">
-          데이터가 더 쌓이면 상관을 보여줘요. (읽기 채점이 3건 이상 필요)
+          데이터가 더 쌓이면 상관을 보여줘요. (가로축·세로축이 모두 있는 세션 3건
+          이상 필요 — 세로축이 &lsquo;독해 확인&rsquo;이면 학생이 읽기 후 독해
+          확인까지 마쳐야 점이 생겨요.)
         </p>
       ) : (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -182,8 +219,8 @@ export function MarkAnalysis({ points }: { points: MarkPoint[] }) {
             {valid.map((p, i) => (
               <circle
                 key={i}
-                cx={px(xKey === "ratio" ? p.ratio : (p.precision as number))}
-                cy={py(p.score)}
+                cx={px(xOf(p) as number)}
+                cy={py(yOf(p) as number)}
                 r="3.5"
                 fill="#f6a23c"
                 fillOpacity="0.75"

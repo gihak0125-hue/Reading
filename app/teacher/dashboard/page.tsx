@@ -214,21 +214,43 @@ export default async function TeacherDashboard() {
     return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
   };
 
-  // 표시량 vs 독해점수 분석용 점(읽기 단계, 표시량 수집된 세션만)
-  const markPoints = sc
-    .filter(
-      (r) =>
-        r.stage === "reading" &&
-        r.mark_ratio != null &&
-        (r.fact != null || r.inference != null),
-    )
-    .map((r) => ({
-      ratio: Math.round((r.mark_ratio as number) * 1000) / 10, // 본문 대비 표시 %
-      precision:
-        r.mark_precision != null ? Math.round(r.mark_precision * 1000) / 10 : null,
-      recall: r.mark_recall != null ? Math.round(r.mark_recall * 1000) / 10 : null,
-      score: avgOf([r.fact, r.inference]) ?? 0, // 읽기 종합(사실·추론 평균)
-    }));
+  // 표시량/정확도 ↔ 독해효과 분석용 점.
+  // 가로축 = 읽기 단계의 표시 지표, 세로축 = 같은 세션의 '독립 측정' 점수
+  // (독해확인·관점). 읽기(표시) 점수는 표시에서 산출돼 순환이라 참고용으로만.
+  const pxBySession = new Map<
+    string,
+    {
+      ratio: number | null;
+      precision: number | null;
+      recall: number | null;
+      reading: number | null;
+      check: number | null;
+      critique: number | null;
+    }
+  >();
+  const getPt = (sid: string) => {
+    let p = pxBySession.get(sid);
+    if (!p) {
+      p = { ratio: null, precision: null, recall: null, reading: null, check: null, critique: null };
+      pxBySession.set(sid, p);
+    }
+    return p;
+  };
+  for (const r of sc) {
+    const p = getPt(r.session_id);
+    if (r.stage === "reading") {
+      if (r.mark_ratio != null) p.ratio = Math.round(r.mark_ratio * 1000) / 10;
+      if (r.mark_precision != null) p.precision = Math.round(r.mark_precision * 1000) / 10;
+      if (r.mark_recall != null) p.recall = Math.round(r.mark_recall * 1000) / 10;
+      p.reading = avgOf([r.fact, r.inference]);
+    } else if (r.stage === "check") {
+      p.check = avgOf([r.detail, r.main, r.inference]);
+    } else if (r.stage === "critique") {
+      p.critique = r.critique;
+    }
+  }
+  // 표시 지표가 있는 세션만(표시량 수집된 읽기)
+  const markPoints = [...pxBySession.values()].filter((p) => p.ratio != null);
   const byStage = (st: string) => sc.filter((r) => r.stage === st);
   const stageStats = [
     {
