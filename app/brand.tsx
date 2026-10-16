@@ -21,25 +21,45 @@ export function SproutMark({ className }: { className?: string }) {
   );
 }
 
-// 앱 제목 워드마크. size로 글자 크기만 조절.
+// 앱 제목 워드마크. size로 글자 크기 조절, english=true면 '북(Book)돋움' 표기.
 export function Wordmark({
   size = "md",
+  english = false,
   className = "",
 }: {
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
+  english?: boolean;
   className?: string;
 }) {
   const icon =
-    size === "lg" ? "h-9 w-9" : size === "sm" ? "h-6 w-6" : "h-7 w-7";
+    size === "xl"
+      ? "h-14 w-14"
+      : size === "lg"
+        ? "h-9 w-9"
+        : size === "sm"
+          ? "h-6 w-6"
+          : "h-7 w-7";
   const text =
-    size === "lg" ? "text-2xl" : size === "sm" ? "text-base" : "text-lg";
+    size === "xl"
+      ? "text-5xl"
+      : size === "lg"
+        ? "text-2xl"
+        : size === "sm"
+          ? "text-base"
+          : "text-lg";
   return (
-    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+    <span className={`inline-flex items-center gap-2 ${className}`}>
       <SproutMark className={icon} />
       <span
         className={`font-extrabold tracking-tight text-amber-700 dark:text-amber-300 ${text}`}
       >
-        북돋움
+        북
+        {english && (
+          <span className="align-middle text-[0.45em] font-bold text-amber-600/70 dark:text-amber-300/70">
+            (Book)
+          </span>
+        )}
+        돋움
       </span>
     </span>
   );
