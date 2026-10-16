@@ -1683,7 +1683,15 @@ export function ReadingWorkspace({
                 </p>
               </div>
               {scoring ? (
-                <p className="text-center text-sm text-gray-400">채점 중이에요…</p>
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 p-8 dark:border-gray-800">
+                  <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-amber-200 border-t-amber-600 dark:border-amber-900 dark:border-t-amber-400" />
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                    채점 중이에요…
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    북돋이가 읽기를 꼼꼼히 살펴보고 있어요. 잠깐만요!
+                  </p>
+                </div>
               ) : scores ? (
                 <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 dark:border-gray-800">
                   {[
