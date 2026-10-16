@@ -27,26 +27,30 @@ export function Wordmark({
   english = false,
   className = "",
 }: {
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
   english?: boolean;
   className?: string;
 }) {
   const icon =
-    size === "xl"
-      ? "h-14 w-14"
-      : size === "lg"
-        ? "h-9 w-9"
-        : size === "sm"
-          ? "h-6 w-6"
-          : "h-7 w-7";
+    size === "2xl"
+      ? "h-16 w-16"
+      : size === "xl"
+        ? "h-14 w-14"
+        : size === "lg"
+          ? "h-9 w-9"
+          : size === "sm"
+            ? "h-6 w-6"
+            : "h-7 w-7";
   const text =
-    size === "xl"
-      ? "text-5xl"
-      : size === "lg"
-        ? "text-2xl"
-        : size === "sm"
-          ? "text-base"
-          : "text-lg";
+    size === "2xl"
+      ? "text-6xl"
+      : size === "xl"
+        ? "text-5xl"
+        : size === "lg"
+          ? "text-2xl"
+          : size === "sm"
+            ? "text-base"
+            : "text-lg";
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <SproutMark className={icon} />

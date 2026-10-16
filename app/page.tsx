@@ -21,9 +21,9 @@ export default async function Home({
 
   return (
     <main className="flex w-full flex-1 flex-col justify-center px-6 py-12 sm:pl-16 lg:pl-40">
-      <div className="flex w-full max-w-sm flex-col items-center gap-5">
-        <Wordmark size="xl" english />
-        <p className="text-center text-base leading-relaxed text-gray-600 dark:text-gray-300">
+      <div className="flex w-full max-w-md flex-col items-center gap-6">
+        <Wordmark size="2xl" english />
+        <p className="text-center text-xl leading-relaxed text-gray-600 dark:text-gray-300">
           오늘의 한 지문이,
           <br />
           생각하는 힘을 키웁니다.
