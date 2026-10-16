@@ -59,6 +59,18 @@ export function AiSuggest({
     });
   }
 
+  const total = (data?.keyInfos.length ?? 0) + (data?.relations.length ?? 0);
+  const selected =
+    keyChecked.filter(Boolean).length + relChecked.filter(Boolean).length;
+  const allOn = total > 0 && selected === total;
+
+  function toggleAll() {
+    if (!data) return;
+    const v = !allOn;
+    setKeyChecked(data.keyInfos.map(() => v));
+    setRelChecked(data.relations.map(() => v));
+  }
+
   function save() {
     if (!data) return;
     const keyInfos = data.keyInfos
@@ -126,6 +138,28 @@ export function AiSuggest({
 
       {data && (data.keyInfos.length > 0 || data.relations.length > 0) && (
         <div className="mt-4 flex flex-col gap-4">
+          <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-200 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm dark:border-violet-900 dark:bg-gray-900/90">
+            <span className="text-xs text-gray-600 dark:text-gray-300">
+              추천 {total}개 · 선택 {selected}개
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="rounded-md border border-violet-300 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-300 dark:hover:bg-violet-950"
+              >
+                {allOn ? "전체 해제" : "전체 선택"}
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving || selected === 0}
+                className="rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+              >
+                {saving ? "저장 중…" : `선택 ${selected}개 저장`}
+              </button>
+            </div>
+          </div>
           {data.keyInfos.length > 0 && (
             <div>
               <p className="mb-1.5 text-sm font-medium">핵심문장 · 중심화제 추천</p>
@@ -191,10 +225,10 @@ export function AiSuggest({
           <button
             type="button"
             onClick={save}
-            disabled={saving}
-            className="self-start rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-60"
+            disabled={saving || selected === 0}
+            className="self-start rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
           >
-            {saving ? "저장 중…" : "선택 항목 저장"}
+            {saving ? "저장 중…" : `선택 ${selected}개 저장`}
           </button>
         </div>
       )}
