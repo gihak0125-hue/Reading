@@ -592,7 +592,7 @@ export function ReadingWorkspace({
     });
   }
   const [showGuide, setShowGuide] = useState(false);
-  const [tab, setTab] = useState<PadTab>("key");
+  const [tab, setTab] = useState<PadTab>("structure");
   const [msg, setMsg] = useState<string | null>(null);
   const [relFrom, setRelFrom] = useState<string | null>(null);
   const [listingLast, setListingLast] = useState<string | null>(null);
