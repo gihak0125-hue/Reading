@@ -768,7 +768,7 @@ export async function scoreSessionAction(
       error: result.error === "no_key" ? "AI 키가 필요해요." : "채점에 실패했어요.",
     };
 
-  await supabase.from("session_scores").upsert({
+  const baseRow = {
     session_id: sessionId,
     stage,
     fact: result.scores.fact ?? null,
@@ -778,7 +778,23 @@ export async function scoreSessionAction(
     main: result.scores.main ?? null,
     comment: result.comment || null,
     updated_at: new Date().toISOString(),
-  });
+  };
+  // 표시량은 '채점'엔 안 쓰고 연구용 데이터로만 수집(reading 단계).
+  // mark_ratio/mark_count 컬럼(0026)이 없으면 폴백으로 기본 행만 저장.
+  const statRow =
+    stage === "reading" && markStats
+      ? {
+          ...baseRow,
+          mark_ratio: Math.round(markStats.markedRatio * 1000) / 1000,
+          mark_count: markStats.markCount,
+          mark_precision: Math.round(markStats.precision * 1000) / 1000,
+          mark_recall: Math.round(markStats.recall * 1000) / 1000,
+        }
+      : baseRow;
+  let { error: scErr } = await supabase.from("session_scores").upsert(statRow);
+  if (scErr && /mark_ratio|mark_count|mark_precision|mark_recall|column/i.test(scErr.message)) {
+    ({ error: scErr } = await supabase.from("session_scores").upsert(baseRow));
+  }
 
   return { ...result.scores, comment: result.comment };
 }

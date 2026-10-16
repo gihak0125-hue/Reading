@@ -76,17 +76,16 @@ export async function scoreSession(ctx: ScoreCtx): Promise<ScoreResult> {
   const sel = ctx.markStats;
   const selText =
     sel && sel.keyCount > 0
-      ? `${NL}${NL}[표시 선택성 지표 — 객관 수치]${NL}- 표시량: 본문의 약 ${Math.round(sel.markedRatio * 100)}% (${sel.markCount}곳)${NL}- 정확도(표시 중 핵심과 겹친 비율): ${Math.round(sel.precision * 100)}%${NL}- 포괄도(핵심 중 표시로 덮은 비율): ${Math.round(sel.recall * 100)}%${NL}- 교사 핵심정보 개수: ${sel.keyCount}`
+      ? `${NL}${NL}[표시 정확도 지표 — 객관 수치]${NL}- 정확도(표시한 것 중 핵심과 겹친 비율): ${Math.round(sel.precision * 100)}%${NL}- 포괄도(핵심 중 표시로 덮은 비율): ${Math.round(sel.recall * 100)}%${NL}- 교사 핵심정보 개수: ${sel.keyCount}`
       : "";
   if (ctx.stage === "reading") {
     system = `당신은 고등학교 문해력 학습 '형성 평가' 채점자입니다. 학생이 지문을 읽으며 남긴 표시(밑줄=중심문장, 동그라미=중심화제, 화살표=관계)를 교사의 정답 기준과 비교해 채점합니다.
-- fact(사실적 독해): 글의 핵심정보(중심화제·중심문장)를 '선택적으로' 잘 짚었는가.
+- fact(사실적 독해): 글의 핵심정보(중심화제·중심문장)를 '정확히' 짚었는가.
 - inference(추론적 독해): 정보 사이의 관계·구조를 얼마나 적절히 연결했는가.
-[채점 원칙 — 양이 아니라 '선택성']
-- '표시 선택성 지표'가 주어지면 그 수치를 근거로 삼으세요.
-- 핵심을 빠짐없이(포괄도↑) **그리고** 군더더기 없이(정확도↑) 짚을수록 fact를 높게.
-- **과잉 표시(본문의 상당 부분을 칠함 / 정확도 낮음)와 과소·누락(포괄도 낮음)은 둘 다 감점.** 표시 개수가 많다고 가점하지 마세요(연구상 과도한 표시는 오히려 독해를 방해).
-- 적정 표시량은 교사 핵심정보 개수에 맞춘 정도가 이상적.
+[채점 원칙 — 양이 아니라 '정확도']
+- '표시 정확도 지표'가 주어지면 그 수치를 근거로 삼으세요.
+- 표시한 것이 실제 핵심과 일치할수록(정확도↑), 핵심을 놓치지 않을수록(포괄도↑) fact를 높게.
+- **표시 '양/개수'는 점수와 무관합니다. 많이 칠했다고 가점·감점하지 마세요.** 오직 '표시가 맞는 곳인지(정확도)'로만 판단하세요.
 0~100점. 정답 문장·위치를 드러내지 말고, 격려하는 짧은 피드백 한 줄.
 JSON만: {"fact":0,"inference":0,"comment":""}` + rubricNote;
     user = `[지문]${NL}${ctx.passageText}${NL}${NL}[학생 표시]${NL}${marksText}${NL}${NL}[학생 관계]${NL}${relText}${NL}${NL}[교사 정답 기준 — 핵심정보]${NL}${keyInfoText}${NL}[교사 정답 기준 — 핵심 관계]${NL}${keyRelText}${selText}` + (ctx.rubric ? `${NL}${NL}[교사 채점 루브릭 — 이 기준으로만 채점]${NL}${ctx.rubric}` : "");
