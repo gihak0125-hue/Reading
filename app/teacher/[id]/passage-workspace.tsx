@@ -88,16 +88,40 @@ export function PassageWorkspace({
   } | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
+  const overlap = (
+    aStart: number,
+    aEnd: number,
+    bStart: number,
+    bEnd: number,
+  ) => aStart < bEnd && bStart < aEnd;
+
+  // 저장된 핵심정보: 같은 문단·같은 종류에서 겹치는 건 하나만(이전에 쌓인 중복 숨김)
   const savedByPara = new Map<string, KeyInfo[]>();
   for (const k of keyInfos) {
     const arr = savedByPara.get(k.paragraph_id) ?? [];
+    if (
+      arr.some(
+        (x) => x.kind === k.kind && overlap(x.span_start, x.span_end, k.span_start, k.span_end),
+      )
+    )
+      continue;
     arr.push(k);
     savedByPara.set(k.paragraph_id, arr);
   }
 
+  // 미리보기: 이미 저장된 것과 겹치면(이미 반영됨) 중복 표시 안 함
   const previewByPara = new Map<string, PreviewKey[]>();
   for (const k of preview?.keyInfos ?? []) {
+    const saved = savedByPara.get(k.paragraphId) ?? [];
+    if (
+      saved.some(
+        (x) => x.kind === k.kind && overlap(x.span_start, x.span_end, k.spanStart, k.spanEnd),
+      )
+    )
+      continue;
     const arr = previewByPara.get(k.paragraphId) ?? [];
+    if (arr.some((x) => x.kind === k.kind && overlap(x.spanStart, x.spanEnd, k.spanStart, k.spanEnd)))
+      continue;
     arr.push({
       spanStart: k.spanStart,
       spanEnd: k.spanEnd,
@@ -115,6 +139,9 @@ export function PassageWorkspace({
     arr.push(m);
     relMarksByPara.set(pid, arr);
   };
+  const seenRel = new Set<string>();
+  const symmetric = (t: string) =>
+    t === "similarity" || t === "contrast" || t === "compare_contrast";
   const addRel = (
     fromPid: string,
     fs: number,
@@ -125,6 +152,13 @@ export function PassageWorkspace({
     type: string,
     isPreview: boolean,
   ) => {
+    // 중복 제거: 같은 양끝·같은 유형(대칭 관계는 방향 무시)은 한 번만 — 저장본·미리보기 모두
+    const a = `${fromPid}:${fs}:${fe}`;
+    const b = `${toPid}:${ts}:${te}`;
+    const sig = `${type}|${a}|${b}`;
+    const rev = `${type}|${b}|${a}`;
+    if (seenRel.has(sig) || (symmetric(type) && seenRel.has(rev))) return;
+    seenRel.add(sig);
     const idx = allRels.length;
     allRels.push({ idx, relationType: type, preview: isPreview });
     const label = REL_LABEL[type] ?? "관계";

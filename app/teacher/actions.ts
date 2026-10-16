@@ -358,31 +358,95 @@ export async function saveSuggestions(input: {
   if (!passage || passage.created_by !== user.id)
     return { error: "권한이 없습니다." };
 
+  const overlap = (a1: number, a2: number, b1: number, b2: number) =>
+    a1 < b2 && b1 < a2;
+  const symmetric = (t: string) =>
+    t === "similarity" || t === "contrast" || t === "compare_contrast";
+
   if (input.keyInfos.length) {
-    const { error } = await supabase.from("passage_key_info").insert(
-      input.keyInfos.map((k) => ({
-        paragraph_id: k.paragraphId,
-        span_start: k.spanStart,
-        span_end: k.spanEnd,
-        kind: k.kind,
-      })),
-    );
-    if (error) return { error: `핵심정보 저장 실패: ${error.message}` };
+    const paraIds = [...new Set(input.keyInfos.map((k) => k.paragraphId))];
+    const { data: existing } = await supabase
+      .from("passage_key_info")
+      .select("paragraph_id, span_start, span_end, kind")
+      .in("paragraph_id", paraIds);
+    const kept: typeof input.keyInfos = [];
+    for (const k of input.keyInfos) {
+      // 이미 저장된 것(같은 문단·종류·겹침)·이번 배치 내 중복은 건너뜀
+      const dupSaved = (existing ?? []).some(
+        (e) =>
+          e.paragraph_id === k.paragraphId &&
+          e.kind === k.kind &&
+          overlap(e.span_start, e.span_end, k.spanStart, k.spanEnd),
+      );
+      const dupBatch = kept.some(
+        (x) =>
+          x.paragraphId === k.paragraphId &&
+          x.kind === k.kind &&
+          overlap(x.spanStart, x.spanEnd, k.spanStart, k.spanEnd),
+      );
+      if (!dupSaved && !dupBatch) kept.push(k);
+    }
+    if (kept.length) {
+      const { error } = await supabase.from("passage_key_info").insert(
+        kept.map((k) => ({
+          paragraph_id: k.paragraphId,
+          span_start: k.spanStart,
+          span_end: k.spanEnd,
+          kind: k.kind,
+        })),
+      );
+      if (error) return { error: `핵심정보 저장 실패: ${error.message}` };
+    }
   }
   if (input.relations.length) {
-    const { error } = await supabase.from("passage_key_relations").insert(
-      input.relations.map((r) => ({
-        passage_id: input.passageId,
-        from_paragraph_id: r.fromParagraphId,
-        from_start: r.fromStart,
-        from_end: r.fromEnd,
-        to_paragraph_id: r.toParagraphId,
-        to_start: r.toStart,
-        to_end: r.toEnd,
-        relation_type: r.relationType,
-      })),
-    );
-    if (error) return { error: `관계 저장 실패: ${error.message}` };
+    const { data: exRel } = await supabase
+      .from("passage_key_relations")
+      .select(
+        "from_paragraph_id, from_start, from_end, to_paragraph_id, to_start, to_end, relation_type",
+      )
+      .eq("passage_id", input.passageId);
+    const sigOf = (
+      fp: string,
+      fs: number,
+      fe: number,
+      tp: string,
+      ts: number,
+      te: number,
+      t: string,
+    ) => `${t}|${fp}:${fs}:${fe}|${tp}:${ts}:${te}`;
+    const seen = new Set<string>();
+    for (const e of exRel ?? []) {
+      seen.add(
+        sigOf(e.from_paragraph_id, e.from_start, e.from_end, e.to_paragraph_id, e.to_start, e.to_end, e.relation_type),
+      );
+      if (symmetric(e.relation_type))
+        seen.add(
+          sigOf(e.to_paragraph_id, e.to_start, e.to_end, e.from_paragraph_id, e.from_start, e.from_end, e.relation_type),
+        );
+    }
+    const keptRel = [] as typeof input.relations;
+    for (const r of input.relations) {
+      const sig = sigOf(r.fromParagraphId, r.fromStart, r.fromEnd, r.toParagraphId, r.toStart, r.toEnd, r.relationType);
+      const rev = sigOf(r.toParagraphId, r.toStart, r.toEnd, r.fromParagraphId, r.fromStart, r.fromEnd, r.relationType);
+      if (seen.has(sig) || (symmetric(r.relationType) && seen.has(rev))) continue;
+      seen.add(sig);
+      keptRel.push(r);
+    }
+    if (keptRel.length) {
+      const { error } = await supabase.from("passage_key_relations").insert(
+        keptRel.map((r) => ({
+          passage_id: input.passageId,
+          from_paragraph_id: r.fromParagraphId,
+          from_start: r.fromStart,
+          from_end: r.fromEnd,
+          to_paragraph_id: r.toParagraphId,
+          to_start: r.toStart,
+          to_end: r.toEnd,
+          relation_type: r.relationType,
+        })),
+      );
+      if (error) return { error: `관계 저장 실패: ${error.message}` };
+    }
   }
 
   revalidatePath(`/teacher/${input.passageId}`);
