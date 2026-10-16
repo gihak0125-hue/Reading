@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
-import { ParagraphTagger } from "./paragraph-tagger";
-import { AiSuggest } from "./ai-suggest";
+import { PassageWorkspace } from "./passage-workspace";
 import { CritiqueNote } from "./critique-note";
 import { CheckQuestions } from "./check-questions";
 import { MarkingRubric } from "./marking-rubric";
@@ -37,6 +36,13 @@ export default async function PassageDetailPage({
         .in("paragraph_id", paraIds)
     : { data: [] };
 
+  const { data: relations } = await supabase
+    .from("passage_key_relations")
+    .select(
+      "id, from_paragraph_id, from_start, from_end, to_paragraph_id, to_start, to_end, relation_type",
+    )
+    .eq("passage_id", id);
+
   const { data: critique } = await supabase
     .from("passage_critique")
     .select("note, rubric")
@@ -54,13 +60,6 @@ export default async function PassageDetailPage({
     .select("rubric")
     .eq("passage_id", id)
     .maybeSingle();
-
-  const byParagraph = new Map<string, typeof keyInfos>();
-  for (const k of keyInfos ?? []) {
-    const arr = byParagraph.get(k.paragraph_id) ?? [];
-    arr.push(k);
-    byParagraph.set(k.paragraph_id, arr);
-  }
 
   return (
     <main className="mx-auto flex max-w-3xl flex-1 flex-col gap-6 px-6 py-12">
@@ -90,24 +89,17 @@ export default async function PassageDetailPage({
 
       <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
         각 문단에서 <b>중심화제</b>·<b>핵심문장</b>을 드래그로 선택하고 버튼을
-        누르면, 학생 진단의 <b>정답 기준</b>으로 저장됩니다. (AI 분석으로 자동
-        추천받아 검토할 수도 있어요. 학생에게는 직접 노출되지 않습니다)
+        누르면, 학생 진단의 <b>정답 기준</b>으로 저장됩니다. 저장된 표시와 관계는
+        본문에 색으로 비칩니다. (AI 분석을 누르면 추천이 본문에 점선으로 미리
+        보여요. 학생에게는 직접 노출되지 않습니다)
       </div>
 
-      <div className="flex flex-col gap-3">
-        {(paragraphs ?? []).map((p) => (
-          <ParagraphTagger
-            key={p.id}
-            passageId={passage.id}
-            paragraphId={p.id}
-            seq={p.seq}
-            text={p.text}
-            keyInfos={byParagraph.get(p.id) ?? []}
-          />
-        ))}
-      </div>
-
-      <AiSuggest passageId={passage.id} />
+      <PassageWorkspace
+        passageId={passage.id}
+        paragraphs={paragraphs ?? []}
+        keyInfos={keyInfos ?? []}
+        relations={relations ?? []}
+      />
 
       <MarkingRubric
         passageId={passage.id}

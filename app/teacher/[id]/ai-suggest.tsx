@@ -19,7 +19,15 @@ const REL: Record<string, string> = {
   contrast: "차이점(대조)",
 };
 
-export function AiSuggest({ passageId }: { passageId: string }) {
+export function AiSuggest({
+  passageId,
+  onPreview,
+}: {
+  passageId: string;
+  onPreview?: (
+    d: { keyInfos: KeyInfoSuggest[]; relations: RelationSuggest[] } | null,
+  ) => void;
+}) {
   const [pending, start] = useTransition();
   const [saving, startSave] = useTransition();
   const [data, setData] = useState<{
@@ -38,10 +46,12 @@ export function AiSuggest({ passageId }: { passageId: string }) {
       if ("error" in res && res.error) {
         setMsg(res.error);
         setData(null);
+        onPreview?.(null);
         return;
       }
       const d = res as { keyInfos: KeyInfoSuggest[]; relations: RelationSuggest[] };
       setData(d);
+      onPreview?.(d);
       setKeyChecked(d.keyInfos.map(() => true));
       setRelChecked(d.relations.map(() => true));
       if (d.keyInfos.length + d.relations.length === 0)
@@ -68,8 +78,9 @@ export function AiSuggest({ passageId }: { passageId: string }) {
       const res = await saveSuggestions({ passageId, keyInfos, relations });
       if (res.error) setMsg(res.error);
       else {
-        setMsg("저장했어요! 아래 문단 태깅에 반영됐어요.");
+        setMsg("저장했어요! 본문에 색으로 표시됐어요.");
         setData(null);
+        onPreview?.(null);
       }
     });
   }
