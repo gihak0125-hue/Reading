@@ -96,12 +96,14 @@ export function ParagraphTagger({
         end: k.span_end,
         kind: k.kind,
         preview: false,
+        rank: undefined as number | undefined,
       })),
       ...previewKeyInfos.map((k) => ({
         start: k.spanStart,
         end: k.spanEnd,
         kind: k.kind,
         preview: true,
+        rank: k.rank,
       })),
     ].filter((m) => m.end > m.start);
     const rel = relMarks.filter((m) => m.end > m.start);
@@ -133,10 +135,15 @@ export function ParagraphTagger({
           cls += bgm.preview
             ? "bg-amber-50 text-amber-900 border-b-2 border-dashed border-amber-500 dark:bg-amber-950/40 dark:text-amber-200 "
             : "bg-amber-200/80 text-amber-900 dark:bg-amber-800/60 dark:text-amber-100 ";
-        else
-          cls += bgm.preview
-            ? "bg-sky-50 text-sky-900 border-b-2 border-dashed border-sky-500 dark:bg-sky-950/40 dark:text-sky-200 "
-            : "bg-sky-200/80 text-sky-900 dark:bg-sky-800/60 dark:text-sky-100 ";
+        else if (bgm.preview)
+          // 핵심문장 미리보기: 중요도 순위가 높을수록(1) 진하게
+          cls +=
+            (bgm.rank ?? 9) <= 1
+              ? "bg-sky-100 text-sky-900 border-b-2 border-dashed border-sky-600 dark:bg-sky-900/50 dark:text-sky-100 "
+              : (bgm.rank ?? 9) === 2
+                ? "bg-sky-50 text-sky-900 border-b-2 border-dashed border-sky-400 dark:bg-sky-950/40 dark:text-sky-200 "
+                : "bg-sky-50/60 text-sky-800 border-b border-dashed border-sky-300 dark:bg-sky-950/25 dark:text-sky-300 ";
+        else cls += "bg-sky-200/80 text-sky-900 dark:bg-sky-800/60 dark:text-sky-100 ";
       }
       if (relm) {
         cls += relm.preview

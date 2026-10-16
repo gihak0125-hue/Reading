@@ -62,6 +62,7 @@ export type PreviewKey = {
   spanStart: number;
   spanEnd: number;
   kind: "keyword" | "key_sentence";
+  rank?: number;
 };
 
 type AllRel = {
@@ -97,7 +98,12 @@ export function PassageWorkspace({
   const previewByPara = new Map<string, PreviewKey[]>();
   for (const k of preview?.keyInfos ?? []) {
     const arr = previewByPara.get(k.paragraphId) ?? [];
-    arr.push({ spanStart: k.spanStart, spanEnd: k.spanEnd, kind: k.kind });
+    arr.push({
+      spanStart: k.spanStart,
+      spanEnd: k.spanEnd,
+      kind: k.kind,
+      rank: k.rank,
+    });
     previewByPara.set(k.paragraphId, arr);
   }
 

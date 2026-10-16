@@ -181,6 +181,19 @@ export function AiSuggest({
                         {k.paragraphSeq}문단 ·{" "}
                         {k.kind === "keyword" ? "중심화제" : "핵심문장"}
                       </span>
+                      {k.kind === "key_sentence" && k.rank && (
+                        <span
+                          className={`mr-1 rounded px-1.5 py-0.5 text-xs font-semibold ${
+                            k.rank === 1
+                              ? "bg-sky-600 text-white"
+                              : k.rank === 2
+                                ? "bg-sky-200 text-sky-800 dark:bg-sky-800 dark:text-sky-100"
+                                : "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-200"
+                          }`}
+                        >
+                          중요도 {k.rank}
+                        </span>
+                      )}
                       “{k.text}”
                     </span>
                   </li>

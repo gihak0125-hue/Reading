@@ -222,6 +222,7 @@ export type KeyInfoSuggest = {
   kind: "keyword" | "key_sentence";
   spanStart: number;
   spanEnd: number;
+  rank?: number; // 핵심문장 중요도 순위(문단 내 1=가장 중요). keyword엔 없음.
 };
 export type RelationSuggest = {
   fromParagraphId: string;
@@ -275,6 +276,8 @@ export async function analyzePassageAction(
 
   const bySeq = new Map(paras.map((p) => [p.seq, p]));
   const keyInfos: KeyInfoSuggest[] = [];
+  // 핵심문장은 모델이 '중요도 순'으로 반환 → 문단 내 등장 순서를 순위(rank)로 매김
+  const ksRank = new Map<string, number>();
   for (const k of result.keyInfos) {
     const p = bySeq.get(k.paragraphSeq);
     if (!p || !k.text) continue;
@@ -291,6 +294,11 @@ export async function analyzePassageAction(
         span.start < x.spanEnd,
     );
     if (overlaps) continue;
+    let rank: number | undefined;
+    if (kind === "key_sentence") {
+      rank = (ksRank.get(p.id) ?? 0) + 1;
+      ksRank.set(p.id, rank);
+    }
     keyInfos.push({
       paragraphId: p.id,
       paragraphSeq: p.seq,
@@ -298,6 +306,7 @@ export async function analyzePassageAction(
       kind,
       spanStart: span.start,
       spanEnd: span.end,
+      rank,
     });
   }
   const relations: RelationSuggest[] = [];
