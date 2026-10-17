@@ -2233,7 +2233,7 @@ export function ReadingWorkspace({
                             key={t.id}
                             type="button"
                             onClick={() => selectTool(t.id)}
-                            className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
+                            className={`flex min-w-[46px] flex-col items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] ${
                               active
                                 ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -2257,7 +2257,7 @@ export function ReadingWorkspace({
                   <button
                     type="button"
                     onClick={() => setShowRel((v) => !v)}
-                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
+                    className={`flex min-w-[46px] flex-col items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] ${
                       showRel || (!!tool && REL_IDS.includes(tool))
                         ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                         : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -2277,7 +2277,7 @@ export function ReadingWorkspace({
                   <button
                     type="button"
                     onClick={() => selectTool("erase")}
-                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
+                    className={`flex min-w-[46px] flex-col items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] ${
                       tool === "erase"
                         ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                         : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -2305,7 +2305,7 @@ export function ReadingWorkspace({
                               key={t.id}
                               type="button"
                               onClick={() => selectTool(t.id)}
-                              className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
+                              className={`flex min-w-[46px] flex-col items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] ${
                                 active
                                   ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                   : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
