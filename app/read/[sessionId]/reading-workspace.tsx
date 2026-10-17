@@ -2209,7 +2209,7 @@ export function ReadingWorkspace({
                   <div
                     key={g.label}
                     style={{ order: g.label === "핵심 표시" ? 1 : 3 }}
-                    className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1 px-0.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
+                    className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
                   >
                     <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
                       {g.label}
@@ -2223,13 +2223,13 @@ export function ReadingWorkspace({
                             key={t.id}
                             type="button"
                             onClick={() => selectTool(t.id)}
-                            className={`flex min-w-[34px] flex-col items-center gap-0.5 rounded-md border px-1 py-1 text-[10px] ${
+                            className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
                               active
                                 ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
                             }`}
                           >
-                            <span className="text-sm leading-none">{t.glyph}</span>
+                            <span className="text-base leading-none">{t.glyph}</span>
                             {t.label}
                           </button>
                         );
@@ -2239,7 +2239,7 @@ export function ReadingWorkspace({
                 ))}
                 <div
                   style={{ order: 2 }}
-                  className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1 px-0.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
+                  className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
                 >
                   <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
                     연결
@@ -2247,13 +2247,13 @@ export function ReadingWorkspace({
                   <button
                     type="button"
                     onClick={() => setShowRel((v) => !v)}
-                    className={`flex min-w-[34px] flex-col items-center gap-0.5 rounded-md border px-1 py-1 text-[10px] ${
+                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
                       showRel || (!!tool && REL_IDS.includes(tool))
                         ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                         : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
                     }`}
                   >
-                    <span className="text-sm leading-none">🔗</span>
+                    <span className="text-base leading-none">🔗</span>
                     관계
                   </button>
                 </div>
@@ -2267,13 +2267,13 @@ export function ReadingWorkspace({
                   <button
                     type="button"
                     onClick={() => selectTool("erase")}
-                    className={`flex min-w-[34px] flex-col items-center gap-0.5 rounded-md border px-1 py-1 text-[10px] ${
+                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
                       tool === "erase"
                         ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                         : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
                     }`}
                   >
-                    <span className="text-sm leading-none">⌫</span>
+                    <span className="text-base leading-none">⌫</span>
                     지우개
                   </button>
                 </div>
@@ -2283,44 +2283,11 @@ export function ReadingWorkspace({
                   <p className="mb-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
                     짝지어 이해해요 · <b>표시 두 개를 이어 그으면</b> 관계가 연결돼요.
                   </p>
-                  <div className="flex flex-wrap gap-1">
-                    {REL_GROUPS.map((g) => (
-                      <div
-                        key={g.label}
-                        className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1 px-0.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
-                      >
-                        <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
-                          {g.label}
-                        </span>
-                        <div className="flex gap-0.5">
-                          {g.ids.map((id) => {
-                            const t = TOOLS.find((x) => x.id === id)!;
-                            const active = tool === t.id;
-                            return (
-                              <button
-                                key={t.id}
-                                type="button"
-                                onClick={() => selectTool(t.id)}
-                                className={`flex min-w-[34px] flex-col items-center gap-0.5 rounded-md border px-1 py-1 text-[10px] ${
-                                  active
-                                    ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
-                                }`}
-                              >
-                                <span className="text-sm leading-none">{t.glyph}</span>
-                                {t.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                    <div className="flex flex-col gap-1 rounded-xl bg-white/50 p-1.5 ring-1 ring-gray-200 dark:bg-gray-950/30 dark:ring-gray-800">
-                      <span className="px-1 text-[10px] font-medium text-gray-400">
-                        그 외
-                      </span>
-                      <div className="flex gap-0.5">
-                        {REL_SINGLES.map((id) => {
+                  {/* 그룹 박스 없이 한 줄로. 묶음(짝)은 간격으로 구분 */}
+                  <div className="flex items-stretch gap-2.5">
+                    {[...REL_GROUPS, { label: "그 외", ids: REL_SINGLES }].map((g) => (
+                      <div key={g.label} className="flex gap-0.5">
+                        {g.ids.map((id) => {
                           const t = TOOLS.find((x) => x.id === id)!;
                           const active = tool === t.id;
                           return (
@@ -2328,19 +2295,19 @@ export function ReadingWorkspace({
                               key={t.id}
                               type="button"
                               onClick={() => selectTool(t.id)}
-                              className={`flex min-w-[34px] flex-col items-center gap-0.5 rounded-md border px-1 py-1 text-[10px] ${
+                              className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
                                 active
                                   ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                   : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
                               }`}
                             >
-                              <span className="text-sm leading-none">{t.glyph}</span>
+                              <span className="text-base leading-none">{t.glyph}</span>
                               {t.label}
                             </button>
                           );
                         })}
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -2380,7 +2347,7 @@ export function ReadingWorkspace({
                 {showGuide ? "▾ 도구 안내 닫기" : "❔ 이 도구들 뭐예요?"}
               </button>
               {showGuide && (
-                <ul className="mt-2 flex flex-col gap-1 rounded-lg bg-white/70 p-3 text-xs leading-relaxed text-gray-600 dark:bg-gray-950/50 dark:text-gray-300">
+                <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 rounded-lg bg-white/70 p-3 text-xs leading-relaxed text-gray-600 dark:bg-gray-950/50 dark:text-gray-300">
                   <li>
                     <b>▁ 밑줄</b> — 중심문장(중요한 문장·구절)에 긋기
                   </li>
@@ -2851,7 +2818,7 @@ export function ReadingWorkspace({
                           <div
                             className={`flex items-center gap-1 text-xs font-bold ${c.accent}`}
                           >
-                            <span className="text-sm leading-none">
+                            <span className="text-base leading-none">
                               {twoway ? "↕" : "↓"}
                             </span>
                             {REL_LABEL[rt]}
