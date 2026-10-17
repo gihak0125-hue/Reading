@@ -2349,15 +2349,17 @@ export function ReadingWorkspace({
                   </button>
                 </div>
               )}
+              {/* 안내는 본문을 밀지 않도록 떠 있는 말풍선(팝오버)으로 */}
+              <div className="relative mt-1.5">
               <button
                 type="button"
                 onClick={() => setShowGuide((v) => !v)}
-                className="mt-2 text-xs font-medium text-amber-700 hover:underline dark:text-amber-400"
+                className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-400"
               >
                 {showGuide ? "▾ 도구 안내 닫기" : "❔ 이 도구들 뭐예요?"}
               </button>
               {showGuide && (
-                <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 rounded-lg bg-white/70 p-3 text-xs leading-relaxed text-gray-600 dark:bg-gray-950/50 dark:text-gray-300">
+                <ul className="absolute left-0 top-full z-30 mt-1 flex max-w-md flex-wrap gap-x-3 gap-y-1 rounded-lg border border-gray-200 bg-white p-3 text-xs leading-relaxed text-gray-600 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
                   <li>
                     <b>▁ 밑줄</b> — 중심문장(중요한 문장·구절)에 긋기
                   </li>
@@ -2393,7 +2395,10 @@ export function ReadingWorkspace({
                   </li>
                 </ul>
               )}
-              <p className="mt-2 text-xs text-gray-500">{toolHint()}</p>
+              </div>
+              {tool && (
+                <p className="mt-1.5 text-xs text-gray-500">{toolHint()}</p>
+              )}
               {msg && <p className="mt-1 text-xs text-red-600">{msg}</p>}
             </div>
           )}
