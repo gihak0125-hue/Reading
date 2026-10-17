@@ -572,9 +572,18 @@ export function ReadingWorkspace({
   const [showBody, setShowBody] = useState(true);
   // 확인/관점 각 단계 대화만 보여주기 위한 시작 인덱스(단계 전환 시 갱신)
   const [convStart, setConvStart] = useState(0);
-  // 낙관적 표시: 메시지를 로컬 상태로 미러링(서버 갱신 시 동기화)
+  // 낙관적 표시: 메시지를 로컬 상태로 미러링(서버 갱신 시 동기화).
+  // 서버 재검증으로 messages가 바뀔 때, 아직 서버에 반영 안 된 로컬 메시지
+  // (방금 스트리밍된 코치 답변·낙관적 학생 메시지)를 덮어쓰지 않도록 '병합'한다.
   const [localMsgs, setLocalMsgs] = useState<CoachTurn[]>(messages);
-  useEffect(() => setLocalMsgs(messages), [messages]);
+  useEffect(() => {
+    setLocalMsgs((cur) => {
+      const key = (m: CoachTurn) => m.role + "\u0000" + m.content.trim();
+      const serverKeys = new Set(messages.map(key));
+      const extra = cur.filter((m) => m.content.trim() && !serverKeys.has(key(m)));
+      return [...messages, ...extra];
+    });
+  }, [messages]);
   const [scores, setScores] = useState<{
     fact?: number;
     inference?: number;
@@ -1550,14 +1559,15 @@ export function ReadingWorkspace({
     }
     setCoachStreaming(true);
     const aid = "stream-" + Date.now();
-    let appended = false;
+    // 순수 updater: 외부 플래그를 쓰지 않고 존재 여부로 판단(StrictMode 이중호출 안전)
     const put = (content: string) =>
       setLocalMsgs((m) => {
-        if (!appended) {
-          appended = true;
+        const idx = m.findIndex((x) => x.id === aid);
+        if (idx === -1)
           return [...m, { id: aid, role: "agent", content, created_at: now() }];
-        }
-        return m.map((x) => (x.id === aid ? { ...x, content } : x));
+        const copy = m.slice();
+        copy[idx] = { ...copy[idx], content };
+        return copy;
       });
     try {
       const res = await fetch("/api/coach", {
@@ -1584,7 +1594,7 @@ export function ReadingWorkspace({
         acc += dec.decode(value, { stream: true });
         if (acc.trim()) put(acc);
       }
-      if (!acc.trim() && appended)
+      if (!acc.trim())
         setLocalMsgs((m) => m.filter((x) => x.id !== aid));
     } catch {
       const r = await sendCoachMessage({
