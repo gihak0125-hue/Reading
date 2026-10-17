@@ -2212,14 +2212,14 @@ export function ReadingWorkspace({
           </div>
 
           {showTools && (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-800 dark:bg-gray-900">
               {/* 상단: 핵심 도구를 묶음으로, 지우개는 유틸리티로 분리 */}
               <div className="flex flex-wrap items-start gap-2">
                 {TOP_GROUPS.map((g) => (
                   <div
                     key={g.label}
                     style={{ order: g.label === "핵심 표시" ? 1 : 3 }}
-                    className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
+                    className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
                   >
                     <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
                       {g.label}
@@ -2233,7 +2233,7 @@ export function ReadingWorkspace({
                             key={t.id}
                             type="button"
                             onClick={() => selectTool(t.id)}
-                            className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
+                            className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
                               active
                                 ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -2249,7 +2249,7 @@ export function ReadingWorkspace({
                 ))}
                 <div
                   style={{ order: 2 }}
-                  className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1.5 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
+                  className="flex flex-col gap-1 rounded-lg bg-amber-50/60 p-1 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900"
                 >
                   <span className="px-1 text-[10px] font-medium text-amber-700/90 dark:text-amber-400/90">
                     연결
@@ -2257,7 +2257,7 @@ export function ReadingWorkspace({
                   <button
                     type="button"
                     onClick={() => setShowRel((v) => !v)}
-                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
+                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
                       showRel || (!!tool && REL_IDS.includes(tool))
                         ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                         : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -2277,7 +2277,7 @@ export function ReadingWorkspace({
                   <button
                     type="button"
                     onClick={() => selectTool("erase")}
-                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
+                    className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
                       tool === "erase"
                         ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                         : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -2289,8 +2289,8 @@ export function ReadingWorkspace({
                 </div>
               </div>
               {showRel && (
-                <div className="mt-2 border-t border-gray-200 pt-3 dark:border-gray-700">
-                  <p className="mb-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                <div className="mt-1.5 border-t border-gray-200 pt-2 dark:border-gray-700">
+                  <p className="mb-1.5 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
                     짝지어 이해해요 · <b>표시 두 개를 이어 그으면</b> 관계가 연결돼요.
                   </p>
                   {/* 그룹 박스 없이 한 줄로. 묶음(짝)은 간격으로 구분 */}
@@ -2305,7 +2305,7 @@ export function ReadingWorkspace({
                               key={t.id}
                               type="button"
                               onClick={() => selectTool(t.id)}
-                              className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 text-[11px] ${
+                              className={`flex min-w-[46px] flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-[11px] ${
                                 active
                                   ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                   : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:hover:bg-gray-800"
@@ -2465,7 +2465,7 @@ export function ReadingWorkspace({
                 </g>
               </svg>
             )}
-            <article className="flex flex-col gap-5">
+            <article className="flex flex-col gap-3.5">
               {paragraphs.map((p) => (
                 <div key={p.id}>
                   <span className="mb-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800">
@@ -2927,7 +2927,7 @@ function AnnotatedParagraph({
   return (
     <p
       data-para-id={paragraphId}
-      className="font-serif-kr whitespace-pre-wrap text-[17px] leading-9 text-gray-800 dark:text-gray-100"
+      className="font-serif-kr whitespace-pre-wrap text-[16px] leading-8 text-gray-800 dark:text-gray-100"
     >
       {runs.map((r, i) => {
         const cls = [

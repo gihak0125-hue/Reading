@@ -115,6 +115,36 @@ export async function POST(req: Request) {
       "이번에는 JSON을 쓰지 말고, 학생에게 보일 말(2~3문장)만 평문으로 출력하세요. 'message'/'area' 같은 키나 중괄호 없이.",
   });
 
+  // 독해 확인(교사 문항 없이 LLM이 생성): 문항 번호는 LLM이 못 세므로 서버가 결정론적으로 교정.
+  if (mode === "check") {
+    const askedCount = ctx.history.filter(
+      (h) => h.role === "agent" && /\(\s*\d+\s*\/\s*\d+\s*\)/.test(h.content),
+    ).length;
+    const n = Math.min(askedCount === 0 ? 1 : askedCount + 1, 3);
+    let out = "";
+    try {
+      const comp = await getOpenAI().chat.completions.create({
+        model,
+        messages,
+        temperature: 0.6,
+        max_tokens: 400,
+      });
+      out = (comp.choices[0]?.message?.content ?? "").trim();
+    } catch {
+      out = "";
+    }
+    // LLM이 붙인 (x/y)를 제거하고 올바른 번호를 부여
+    out = out.replace(/\(\s*\d+\s*\/\s*\d+\s*\)\s*/g, "").trim();
+    out = `(${n}/3) ` + (out || "지문을 다시 읽고 답해 볼까요?");
+    await supabase.from("agent_messages").insert({
+      session_id: sessionId,
+      role: "agent",
+      content: out,
+      model_used: model,
+    });
+    return plain(out);
+  }
+
   const completion = await getOpenAI().chat.completions.create({
     model,
     messages,
