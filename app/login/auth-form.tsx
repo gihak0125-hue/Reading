@@ -10,6 +10,12 @@ export function AuthForm({ next }: { next: string }) {
   const [mode, setMode] = useState<"login" | "signup" | null>(null);
   const [role, setRole] = useState<"student" | "teacher">("student");
   const [state, formAction, pending] = useActionState(authenticate, initial);
+  // 개인정보 동의(회원가입 필수)
+  const [agreeCollect, setAgreeCollect] = useState(false);
+  const [agreePolicy, setAgreePolicy] = useState(false);
+  const [showCollect, setShowCollect] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(false);
+  const consentOk = agreeCollect && agreePolicy;
 
   // 선택 전: 큰 버튼 두 개만
   if (mode === null) {
@@ -167,6 +173,71 @@ export function AuthForm({ next }: { next: string }) {
           </label>
         )}
 
+        {mode === "signup" && (
+          <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                name="agree_collect"
+                required
+                checked={agreeCollect}
+                onChange={(e) => setAgreeCollect(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0"
+              />
+              <span className="text-gray-700 dark:text-gray-300">
+                <b className="text-amber-700 dark:text-amber-400">[필수]</b>{" "}
+                개인정보 수집·이용에 동의합니다.{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowCollect((v) => !v)}
+                  className="text-amber-700 underline dark:text-amber-400"
+                >
+                  {showCollect ? "접기" : "자세히"}
+                </button>
+              </span>
+            </label>
+            {showCollect && (
+              <div className="rounded-md bg-gray-50 p-2 text-xs leading-relaxed text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                · 수집 항목: 이메일, 이름(닉네임){role === "student" ? ", 출석번호, 참여 코드" : ", 소속 학교"}
+                <br />· 이용 목적: 회원 식별·로그인, 읽기 학습 기록 제공
+                {role === "student" ? "·교사의 학습 지도" : "·교사 승인 및 학급 관리"}
+                <br />· 보유·이용 기간: 회원 탈퇴 시 또는 수집·이용 목적 달성 시까지(관련 법령에 따른 보존 제외)
+                <br />· 동의를 거부할 수 있으나, 미동의 시 회원가입이 제한됩니다.
+              </div>
+            )}
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                name="agree_policy"
+                required
+                checked={agreePolicy}
+                onChange={(e) => setAgreePolicy(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0"
+              />
+              <span className="text-gray-700 dark:text-gray-300">
+                <b className="text-amber-700 dark:text-amber-400">[필수]</b>{" "}
+                개인정보 처리방침을 확인했습니다.{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowPolicy((v) => !v)}
+                  className="text-amber-700 underline dark:text-amber-400"
+                >
+                  {showPolicy ? "접기" : "보기"}
+                </button>
+              </span>
+            </label>
+            {showPolicy && (
+              <div className="rounded-md bg-gray-50 p-2 text-xs leading-relaxed text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                북돋움은 학습 서비스 제공을 위해 최소한의 개인정보만 수집하며, 수집한
+                정보를 학습 기록·교사 지도 목적 외에는 사용하지 않습니다. 개인정보는
+                암호화·접근권한 관리로 보호되고, 제3자에게 제공·판매하지 않습니다.
+                학생 식별정보는 URL·로그에 노출되지 않도록 관리합니다. 자세한 사항은
+                운영자에게 문의할 수 있습니다.
+              </div>
+            )}
+          </div>
+        )}
+
         {state.error && (
           <p className="text-sm text-red-600" role="alert">
             {state.error}
@@ -180,7 +251,7 @@ export function AuthForm({ next }: { next: string }) {
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || (mode === "signup" && !consentOk)}
           className="rounded-md bg-amber-700 px-4 py-2 font-medium text-white hover:bg-amber-800 disabled:opacity-60"
         >
           {pending
@@ -189,6 +260,11 @@ export function AuthForm({ next }: { next: string }) {
               ? "로그인"
               : "회원가입"}
         </button>
+        {mode === "signup" && !consentOk && (
+          <p className="-mt-2 text-center text-xs text-gray-400">
+            가입하려면 필수 동의 항목에 체크해 주세요.
+          </p>
+        )}
 
         <p className="text-center text-sm text-gray-500 dark:text-gray-400">
           {mode === "login" ? "계정이 없나요? " : "이미 계정이 있나요? "}

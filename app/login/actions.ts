@@ -34,6 +34,13 @@ export async function authenticate(
   if (intent === "signup") {
     if (password.length < 6)
       return { error: "비밀번호는 6자 이상이어야 합니다." };
+    // 개인정보 수집·이용/처리방침 필수 동의 확인
+    const agreeCollect = formData.get("agree_collect") === "on";
+    const agreePolicy = formData.get("agree_policy") === "on";
+    if (!agreeCollect || !agreePolicy)
+      return {
+        error: "개인정보 수집·이용 및 처리방침에 동의해야 가입할 수 있습니다.",
+      };
     const displayName = String(formData.get("display_name") ?? "").trim();
     const role =
       String(formData.get("role") ?? "student") === "teacher"
