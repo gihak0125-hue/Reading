@@ -14,7 +14,6 @@ export function AuthForm({ next }: { next: string }) {
   const [agreeCollect, setAgreeCollect] = useState(false);
   const [agreePolicy, setAgreePolicy] = useState(false);
   const [showCollect, setShowCollect] = useState(false);
-  const [showPolicy, setShowPolicy] = useState(false);
   const consentOk = agreeCollect && agreePolicy;
 
   // 선택 전: 큰 버튼 두 개만
@@ -217,24 +216,16 @@ export function AuthForm({ next }: { next: string }) {
               <span className="text-gray-700 dark:text-gray-300">
                 <b className="text-amber-700 dark:text-amber-400">[필수]</b>{" "}
                 개인정보 처리방침을 확인했습니다.{" "}
-                <button
-                  type="button"
-                  onClick={() => setShowPolicy((v) => !v)}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-amber-700 underline dark:text-amber-400"
                 >
-                  {showPolicy ? "접기" : "보기"}
-                </button>
+                  전문 보기
+                </a>
               </span>
             </label>
-            {showPolicy && (
-              <div className="rounded-md bg-gray-50 p-2 text-xs leading-relaxed text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-                북돋움은 학습 서비스 제공을 위해 최소한의 개인정보만 수집하며, 수집한
-                정보를 학습 기록·교사 지도 목적 외에는 사용하지 않습니다. 개인정보는
-                암호화·접근권한 관리로 보호되고, 제3자에게 제공·판매하지 않습니다.
-                학생 식별정보는 URL·로그에 노출되지 않도록 관리합니다. 자세한 사항은
-                운영자에게 문의할 수 있습니다.
-              </div>
-            )}
           </div>
         )}
 

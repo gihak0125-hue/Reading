@@ -31,6 +31,7 @@ export function HomeButton() {
     p === "/login" ||
     p === "/dashboard" ||
     p === "/records" ||
+    p === "/privacy" ||
     p === "/join" ||
     p === "/tutorial" ||
     p.startsWith("/tutorial/") ||
